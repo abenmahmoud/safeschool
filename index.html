@@ -1843,7 +1843,7 @@ function detectTenant(){
 window.SS_TENANT = detectTenant();
 
 // ─── DB layer (localStorage → Supabase ready) ────────────────────────────────
-const DB = {
+window.DB = {
   _sb: () => !!(SUPABASE_URL && SUPABASE_KEY),
   async getReports(sid){
     if(this._sb()){
@@ -1902,7 +1902,7 @@ const DB = {
 })();
 
 // ─── Dashboard Admin v3 ──────────────────────────────────────────────────────
-async function renderDashboardV3(el){
+window.renderDashboardV3 = async function(el){
   const sid=localStorage.getItem('ss_current_etab')||'demo';
   const etabs=JSON.parse(localStorage.getItem('ss_etabs')||'[]');
   const etab=etabs.find(e=>e.id===sid)||{name:'Établissement démo'};
@@ -1976,7 +1976,7 @@ async function renderDashboardV3(el){
   </div>`;
 }
 
-function renderRptList(list){
+window.renderRptList = function(list){
   if(!list||!list.length) return '';
   const TLBL={verbal:'💬 Verbal',physique:'👊 Physique',cyber:'💻 Cyber',exclusion:'🚫 Exclusion',autre:'📝 Autre'};
   return list.map(r=>`
@@ -1995,7 +1995,7 @@ function renderRptList(list){
   `).join('');
 }
 
-async function fltRpt(status,btn){
+window.fltRpt = async function(status,btn){
   document.querySelectorAll('.flt-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   const sid=localStorage.getItem('ss_current_etab')||'demo';
@@ -2004,7 +2004,7 @@ async function fltRpt(status,btn){
   const el=document.getElementById('rpt-list'); if(el) el.innerHTML=renderRptList(filtered.slice(0,20));
 }
 
-function openRpt(id){
+window.openRpt = function(id){
   const all=window._allRptsAll||[];
   const r=all.find(x=>x.id===id); if(!r) return;
   const TLBL={verbal:'💬 Verbal',physique:'👊 Physique',cyber:'💻 Cyber',exclusion:'🚫 Exclusion',autre:'📝 Autre'};
@@ -2035,7 +2035,7 @@ function openRpt(id){
   document.body.appendChild(m);
 }
 
-async function chgSt(id,status,sid){
+window.chgSt = async function(id,status,sid){
   await DB.updateStatus(id,status,sid);
   if(window._allRptsAll){const r=window._allRptsAll.find(x=>x.id===id);if(r)r.status=status;}
   document.getElementById('rpt-modal')?.remove();
