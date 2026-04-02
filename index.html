@@ -309,6 +309,34 @@ a{text-decoration:none}
 .bdg-card .bn{font-size:.7rem;font-weight:700;color:var(--t)}
 .bdg-card .bp{font-size:.66rem;color:var(--tm);margin-top:2px}
 
+/* ── ESTABLISHMENT SELECTOR ── */
+#pg-select-etab{display:flex;flex-direction:column;min-height:100vh;background:linear-gradient(150deg,#eef2ff 0%,#f5f3ff 60%,#fdf4ff 100%)}
+.etab-header{padding:36px 20px 20px;text-align:center}
+.etab-header .wbadge{display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);color:var(--p);font-size:.77rem;font-weight:700;padding:5px 13px;border-radius:20px;margin-bottom:14px;border:1px solid rgba(79,70,229,.15)}
+.etab-list{padding:0 20px;display:flex;flex-direction:column;gap:12px;flex:1}
+.etab-card{background:#fff;border-radius:var(--r16);padding:20px 18px;display:flex;align-items:center;gap:16px;border:2px solid var(--border);cursor:pointer;transition:.25s cubic-bezier(.34,1.56,.64,1)}
+.etab-card:hover{transform:translateY(-3px);box-shadow:var(--s2);border-color:var(--p2)}
+.etab-card.sel{border-color:var(--p);background:var(--pbg)}
+.etab-icon{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0}
+.etab-icon.lycee{background:var(--pbg)}
+.etab-icon.college{background:var(--gbg)}
+.etab-icon.ecole{background:var(--abg)}
+.etab-icon.autre{background:var(--skybg)}
+.etab-info h3{font-size:1rem;color:var(--t);margin-bottom:2px}
+.etab-info p{font-size:.8rem;color:var(--tm)}
+.etab-type-badge{font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:10px;display:inline-block;margin-top:4px}
+.etab-footer{padding:18px 20px;text-align:center}
+.etab-current{display:flex;align-items:center;gap:8px;background:var(--pbg);border:1.5px solid rgba(79,70,229,.15);border-radius:var(--r12);padding:8px 14px;margin:0 20px;cursor:pointer;transition:.2s}
+.etab-current:hover{background:var(--p);color:#fff;border-color:var(--p)}
+.etab-current:hover *{color:#fff!important}
+.etab-current-icon{font-size:1.2rem}
+.etab-current-info{flex:1}
+.etab-current-info h4{font-size:.82rem;font-weight:700;color:var(--p)}
+.etab-current-info p{font-size:.7rem;color:var(--tm)}
+.etab-loading{text-align:center;padding:40px 20px}
+.etab-loading .spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--p);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ── DASHBOARD ── */
 .dash-top{padding:14px 20px;background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;display:flex;align-items:center;justify-content:space-between}
 .dash-top h1{color:#fff;font-size:1.35rem}
@@ -403,6 +431,21 @@ a{text-decoration:none}
 <body>
 <div id="app">
 
+<!-- ════ ESTABLISHMENT SELECTOR ════ -->
+<div id="pg-select-etab" style="display:none">
+  <div class="etab-header">
+    <div class="wbadge">🛡️ SafeSchool · Multi-établissements</div>
+    <h1>Choisis ton établissement</h1>
+    <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto">Sélectionne ton école, collège ou lycée pour accéder à l'espace dédié.</p>
+  </div>
+  <div class="etab-list" id="etab-list">
+    <div class="etab-loading"><div class="spinner"></div><p>Chargement des établissements…</p></div>
+  </div>
+  <div class="etab-footer">
+    <p style="font-size:.76rem;color:var(--ts)">Chaque établissement a son propre espace sécurisé · RGPD</p>
+  </div>
+</div>
+
 <!-- Emergency bar -->
 <div class="ebar">
   <div class="ebar-l">
@@ -413,6 +456,16 @@ a{text-decoration:none}
     <a href="tel:3018" class="ecall">3018</a>
     <a href="tel:15" class="ecall">15 SAMU</a>
   </div>
+</div>
+
+<!-- Current establishment indicator -->
+<div class="etab-current" id="etab-current-bar" onclick="showEtabSelector()" style="display:none;margin:8px 16px">
+  <span class="etab-current-icon" id="etab-bar-icon">🏫</span>
+  <div class="etab-current-info">
+    <h4 id="etab-bar-name">—</h4>
+    <p id="etab-bar-addr">Changer d'établissement</p>
+  </div>
+  <svg width="16" height="16" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
 </div>
 
 <!-- Toast tray -->
@@ -449,7 +502,7 @@ a{text-decoration:none}
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
   <div style="height:20px"></div>
-  <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)">Application de ton lycée · Signalements confidentiels · RGPD</p></div>
+  <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">Signalements confidentiels · RGPD</p></div>
   <div style="height:14px"></div>
 </div>
 
@@ -589,39 +642,88 @@ a{text-decoration:none}
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     <span>Aide</span>
   </button>
+  <button class="ni" id="ni-profile" onclick="go('profile')">
+    <div class="ni-pip"></div>
+    <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profil</span>
+  </button>
 </nav>
 
 </div><!-- #app -->
 
 <script>
 // ═══════════════════════════════════════════
-// STATE & STORAGE
+// MULTI-ESTABLISHMENT STATE
 // ═══════════════════════════════════════════
+let currentEtab = null; // {id, name, type, address, adminEmail, adminPassword}
+let etabList = [];
+let cachedReports = [];
+let cachedStaff = [];
+let cachedLogs = [];
+
+// Local-only state (points, badges, quiz)
 const S = {
-  reports: () => JSON.parse(localStorage.getItem('ss_reports')||'[]'),
-  setReports: v => localStorage.setItem('ss_reports', JSON.stringify(v)),
-  staff: () => JSON.parse(localStorage.getItem('ss_staff')||JSON.stringify(defaultStaff)),
-  setStaff: v => localStorage.setItem('ss_staff', JSON.stringify(v)),
+  reports: () => cachedReports,
+  setReports: async v => {
+    cachedReports = v;
+    if (currentEtab) {
+      await fetch(`/api/reports?etab=${currentEtab.id}`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(v[0])
+      }).catch(()=>{});
+    }
+  },
+  updateReport: async (report) => {
+    if (currentEtab) {
+      await fetch(`/api/reports?etab=${currentEtab.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(report)
+      }).catch(()=>{});
+    }
+  },
+  reloadReports: async () => {
+    if (!currentEtab) return;
+    try {
+      const res = await fetch(`/api/reports?etab=${currentEtab.id}`);
+      cachedReports = await res.json();
+    } catch(e) { console.error('Failed to load reports', e); }
+  },
+  staff: () => cachedStaff,
+  setStaff: async v => {
+    cachedStaff = v;
+    if (currentEtab) {
+      await fetch(`/api/staff?etab=${currentEtab.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(v)
+      }).catch(()=>{});
+    }
+  },
+  reloadStaff: async () => {
+    if (!currentEtab) return;
+    try {
+      const res = await fetch(`/api/staff?etab=${currentEtab.id}`);
+      cachedStaff = await res.json();
+    } catch(e) { console.error('Failed to load staff', e); }
+  },
   points: () => parseInt(localStorage.getItem('ss_pts')||'0'),
   setPoints: v => localStorage.setItem('ss_pts', v),
   badges: () => JSON.parse(localStorage.getItem('ss_badges')||'[]'),
   setBadges: v => localStorage.setItem('ss_badges', JSON.stringify(v)),
   quizCount: () => parseInt(localStorage.getItem('ss_qc')||'0'),
   setQuizCount: v => localStorage.setItem('ss_qc', v),
-  logs: () => JSON.parse(localStorage.getItem('ss_logs')||'[]'),
-  addLog: (msg,rid) => {
-    const logs = S.logs();
-    logs.unshift({msg,rid,t:new Date().toISOString()});
-    localStorage.setItem('ss_logs', JSON.stringify(logs.slice(0,100)));
+  logs: () => cachedLogs,
+  addLog: async (msg,rid) => {
+    cachedLogs.unshift({msg,rid,t:new Date().toISOString()});
+    cachedLogs = cachedLogs.slice(0,100);
+  },
+  reloadLogs: async () => {
+    if (!currentEtab) return;
+    try {
+      const res = await fetch(`/api/logs?etab=${currentEtab.id}`);
+      cachedLogs = await res.json();
+    } catch(e) { console.error('Failed to load logs', e); }
   }
 };
-
-const defaultStaff = [
-  {id:'s1',name:'Mme Martin Sophie',role:'cpe',emoji:'👩‍🏫',phone:'06 01 02 03 04',email:'martin.sophie@lycee.fr',active:true},
-  {id:'s2',name:'M. Dupont Pierre',role:'dir',emoji:'🎓',phone:'04 00 00 00 01',email:'direction@lycee.fr',active:true},
-  {id:'s3',name:'Mme Leblanc Claire',role:'inf',emoji:'🏥',phone:'04 00 00 00 02',email:'infirmerie@lycee.fr',active:true},
-  {id:'s4',name:'M. Bernard Thomas',role:'ref',emoji:'🛡️',phone:'06 05 06 07 08',email:'bernard.thomas@lycee.fr',active:true},
-];
 
 let currentPage = 'home';
 let rStep = 1, rData = {urgency:1,isAnonymous:true};
@@ -633,10 +735,164 @@ let editStaffId = null;
 let filterStatus = 'all', searchQ = '';
 
 // ═══════════════════════════════════════════
+// ESTABLISHMENT SELECTION
+// ═══════════════════════════════════════════
+const etabTypeIcons = {lycee:'🏫',college:'🏛️',ecole:'📚',autre:'🏢'};
+const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'Autre'};
+
+async function loadEstablishments() {
+  try {
+    const res = await fetch('/api/establishments');
+    etabList = await res.json();
+    if (etabList.length === 0) {
+      // Seed demo data
+      await fetch('/api/seed', { method: 'POST' });
+      const res2 = await fetch('/api/establishments');
+      etabList = await res2.json();
+    }
+  } catch(e) {
+    console.error('Failed to load establishments', e);
+    etabList = [];
+  }
+  return etabList;
+}
+
+function renderEtabList() {
+  const el = document.getElementById('etab-list');
+  if (!el) return;
+  if (etabList.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:30px"><p>Aucun établissement configuré.</p></div>`;
+    return;
+  }
+  el.innerHTML = etabList.map(e => `
+    <div class="etab-card" onclick="selectEstablishment('${e.id}')">
+      <div class="etab-icon ${e.type}">${etabTypeIcons[e.type]||'🏢'}</div>
+      <div class="etab-info">
+        <h3>${e.name}</h3>
+        <p>${e.address || ''}</p>
+        <span class="etab-type-badge" style="background:var(--pbg);color:var(--p)">${etabTypeLabels[e.type]||e.type}</span>
+      </div>
+      <svg width="18" height="18" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+  `).join('') + `
+    <div style="margin-top:10px;text-align:center">
+      <button class="btn btn-ghost btn-sm" onclick="showAddEtabModal()">+ Ajouter un établissement</button>
+    </div>`;
+}
+
+async function selectEstablishment(etabId) {
+  const etab = etabList.find(e => e.id === etabId);
+  if (!etab) return;
+  currentEtab = etab;
+  localStorage.setItem('ss_current_etab', etabId);
+
+  // Load data for this establishment
+  await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+
+  // Hide selector, show app
+  document.getElementById('pg-select-etab').style.display = 'none';
+  document.getElementById('etab-current-bar').style.display = 'flex';
+  document.querySelector('.ebar').style.display = 'flex';
+  document.querySelector('.bnav').style.display = 'flex';
+
+  // Update UI
+  document.getElementById('etab-bar-icon').textContent = etabTypeIcons[etab.type] || '🏫';
+  document.getElementById('etab-bar-name').textContent = etab.name;
+  document.getElementById('etab-bar-addr').textContent = etab.address || 'Changer d\'établissement';
+  document.getElementById('home-etab-label').textContent = `${etab.name} · Signalements confidentiels · RGPD`;
+
+  go('home');
+}
+
+function showEtabSelector() {
+  adminIn = false;
+  document.getElementById('pg-dashboard').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+  document.getElementById('pg-select-etab').style.display = 'flex';
+  document.getElementById('etab-current-bar').style.display = 'none';
+  document.querySelector('.ebar').style.display = 'none';
+  document.querySelector('.bnav').style.display = 'none';
+  renderEtabList();
+}
+
+function showAddEtabModal() {
+  document.body.insertAdjacentHTML('beforeend', `
+  <div class="modal-overlay" id="add-etab-modal" onclick="if(event.target===this)closeAddEtabModal()">
+    <div class="modal">
+      <div class="mhandle"></div>
+      <h3>Ajouter un établissement</h3>
+      <div class="fg">
+        <label class="fl">Nom de l'établissement *</label>
+        <input type="text" class="fi" id="new-etab-name" placeholder="Ex: Lycée Jean Moulin">
+      </div>
+      <div class="fg">
+        <label class="fl">Type *</label>
+        <select class="fsel" id="new-etab-type">
+          <option value="lycee">Lycée</option>
+          <option value="college">Collège</option>
+          <option value="ecole">École primaire</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Adresse</label>
+        <input type="text" class="fi" id="new-etab-addr" placeholder="Adresse de l'établissement">
+      </div>
+      <div class="fg">
+        <label class="fl">Email administrateur *</label>
+        <input type="email" class="fi" id="new-etab-email" placeholder="admin@etablissement.fr">
+      </div>
+      <div class="fg">
+        <label class="fl">Mot de passe administrateur *</label>
+        <input type="password" class="fi" id="new-etab-pass" placeholder="Mot de passe sécurisé">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" style="flex:1" onclick="closeAddEtabModal()">Annuler</button>
+        <button class="btn btn-p" style="flex:2" onclick="createEstablishment()">Créer l'établissement</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+function closeAddEtabModal() { document.getElementById('add-etab-modal')?.remove(); }
+
+async function createEstablishment() {
+  const name = document.getElementById('new-etab-name').value.trim();
+  const type = document.getElementById('new-etab-type').value;
+  const address = document.getElementById('new-etab-addr').value.trim();
+  const adminEmail = document.getElementById('new-etab-email').value.trim();
+  const adminPassword = document.getElementById('new-etab-pass').value;
+
+  if (!name) { toast('Le nom est requis', 'err'); return; }
+  if (!adminEmail || !adminPassword) { toast('Email et mot de passe admin requis', 'err'); return; }
+
+  try {
+    const res = await fetch('/api/establishments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, type, address, adminEmail, adminPassword })
+    });
+    const newEtab = await res.json();
+    if (res.ok) {
+      etabList.push(newEtab);
+      closeAddEtabModal();
+      renderEtabList();
+      toast(`${name} créé !`, 'ok');
+    } else {
+      toast(newEtab.error || 'Erreur', 'err');
+    }
+  } catch(e) {
+    toast('Erreur de connexion', 'err');
+  }
+}
+
+// ═══════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════
 function go(page) {
+  if (!currentEtab && page !== 'select-etab') { showEtabSelector(); return; }
   if (page === 'dashboard' && !adminIn) { showAdminLogin(); return; }
+  document.getElementById('pg-select-etab').style.display = 'none';
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); if (p.id !== 'pg-dashboard') p.style.display = ''; });
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   const el = document.getElementById('pg-'+page);
@@ -818,7 +1074,14 @@ function submitReport(){
     status:'new',staffReply:'',staffNotes:'',assignedTo:null,
     createdAt:new Date().toISOString(),history:[{s:'new',t:new Date().toISOString(),by:'Système'}]
   };
-  const reps=S.reports();reps.unshift(report);S.setReports(reps);
+  cachedReports.unshift(report);
+  // Save to API
+  if(currentEtab){
+    fetch(`/api/reports?etab=${currentEtab.id}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(report)
+    }).catch(()=>{});
+  }
   S.addLog(`Nouveau signalement #${report.id} (${rData.harassmentType})`,report.id);
   if(rData.reporterType==='witness'){
     const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
@@ -1072,7 +1335,7 @@ function renderSchoolContacts(){
   const el=document.getElementById('school-contacts-section');
   if(!el)return;
   el.innerHTML=`
-  <div class="stitle" style="padding-top:14px">Ton établissement</div>
+  <div class="stitle" style="padding-top:14px">${currentEtab?currentEtab.name:'Ton établissement'}</div>
   <div class="clist">
     ${staff.map(s=>`
     <a href="tel:${s.phone}" class="ci-item">
@@ -1100,7 +1363,7 @@ function renderProfile(){
   <div class="prof-head">
     <div class="prof-av">👤</div>
     <h2>Mon Profil</h2>
-    <p>Élève · SafeSchool</p>
+    <p>Élève · ${currentEtab?currentEtab.name:'SafeSchool'}</p>
     <div class="pstats">
       <div class="ps"><div class="ps-n">${pts}</div><div class="ps-l">Points</div></div>
       <div class="ps"><div class="ps-n">${qc}</div><div class="ps-l">Quiz</div></div>
@@ -1119,8 +1382,9 @@ function renderProfile(){
   <div style="padding:18px 20px">
     <button class="btn btn-soft btn-full" onclick="go('education')">🎯 Gagner des points</button>
   </div>
-  <div style="padding:0 20px 8px;border-top:1px solid var(--border);margin-top:4px">
+  <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);margin-top:4px">
     <div style="height:14px"></div>
+    <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showAdminLogin()">⚙️ Accès administration</button>
   </div>
   <div style="height:10px"></div>`;
@@ -1131,29 +1395,50 @@ function renderProfile(){
 // ═══════════════════════════════════════════
 function showAdminLogin(){
   if(document.getElementById('admin-overlay'))return;
+  const etabEmail = currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr';
   document.body.insertAdjacentHTML('beforeend',`
   <div id="admin-overlay" class="admin-wrap">
     <div class="admin-card">
       <div class="admin-logo">🔐</div>
       <h2 style="text-align:center;margin-bottom:5px">Administration</h2>
-      <p style="text-align:center;margin-bottom:24px;font-size:.88rem">Réservé au personnel éducatif</p>
-      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="admin@lycee.fr" placeholder="admin@lycee.fr"></div>
-      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="admin123" placeholder="••••••••"><p class="fhint">Démo : admin@lycee.fr / admin123</p></div>
+      <p style="text-align:center;margin-bottom:8px;font-size:.88rem">Réservé au personnel éducatif</p>
+      ${currentEtab?`<p style="text-align:center;margin-bottom:18px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}
+      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="" placeholder="${etabEmail}"></div>
+      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="••••••••"></div>
       <button class="btn btn-p btn-full btn-lg" onclick="tryLogin()" style="margin-bottom:10px">Se connecter</button>
       <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>
     </div>
   </div>`);
   document.getElementById('al-pass').addEventListener('keydown',e=>e.key==='Enter'&&tryLogin());
 }
-function tryLogin(){
+async function tryLogin(){
   const e=document.getElementById('al-email').value;
   const p=document.getElementById('al-pass').value;
-  if(e==='admin@lycee.fr'&&p==='admin123'){
-    adminIn=true;
-    document.getElementById('admin-overlay').remove();
-    document.getElementById('pg-dashboard').style.display='flex';
-    go('dashboard');toast('Connecté en tant qu\'administrateur','ok');
-  } else toast('Identifiants incorrects','err');
+  if (!currentEtab) { toast('Aucun établissement sélectionné','err'); return; }
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ etabId: currentEtab.id, email: e, password: p })
+    });
+    if (res.ok) {
+      adminIn=true;
+      document.getElementById('admin-overlay').remove();
+      document.getElementById('pg-dashboard').style.display='flex';
+      // Refresh data from server
+      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+      go('dashboard');toast('Connecté en tant qu\'administrateur','ok');
+    } else {
+      toast('Identifiants incorrects','err');
+    }
+  } catch(err) {
+    // Fallback to local check for offline
+    if(currentEtab && e===currentEtab.adminEmail && p===currentEtab.adminPassword){
+      adminIn=true;
+      document.getElementById('admin-overlay').remove();
+      document.getElementById('pg-dashboard').style.display='flex';
+      go('dashboard');toast('Connecté (mode hors-ligne)','ok');
+    } else toast('Identifiants incorrects','err');
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1168,7 +1453,7 @@ function renderDashboard(){
 
   document.getElementById('dashboard-body').innerHTML=`
   <div class="dash-top">
-    <div><h1>Dashboard</h1><p>Gestion des signalements</p></div>
+    <div><h1>Dashboard</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
     <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
   </div>
   <div class="kpi-row">
@@ -1273,7 +1558,7 @@ function assignReport(idx,staffId){
   if(!reps[idx].history)reps[idx].history=[];
   const st=staffId?S.staff().find(s=>s.id===staffId):null;
   reps[idx].history.push({s:'assigned',t:new Date().toISOString(),by:'Admin',note:`Assigné à ${st?st.name:'personne'}`});
-  S.setReports(reps);
+  S.updateReport({...reps[idx], logMsg:`Dossier #${reps[idx].id} assigné à ${st?st.name:'personne'}`});
   S.addLog(`Dossier #${reps[idx].id} assigné à ${st?st.name:'personne'}`,reps[idx].id);
   toast(st?`Assigné à ${st.name}`:'Assignation retirée','ok');
 }
@@ -1283,7 +1568,7 @@ function saveReply(idx){
   reps[idx].staffNotes=document.getElementById('notes-'+idx)?.value||'';
   if(!reps[idx].history)reps[idx].history=[];
   if(reps[idx].staffReply)reps[idx].history.push({s:'replied',t:new Date().toISOString(),by:'Admin',note:'Réponse envoyée à l\'élève'});
-  S.setReports(reps);
+  S.updateReport({...reps[idx], logMsg:`Réponse sauvegardée pour #${reps[idx].id}`});
   S.addLog(`Réponse sauvegardée pour #${reps[idx].id}`,reps[idx].id);
   toast('Sauvegardé !','ok');
 }
@@ -1293,7 +1578,7 @@ function setStatus(idx,status){
   reps[idx].status=status;
   if(!reps[idx].history)reps[idx].history=[];
   reps[idx].history.push({s:status,t:new Date().toISOString(),by:'Admin',note:`Statut : ${old} → ${status}`});
-  S.setReports(reps);
+  S.updateReport({...reps[idx], logMsg:`Dossier #${reps[idx].id} → ${status}`});
   S.addLog(`Dossier #${reps[idx].id} → ${status}`,reps[idx].id);
   renderDashboard();toast('Statut mis à jour','ok');
 }
@@ -1432,16 +1717,23 @@ function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dash
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
-document.addEventListener('DOMContentLoaded',()=>{
-  // Demo: add sample reports if none
-  if(S.reports().length===0){
-    const demos=[
-      {id:'DM9KX2',code:'DM9KX2',reporterType:'victim',harassmentType:'cyber',description:'Je reçois des messages insultants sur Instagram depuis 2 semaines. Un groupe a été créé pour se moquer de moi.',location:'Instagram / TikTok',frequency:'daily',urgency:3,isAnonymous:true,status:'new',staffReply:'',staffNotes:'',assignedTo:'s1',createdAt:new Date(Date.now()-2*86400000).toISOString(),history:[]},
-      {id:'RT5AB8',code:'RT5AB8',reporterType:'witness',harassmentType:'physical',description:'J\'ai vu des élèves de Terminale pousser et bousculer un élève de Seconde tous les jours dans le couloir B.',location:'Couloir B, 1er étage',frequency:'daily',urgency:2,isAnonymous:true,status:'in_progress',staffReply:'Merci de nous avoir signalé cette situation. Nous avons convoqué les personnes concernées et nous prenons des mesures. Un suivi est en place.',staffNotes:'Convocation faite le 2/04. Parents informés.',assignedTo:'s1',createdAt:new Date(Date.now()-5*86400000).toISOString(),history:[]},
-      {id:'KL3ZT1',code:null,reporterType:'victim',harassmentType:'verbal',description:'Des élèves m\'insultent sur mon prénom et mon apparence physique depuis la rentrée.',location:'Salle de sport',frequency:'weekly',urgency:1,isAnonymous:false,reporterName:'Lucas Martin',reporterClass:'2nde A',reporterEmail:'lucas.m@lycee.fr',status:'resolved',staffReply:'Nous avons eu un entretien avec les élèves concernés. La situation est résolue. N\'hésite pas à revenir nous voir si ça recommence.',staffNotes:'Entretien le 28/03. Accord trouvé.',assignedTo:'s4',createdAt:new Date(Date.now()-8*86400000).toISOString(),history:[]},
-    ];
-    S.setReports(demos);
-    S.addLog('Application initialisée avec des données de démonstration');
+document.addEventListener('DOMContentLoaded', async () => {
+  // Hide main app, show establishment selector first
+  document.querySelector('.ebar').style.display = 'none';
+  document.querySelector('.bnav').style.display = 'none';
+  document.getElementById('etab-current-bar').style.display = 'none';
+
+  // Load establishments
+  await loadEstablishments();
+
+  // Check if user had a previously selected establishment
+  const savedEtabId = localStorage.getItem('ss_current_etab');
+  if (savedEtabId && etabList.find(e => e.id === savedEtabId)) {
+    await selectEstablishment(savedEtabId);
+  } else {
+    // Show establishment selector
+    document.getElementById('pg-select-etab').style.display = 'flex';
+    renderEtabList();
   }
 });
 
