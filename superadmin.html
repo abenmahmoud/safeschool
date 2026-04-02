@@ -6,517 +6,428 @@
 <title>SafeSchool - Super Admin</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
-.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.login-box{background:#1e293b;border-radius:20px;padding:40px;width:100%;max-width:400px;border:1px solid #334155}
-.logo{text-align:center;margin-bottom:32px}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.ls{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.lb{background:#1e293b;border-radius:20px;padding:40px;width:100%;max-width:400px;border:1px solid #334155}
+.logo{text-align:center;margin-bottom:28px}
 .logo h1{font-size:1.5rem;font-weight:800;color:#fff;margin-top:8px}
 .logo p{font-size:.85rem;color:#64748b;margin-top:4px}
-.field label{display:block;font-size:.8rem;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
-.field{margin-bottom:16px}
-.field input,.field select{width:100%;padding:12px 14px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:.95rem;outline:none;transition:.2s}
-.field input:focus,.field select:focus{border-color:#6366f1}
-.error-msg{background:#450a0a;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:12px;display:none}
-.btn{display:inline-block;padding:12px 20px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer;transition:.2s}
+.f{margin-bottom:16px}
+.f label{display:block;font-size:.8rem;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.f input,.f select{width:100%;padding:12px 14px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:.95rem;outline:none}
+.f input:focus,.f select:focus{border-color:#6366f1}
+.err{background:#450a0a;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:12px;display:none}
+.btn{display:inline-block;padding:12px 20px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer}
 .btn:hover{background:#4f46e5}
-.btn-full{width:100%}
-.btn-sm{padding:7px 14px;font-size:.82rem;border-radius:8px}
-.btn-danger{background:#dc2626}.btn-danger:hover{background:#b91c1c}
-.btn-success{background:#16a34a}.btn-success:hover{background:#15803d}
-.btn-secondary{background:#334155;color:#94a3b8}.btn-secondary:hover{background:#475569;color:#e2e8f0}
+.bfull{width:100%}
+.bsm{padding:7px 14px;font-size:.82rem;border-radius:8px}
+.bd{background:#dc2626}.bd:hover{background:#b91c1c}
+.bg{background:#16a34a}.bg:hover{background:#15803d}
+.bs{background:#334155;color:#94a3b8}.bs:hover{background:#475569;color:#e2e8f0}
 #app{display:none}
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;z-index:100}
-.sidebar-logo{padding:0 20px 20px;border-bottom:1px solid #334155;margin-bottom:12px}
-.sidebar-logo h2{font-size:1.1rem;font-weight:800;color:#fff}
-.sidebar-logo span{font-size:.72rem;color:#6366f1;font-weight:600}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:.88rem;color:#94a3b8;font-weight:500;transition:.15s;border-left:3px solid transparent}
-.nav-item:hover{color:#e2e8f0;background:#334155}
-.nav-item.active{color:#a5b4fc;border-left-color:#6366f1;background:rgba(99,102,241,.1)}
-.sidebar-footer{position:absolute;bottom:20px;left:0;right:0;padding:0 20px}
-.main{margin-left:220px;padding:32px;min-height:100vh}
-.page-title{font-size:1.4rem;font-weight:800;color:#f1f5f9;margin-bottom:4px}
-.page-sub{font-size:.85rem;color:#64748b;margin-bottom:24px}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
-.stat-card{background:#1e293b;border-radius:14px;padding:20px;border:1px solid #334155;position:relative;overflow:hidden}
-.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,#6366f1)}
-.stat-num{font-size:2rem;font-weight:800;color:#f1f5f9;line-height:1;margin:6px 0 2px}
-.stat-label{font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.stat-sub{font-size:.72rem;color:#16a34a;font-weight:600;margin-top:4px}
+.sb{position:fixed;left:0;top:0;bottom:0;width:220px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;z-index:100}
+.sbl{padding:0 20px 20px;border-bottom:1px solid #334155;margin-bottom:12px}
+.sbl h2{font-size:1.1rem;font-weight:800;color:#fff}
+.sbl span{font-size:.72rem;color:#6366f1;font-weight:600}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:.88rem;color:#94a3b8;font-weight:500;border-left:3px solid transparent}
+.ni:hover{color:#e2e8f0;background:#334155}
+.ni.on{color:#a5b4fc;border-left-color:#6366f1;background:rgba(99,102,241,.1)}
+.sbf{position:absolute;bottom:20px;left:0;right:0;padding:0 20px}
+.mn{margin-left:220px;padding:32px;min-height:100vh}
+.pt{font-size:1.4rem;font-weight:800;color:#f1f5f9;margin-bottom:4px}
+.ps{font-size:.85rem;color:#64748b;margin-bottom:24px}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
+.sc{background:#1e293b;border-radius:14px;padding:20px;border:1px solid #334155;position:relative;overflow:hidden}
+.sc::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,#6366f1)}
+.sn{font-size:2rem;font-weight:800;color:#f1f5f9;line-height:1;margin:6px 0 2px}
+.sl{font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.ss{font-size:.72rem;color:#16a34a;font-weight:600;margin-top:4px}
 .card{background:#1e293b;border-radius:14px;border:1px solid #334155;overflow:hidden;margin-bottom:20px}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #334155}
-.card-header h3{font-size:.95rem;font-weight:700;color:#f1f5f9}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #334155}
+.ch h3{font-size:.95rem;font-weight:700;color:#f1f5f9}
 table{width:100%;border-collapse:collapse}
-th{padding:10px 16px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #334155;background:#0f172a}
+th{padding:10px 16px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:1px solid #334155;background:#0f172a}
 td{padding:12px 16px;font-size:.85rem;color:#cbd5e1;border-bottom:1px solid #1e293b;vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(99,102,241,.04)}
-.td-actions{display:flex;gap:6px}
+.tda{display:flex;gap:6px}
 .badge{padding:3px 8px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
-.badge-starter{background:#1e293b;color:#94a3b8;border:1px solid #334155}
-.badge-pro{background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3}
-.badge-enterprise{background:#14532d;color:#86efac;border:1px solid #166534}
-.badge-active{background:#14532d;color:#86efac}
-.badge-trial{background:#78350f;color:#fcd34d}
-.badge-expired{background:#450a0a;color:#fca5a5}
-.badge-suspended{background:#1e293b;color:#64748b;border:1px solid #334155}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.subdomain-preview{background:#0f172a;border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.88rem;color:#a5b4fc;border:1px solid #334155}
-.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.plan-card{border:2px solid #334155;border-radius:10px;padding:12px;cursor:pointer;transition:.2s;text-align:center}
-.plan-card:hover{border-color:#6366f1}
-.plan-card.selected{border-color:#6366f1;background:rgba(99,102,241,.1)}
-.plan-name{font-weight:800;font-size:.88rem;color:#f1f5f9;margin-bottom:3px}
-.plan-price{font-size:1.1rem;font-weight:800;color:#a5b4fc}
-.plan-feats{font-size:.68rem;color:#64748b;margin-top:5px;line-height:1.5}
-.quota-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
-.quota-item{background:#0f172a;border-radius:8px;padding:10px;text-align:center;border:1px solid #334155}
-.quota-val{font-size:1.1rem;font-weight:800;color:#a5b4fc}
-.quota-lbl{font-size:.68rem;color:#64748b;font-weight:600;margin-top:2px;text-transform:uppercase}
-.dns-box{background:#0f172a;border:1px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:14px}
-.dns-box h4{font-size:.8rem;font-weight:700;color:#60a5fa;margin-bottom:8px}
-.dns-row{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:4px;flex-wrap:wrap}
-.dns-type{background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-weight:700;font-family:monospace;flex-shrink:0}
-.dns-val{color:#94a3b8;font-family:monospace;font-size:.72rem}
-.copy-btn{background:#1e3a5f;border:none;color:#60a5fa;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:.68rem}
-.copy-btn:hover{background:#1e40af}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:500px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
-.modal h3{font-size:1.1rem;font-weight:800;color:#f1f5f9;margin-bottom:18px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
-.success-box{background:#0f172a;border-radius:12px;padding:18px;margin-bottom:16px;border:1px solid #334155}
-.success-row{margin-bottom:8px}
-.success-lbl{color:#64748b;font-size:.78rem;display:block;margin-bottom:2px}
-.success-val{color:#f1f5f9;font-weight:600}
-.success-val.mono{font-family:monospace;color:#a5b4fc}
-.success-val.pwd{font-family:monospace;color:#fbbf24;font-size:1.05rem}
-.activity-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #334155}
-.activity-item:last-child{border-bottom:none}
+.b-starter{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+.b-pro{background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3}
+.b-enterprise{background:#14532d;color:#86efac;border:1px solid #166534}
+.b-active{background:#14532d;color:#86efac}
+.b-trial{background:#78350f;color:#fcd34d}
+.b-expired{background:#450a0a;color:#fca5a5}
+.b-suspended{background:#1e293b;color:#64748b;border:1px solid #334155}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sp{background:#0f172a;border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.88rem;color:#a5b4fc;border:1px solid #334155}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.pc{border:2px solid #334155;border-radius:10px;padding:12px;cursor:pointer;text-align:center}
+.pc.on{border-color:#6366f1;background:rgba(99,102,241,.1)}
+.pn{font-weight:800;font-size:.88rem;color:#f1f5f9;margin-bottom:3px}
+.pp{font-size:1.1rem;font-weight:800;color:#a5b4fc}
+.pf{font-size:.68rem;color:#64748b;margin-top:5px;line-height:1.5}
+.qg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.qi{background:#0f172a;border-radius:8px;padding:10px;text-align:center;border:1px solid #334155}
+.qv{font-size:1.1rem;font-weight:800;color:#a5b4fc}
+.ql{font-size:.68rem;color:#64748b;font-weight:600;margin-top:2px;text-transform:uppercase}
+.db{background:#0f172a;border:1px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:14px}
+.db h4{font-size:.8rem;font-weight:700;color:#60a5fa;margin-bottom:8px}
+.dr{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:4px;flex-wrap:wrap}
+.dt{background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-weight:700;font-family:monospace;flex-shrink:0}
+.dv{color:#94a3b8;font-family:monospace;font-size:.72rem}
+.cb{background:#1e3a5f;border:none;color:#60a5fa;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:.68rem}
+.mb{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.mo{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:500px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
+.mo h3{font-size:1.1rem;font-weight:800;color:#f1f5f9;margin-bottom:18px}
+.mf{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.sbox{background:#0f172a;border-radius:12px;padding:18px;margin-bottom:16px;border:1px solid #334155}
+.sr{margin-bottom:8px}
+.slb{color:#64748b;font-size:.78rem;display:block;margin-bottom:2px}
+.sv{color:#f1f5f9;font-weight:600}
+.sv.mono{font-family:monospace;color:#a5b4fc}
+.sv.pwd{font-family:monospace;color:#fbbf24;font-size:1.05rem}
+.ai{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #334155}
+.ai:last-child{border-bottom:none}
 .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.toast{position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.88rem;z-index:9999;display:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.toast{position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.88rem;z-index:9999;display:none}
 </style>
 </head>
 <body>
-
-<div class="login-screen" id="login-screen">
-  <div class="login-box">
+<div class="ls" id="ls">
+  <div class="lb">
     <div class="logo">
-      <div style="font-size:2.5rem">SHIELD</div>
+      <div style="font-size:2.5rem">&#128737;</div>
       <h1>SafeSchool</h1>
       <p>Super Admin - Fondateur uniquement</p>
     </div>
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="login-email" value="am.ad.bm@gmail.com" autocomplete="email">
-    </div>
-    <div class="field">
-      <label>Mot de passe</label>
-      <input type="password" id="login-pwd" placeholder="Mot de passe" autocomplete="current-password">
-    </div>
-    <button class="btn btn-full" id="login-btn">Connexion Super Admin</button>
-    <div class="error-msg" id="login-error">Email ou mot de passe incorrect</div>
-    <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Ne pas partager</p>
+    <div class="f"><label>Email</label><input type="email" id="lem" value="am.ad.bm@gmail.com"></div>
+    <div class="f"><label>Mot de passe</label><input type="password" id="lpw" placeholder="Mot de passe"></div>
+    <button class="btn bfull" id="lbtn">Connexion Super Admin</button>
+    <div class="err" id="lerr">Email ou mot de passe incorrect</div>
+    <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint</p>
   </div>
 </div>
-
 <div id="app">
-  <nav class="sidebar">
-    <div class="sidebar-logo">
-      <h2>SafeSchool</h2>
-      <span>Super Admin</span>
-    </div>
-    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">Tableau de bord</div>
-    <div class="nav-item" id="nav-schools" onclick="showPage('schools')">Etablissements</div>
-    <div class="nav-item" id="nav-create" onclick="showPage('create')">Nouvel etablissement</div>
-    <div class="nav-item" id="nav-domains" onclick="showPage('domains')">Sous-domaines</div>
-    <div class="nav-item" id="nav-billing" onclick="showPage('billing')">Abonnements</div>
-    <div class="sidebar-footer">
-      <button class="btn btn-secondary btn-sm btn-full" onclick="doLogout()">Deconnexion</button>
-    </div>
+  <nav class="sb">
+    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin</span></div>
+    <div class="ni on" id="n-db" onclick="showPage('db')">Tableau de bord</div>
+    <div class="ni" id="n-sc" onclick="showPage('sc')">Etablissements</div>
+    <div class="ni" id="n-cr" onclick="showPage('cr')">Nouvel etablissement</div>
+    <div class="ni" id="n-dn" onclick="showPage('dn')">Sous-domaines</div>
+    <div class="ni" id="n-bl" onclick="showPage('bl')">Abonnements</div>
+    <div class="sbf"><button class="btn bs bsm bfull" onclick="doLogout()">Deconnexion</button></div>
   </nav>
-
-  <main class="main">
-    <div id="page-dashboard">
-      <div class="page-title">Tableau de bord</div>
-      <div class="page-sub">Etat en temps reel de vos etablissements</div>
-      <div class="stats-grid" id="global-stats"></div>
+  <main class="mn">
+    <div id="p-db">
+      <div class="pt">Tableau de bord</div><div class="ps">Vue globale en temps reel</div>
+      <div class="sg" id="gst"></div>
+      <div class="card"><div class="ch"><h3>Activite</h3></div><div id="act" style="padding:20px"></div></div>
+    </div>
+    <div id="p-sc" style="display:none">
+      <div class="pt">Etablissements</div><div class="ps">Gestion de vos lycees et colleges</div>
       <div class="card">
-        <div class="card-header"><h3>Activite</h3></div>
-        <div id="recent-activity" style="padding:20px"></div>
+        <div class="ch"><h3>Liste (<span id="sco">0</span>)</h3><button class="btn bsm" onclick="showPage('cr')">+ Ajouter</button></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Sous-domaine</th><th>Plan</th><th>Eleves</th><th>Signalements</th><th>Statut</th><th>Expire</th><th>Actions</th></tr></thead><tbody id="stb"></tbody></table></div>
       </div>
     </div>
-
-    <div id="page-schools" style="display:none">
-      <div class="page-title">Etablissements</div>
-      <div class="page-sub">Gestion de tous vos lycees et colleges</div>
-      <div class="card">
-        <div class="card-header">
-          <h3>Liste (<span id="school-count">0</span>)</h3>
-          <button class="btn btn-sm" onclick="showPage('create')">+ Ajouter</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table>
-            <thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Eleves</th><th>Signalements</th><th>Statut</th><th>Expire</th><th>Actions</th></tr></thead>
-            <tbody id="schools-table"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="page-create" style="display:none">
-      <div class="page-title">Nouvel etablissement</div>
-      <div class="page-sub">Creer un espace dedie</div>
+    <div id="p-cr" style="display:none">
+      <div class="pt">Nouvel etablissement</div><div class="ps">Creer un espace securise dedie</div>
       <div class="card" style="max-width:660px">
-        <div class="card-header"><h3>Informations</h3></div>
+        <div class="ch"><h3>Informations</h3></div>
         <div style="padding:24px">
-          <div class="form-row">
-            <div class="field"><label>Nom *</label><input type="text" id="c-name" placeholder="Lycee Jean Moulin" oninput="onNameInput()"></div>
-            <div class="field"><label>Ville</label><input type="text" id="c-ville" placeholder="Drancy"></div>
-          </div>
-          <div class="field"><label>Email contact *</label><input type="email" id="c-email" placeholder="proviseur@etablissement.fr"></div>
-          <div class="field">
-            <label>Sous-domaine genere</label>
-            <div class="subdomain-preview" id="subdomain-preview">nom-lycee.safeschool.fr</div>
-            <input type="hidden" id="c-slug">
-          </div>
-          <div class="field">
-            <label>Plan</label>
-            <div class="plan-grid" id="plan-grid">
-              <div class="plan-card selected" data-plan="starter" onclick="onPlanClick(this)">
-                <div class="plan-name">Starter</div><div class="plan-price">Gratuit</div>
-                <div class="plan-feats">200 eleves / 50 signalements / 1 admin / 3 mois</div>
-              </div>
-              <div class="plan-card" data-plan="pro" onclick="onPlanClick(this)">
-                <div class="plan-name">Pro</div><div class="plan-price">49 EUR/mois</div>
-                <div class="plan-feats">Illimite / 3 admins / 12 mois</div>
-              </div>
-              <div class="plan-card" data-plan="enterprise" onclick="onPlanClick(this)">
-                <div class="plan-name">Enterprise</div><div class="plan-price">Sur devis</div>
-                <div class="plan-feats">Multi-sites / API / SLA 99.9%</div>
-              </div>
+          <div class="fr2"><div class="f"><label>Nom *</label><input type="text" id="cn" placeholder="Lycee Jean Moulin" oninput="onNm()"></div><div class="f"><label>Ville</label><input type="text" id="cv" placeholder="Drancy"></div></div>
+          <div class="f"><label>Email contact *</label><input type="email" id="ce" placeholder="proviseur@etablissement.fr"></div>
+          <div class="f"><label>Sous-domaine</label><div class="sp" id="sdp">nom-lycee.safeschool.fr</div><input type="hidden" id="csl"></div>
+          <div class="f"><label>Plan</label>
+            <div class="pg" id="pgr">
+              <div class="pc on" data-plan="starter" onclick="onPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div><div class="pf">200 eleves / 50 sign. / 1 admin / 3 mois</div></div>
+              <div class="pc" data-plan="pro" onclick="onPl(this)"><div class="pn">Pro</div><div class="pp">49 EUR/mois</div><div class="pf">Illimite / 3 admins / 12 mois</div></div>
+              <div class="pc" data-plan="enterprise" onclick="onPl(this)"><div class="pn">Enterprise</div><div class="pp">Sur devis</div><div class="pf">Multi-sites / API / SLA 99.9%</div></div>
             </div>
           </div>
-          <div class="field">
-            <label>Quotas attribues</label>
-            <div class="quota-grid" id="quota-display"></div>
+          <div class="f"><label>Quotas</label><div class="qg" id="qdi"></div></div>
+          <div class="db" id="dnsb" style="display:none">
+            <h4>DNS Cloudflare apres creation</h4>
+            <div class="dr"><span class="dt">CNAME</span><span class="dv" id="dsl">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
           </div>
-          <div class="dns-box" id="dns-box" style="display:none">
-            <h4>DNS a ajouter dans Cloudflare apres creation</h4>
-            <div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val" id="dns-slug">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">darling-muffin-21eb90.netlify.app</span><button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button></div>
-          </div>
-          <div style="display:flex;gap:12px">
-            <button class="btn btn-success" onclick="createSchool()">Creer l'etablissement</button>
-            <button class="btn btn-secondary" onclick="showPage('schools')">Annuler</button>
-          </div>
+          <div style="display:flex;gap:12px"><button class="btn bg" onclick="createSch()">Creer</button><button class="btn bs" onclick="showPage('sc')">Annuler</button></div>
         </div>
       </div>
     </div>
-
-    <div id="page-domains" style="display:none">
-      <div class="page-title">Sous-domaines</div>
-      <div class="page-sub">Configuration DNS et sous-domaines actifs</div>
-      <div class="card">
-        <div class="card-header"><h3>Wildcard DNS (une seule configuration)</h3></div>
-        <div style="padding:20px">
-          <div class="dns-box">
-            <div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">darling-muffin-21eb90.netlify.app</span><button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button></div>
-            <div class="dns-row" style="margin-top:6px"><span class="dns-type">A</span><span class="dns-val">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">75.2.60.5</span><button class="copy-btn" onclick="copyText('75.2.60.5')">Copier</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3>Sous-domaines actifs</h3></div>
-        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Statut</th><th>Lien</th></tr></thead><tbody id="domains-table"></tbody></table></div>
+    <div id="p-dn" style="display:none">
+      <div class="pt">Sous-domaines</div><div class="ps">Configuration DNS</div>
+      <div class="card"><div class="ch"><h3>Wildcard DNS</h3></div><div style="padding:20px">
+        <div class="db"><div class="dr"><span class="dt">CNAME</span><span class="dv">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
+        <div class="dr" style="margin-top:6px"><span class="dt">A</span><span class="dv">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">75.2.60.5</span></div></div>
+      </div></div>
+      <div class="card"><div class="ch"><h3>Sous-domaines actifs</h3></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Statut</th><th>Lien</th></tr></thead><tbody id="dntb"></tbody></table></div>
       </div>
     </div>
-
-    <div id="page-billing" style="display:none">
-      <div class="page-title">Abonnements</div>
-      <div class="page-sub">Suivi des revenus et plans</div>
-      <div class="stats-grid" id="billing-stats"></div>
-      <div class="card">
-        <div class="card-header"><h3>Tous les abonnements</h3></div>
-        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Plan</th><th>Montant</th><th>Debut</th><th>Expiration</th><th>J. restants</th><th>Statut</th><th>Action</th></tr></thead><tbody id="billing-table"></tbody></table></div>
+    <div id="p-bl" style="display:none">
+      <div class="pt">Abonnements</div><div class="ps">Suivi des revenus</div>
+      <div class="sg" id="bst"></div>
+      <div class="card"><div class="ch"><h3>Abonnements</h3></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Plan</th><th>Montant</th><th>Debut</th><th>Expiration</th><th>J. rest.</th><th>Statut</th><th>Action</th></tr></thead><tbody id="bltb"></tbody></table></div>
       </div>
     </div>
   </main>
 </div>
-
-<div class="modal-bg" id="edit-modal" style="display:none" onclick="if(event.target===this)closeModal()">
-  <div class="modal" onclick="event.stopPropagation()">
-    <h3>Modifier l'etablissement</h3>
-    <input type="hidden" id="edit-id">
-    <div class="field"><label>Nom</label><input type="text" id="edit-name"></div>
-    <div class="field"><label>Email</label><input type="email" id="edit-email"></div>
-    <div class="field">
-      <label>Plan</label>
-      <div class="plan-grid" id="edit-plan-grid">
-        <div class="plan-card" data-plan="starter" onclick="onEditPlanClick(this)"><div class="plan-name">Starter</div><div class="plan-price">Gratuit</div></div>
-        <div class="plan-card" data-plan="pro" onclick="onEditPlanClick(this)"><div class="plan-name">Pro</div><div class="plan-price">49 EUR/mois</div></div>
-        <div class="plan-card" data-plan="enterprise" onclick="onEditPlanClick(this)"><div class="plan-name">Enterprise</div><div class="plan-price">Sur devis</div></div>
+<div class="mb" id="emod" style="display:none" onclick="if(event.target===this)clMod()">
+  <div class="mo" onclick="event.stopPropagation()">
+    <h3>Modifier</h3>
+    <input type="hidden" id="eid">
+    <div class="f"><label>Nom</label><input type="text" id="enm"></div>
+    <div class="f"><label>Email</label><input type="email" id="eem"></div>
+    <div class="f"><label>Plan</label>
+      <div class="pg" id="epg">
+        <div class="pc" data-plan="starter" onclick="onEPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div></div>
+        <div class="pc" data-plan="pro" onclick="onEPl(this)"><div class="pn">Pro</div><div class="pp">49 EUR/mois</div></div>
+        <div class="pc" data-plan="enterprise" onclick="onEPl(this)"><div class="pn">Enterprise</div><div class="pp">Sur devis</div></div>
       </div>
     </div>
-    <div class="field">
-      <label>Statut</label>
-      <select id="edit-status">
-        <option value="active">Actif</option>
-        <option value="trial">Periode d'essai</option>
-        <option value="suspended">Suspendu</option>
-        <option value="expired">Expire</option>
-      </select>
+    <div class="f"><label>Statut</label>
+      <select id="est"><option value="active">Actif</option><option value="trial">Periode essai</option><option value="suspended">Suspendu</option><option value="expired">Expire</option></select>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Annuler</button>
-      <button class="btn btn-sm" onclick="saveEdit()">Sauvegarder</button>
-    </div>
+    <div class="mf"><button class="btn bs bsm" onclick="clMod()">Annuler</button><button class="btn bsm" onclick="svEd()">Sauvegarder</button></div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
+<div class="toast" id="tst"></div>
 <script>
-var CFG = { email: 'am.ad.bm@gmail.com', pwd: 'SafeSchool2026!', key: 'sa_v3' };
-var PLANS = {
-  starter:    { price: 0,  maxS: 200,   maxR: 50,   maxA: 1,  months: 3 },
-  pro:        { price: 49, maxS: 9999,  maxR: 9999, maxA: 3,  months: 12 },
-  enterprise: { price: 0,  maxS: 99999, maxR: 99999,maxA: 99, months: 24 }
-};
-var ST = { plan: 'starter', editPlan: 'starter' };
-
-function getSchools() { try { return JSON.parse(localStorage.getItem(CFG.key) || '[]'); } catch(e) { return []; } }
-function saveSchools(l) { localStorage.setItem(CFG.key, JSON.stringify(l)); }
-
-function initDemo() {
-  if (getSchools().length) return;
-  var n = new Date(), d30 = new Date(n), e1 = new Date(n), e2 = new Date(n);
-  d30.setDate(d30.getDate()-30); e1.setMonth(e1.getMonth()+9); e2.setMonth(e2.getMonth()+2);
-  saveSchools([
-    { id:'sch_001', name:'Lycee Jean Moulin', ville:'Drancy', email:'proviseur@jmoulin.fr', slug:'jean-moulin', plan:'pro', status:'active', maxS:9999, maxR:9999, maxA:3, createdAt:d30.toISOString(), expiresAt:e1.toISOString(), reports:18, students:0, adminPwd:'SS4XK9PL' },
-    { id:'sch_002', name:'College Victor Hugo', ville:'Paris 10e', email:'direction@vhugo.fr', slug:'victor-hugo', plan:'starter', status:'trial', maxS:200, maxR:50, maxA:1, createdAt:n.toISOString(), expiresAt:e2.toISOString(), reports:3, students:0, adminPwd:'SS7RK2MN' }
+var C={em:"am.ad.bm@gmail.com",pw:"SafeSchool2026!",k:"sa_v3"};
+var PL={starter:{pr:0,ms:200,mr:50,ma:1,mo:3},pro:{pr:49,ms:9999,mr:9999,ma:3,mo:12},enterprise:{pr:0,ms:99999,mr:99999,ma:99,mo:24}};
+var ST={plan:"starter",ePlan:"starter"};
+function gS(){try{return JSON.parse(localStorage.getItem(C.k)||"[]");}catch(e){return[];}}
+function sS(l){localStorage.setItem(C.k,JSON.stringify(l));}
+function initDemo(){
+  if(gS().length)return;
+  var n=new Date(),d30=new Date(n),e1=new Date(n),e2=new Date(n);
+  d30.setDate(d30.getDate()-30);e1.setMonth(e1.getMonth()+9);e2.setMonth(e2.getMonth()+2);
+  sS([
+    {id:"s1",name:"Lycee Jean Moulin",ville:"Drancy",email:"proviseur@jm.fr",slug:"jean-moulin",plan:"pro",status:"active",ms:9999,mr:9999,ma:3,cAt:d30.toISOString(),eAt:e1.toISOString(),rep:18,stu:0,apw:"SS4XK9PL"},
+    {id:"s2",name:"College Victor Hugo",ville:"Paris 10e",email:"dir@vh.fr",slug:"victor-hugo",plan:"starter",status:"trial",ms:200,mr:50,ma:1,cAt:n.toISOString(),eAt:e2.toISOString(),rep:3,stu:0,apw:"SS7RK2MN"}
   ]);
 }
-
-function doLogin() {
-  var em = document.getElementById('login-email').value.trim();
-  var pw = document.getElementById('login-pwd').value;
-  if (em === CFG.email && pw === CFG.pwd) {
-    document.getElementById('login-error').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    initDemo(); showPage('dashboard');
-  } else {
-    document.getElementById('login-error').style.display = 'block';
+function doLogin(){
+  var em=document.getElementById("lem").value.trim();
+  var pw=document.getElementById("lpw").value;
+  if(em===C.em&&pw===C.pw){
+    document.getElementById("lerr").style.display="none";
+    document.getElementById("ls").style.display="none";
+    document.getElementById("app").style.display="block";
+    initDemo();showPage("db");
+  }else{
+    document.getElementById("lerr").style.display="block";
   }
 }
-function doLogout() {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-pwd').value = '';
-  document.getElementById('login-error').style.display = 'none';
+function doLogout(){
+  document.getElementById("app").style.display="none";
+  document.getElementById("ls").style.display="flex";
+  document.getElementById("lpw").value="";
+  document.getElementById("lerr").style.display="none";
 }
-document.getElementById('login-btn').addEventListener('click', doLogin);
-document.getElementById('login-pwd').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
-
-var PAGES = ['dashboard','schools','create','domains','billing'];
-function showPage(p) {
-  PAGES.forEach(function(x) {
-    var el = document.getElementById('page-'+x), nav = document.getElementById('nav-'+x);
-    if (el) el.style.display = (x===p) ? 'block' : 'none';
-    if (nav) nav.classList.toggle('active', x===p);
+document.getElementById("lbtn").addEventListener("click",doLogin);
+document.getElementById("lpw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+var PGS=["db","sc","cr","dn","bl"];
+function showPage(p){
+  PGS.forEach(function(x){
+    var el=document.getElementById("p-"+x),nav=document.getElementById("n-"+x);
+    if(el)el.style.display=(x===p)?"block":"none";
+    if(nav)nav.classList.toggle("on",x===p);
   });
-  var fn = {dashboard:renderDashboard,schools:renderSchools,domains:renderDomains,billing:renderBilling,create:resetCreate};
-  if (fn[p]) fn[p]();
+  var fn={db:rdDb,sc:rdSc,dn:rdDn,bl:rdBl,cr:rstCr};
+  if(fn[p])fn[p]();
 }
-
-function fmt(n) { return n >= 9999 ? 'Illimite' : String(n); }
-function fmtD(iso) { return iso ? new Date(iso).toLocaleDateString('fr-FR') : '-'; }
-function daysLeft(iso) { return iso ? Math.ceil((new Date(iso)-new Date())/86400000) : 0; }
-function planPrice(pl) { return PLANS[pl] && PLANS[pl].price > 0 ? PLANS[pl].price + ' EUR/mois' : 'Gratuit'; }
-function sc(lbl,val,sub,col) { return '<div class="stat-card" style="--c:'+col+'"><div class="stat-label">'+lbl+'</div><div class="stat-num">'+val+'</div><div class="stat-sub">'+sub+'</div></div>'; }
-
-function showToast(msg,err) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.style.background = err ? '#dc2626' : '#16a34a';
-  t.style.display = 'block'; setTimeout(function(){ t.style.display='none'; }, 3000);
+function fmt(n){return n>=9999?"Illimite":String(n);}
+function fmtD(iso){return iso?new Date(iso).toLocaleDateString("fr-FR"):"-";}
+function dL(iso){return iso?Math.ceil((new Date(iso)-new Date())/86400000):0;}
+function plPr(pl){return PL[pl]&&PL[pl].pr>0?PL[pl].pr+" EUR/mois":"Gratuit";}
+function stc(lb,vl,sb,co){return "<div class=\"sc\" style=\"--c:"+co+"\"><div class=\"sl\">"+lb+"</div><div class=\"sn\">"+vl+"</div><div class=\"ss\">"+sb+"</div></div>";}
+function shTst(msg,err){
+  var t=document.getElementById("tst");
+  t.textContent=msg;t.style.background=err?"#dc2626":"#16a34a";
+  t.style.display="block";setTimeout(function(){t.style.display="none";},3000);
 }
-function copyText(txt) { navigator.clipboard.writeText(txt).then(function(){ showToast('Copie !'); }); }
-function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
-
-function renderDashboard() {
-  var s = getSchools();
-  var active = s.filter(function(x){ return x.status==='active'; }).length;
-  var trial  = s.filter(function(x){ return x.status==='trial'; }).length;
-  var mrr    = s.filter(function(x){ return x.plan==='pro'&&x.status==='active'; }).length * 49;
-  var reps   = s.reduce(function(a,x){ return a+(x.reports||0); }, 0);
-  document.getElementById('global-stats').innerHTML =
-    sc('Etablissements', s.length, 'Total deployes', '#6366f1') +
-    sc('Actifs', active, 'En production', '#16a34a') +
-    sc('Essais', trial, 'Periode pilote', '#f59e0b') +
-    sc('MRR', mrr+' EUR', 'Revenus mensuels', '#06b6d4') +
-    sc('Signalements', reps, 'Total cumule', '#8b5cf6');
-  document.getElementById('recent-activity').innerHTML = s.length ? s.map(function(x){
-    var dot = x.status==='active'?'#16a34a':x.status==='trial'?'#f59e0b':'#64748b';
-    return '<div class="activity-item"><div class="dot" style="background:'+dot+'"></div>'
-      +'<div style="flex:1"><div style="color:#e2e8f0;font-weight:600;font-size:.85rem">'+x.name+'</div>'
-      +'<div style="font-size:.75rem;color:#64748b">'+x.slug+'.safeschool.fr &mdash; '+x.plan.toUpperCase()+'</div></div>'
-      +'<div style="font-size:.78rem;color:#94a3b8">'+(x.reports||0)+' signalements</div></div>';
-  }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun etablissement.</p>';
+function cpTxt(txt){navigator.clipboard.writeText(txt).then(function(){shTst("Copie!");});}
+function clMod(){document.getElementById("emod").style.display="none";}
+function rdDb(){
+  var s=gS();
+  var act=s.filter(function(x){return x.status==="active";}).length;
+  var tri=s.filter(function(x){return x.status==="trial";}).length;
+  var mrr=s.filter(function(x){return x.plan==="pro"&&x.status==="active";}).length*49;
+  var rep=s.reduce(function(a,x){return a+(x.rep||0);},0);
+  document.getElementById("gst").innerHTML=
+    stc("Etablissements",s.length,"Total deployes","#6366f1")+
+    stc("Actifs",act,"En production","#16a34a")+
+    stc("Essais",tri,"Periode pilote","#f59e0b")+
+    stc("MRR",mrr+" EUR","Revenus mensuels","#06b6d4")+
+    stc("Signalements",rep,"Total cumule","#8b5cf6");
+  document.getElementById("act").innerHTML=s.length?s.map(function(x){
+    var dot=x.status==="active"?"#16a34a":x.status==="trial"?"#f59e0b":"#64748b";
+    return "<div class=\"ai\"><div class=\"dot\" style=\"background:"+dot+"\"></div>"
+      +"<div style=\"flex:1\"><div style=\"color:#e2e8f0;font-weight:600;font-size:.85rem\">"+x.name+"</div>"
+      +"<div style=\"font-size:.75rem;color:#64748b\">"+x.slug+".safeschool.fr - "+x.plan.toUpperCase()+"</div></div>"
+      +"<div style=\"font-size:.78rem;color:#94a3b8\">"+(x.rep||0)+" signalements</div></div>";
+  }).join(""):"<p style=\"color:#64748b;font-size:.85rem\">Aucun etablissement.</p>";
 }
-
-function renderSchools() {
-  var s = getSchools();
-  document.getElementById('school-count').textContent = s.length;
-  document.getElementById('schools-table').innerHTML = s.map(function(x){
-    var dl = daysLeft(x.expiresAt), dc = dl<30?'#fca5a5':'#94a3b8';
-    return '<tr><td><div style="font-weight:600;color:#f1f5f9">'+x.name+'</div><div style="font-size:.72rem;color:#64748b">'+(x.ville||'')+'</div></td>'
-      +'<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#a5b4fc;font-family:monospace;font-size:.78rem">'+x.slug+'.safeschool.fr</a></td>'
-      +'<td><span class="badge badge-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
-      +'<td style="color:#94a3b8">'+(x.students||0)+' / '+fmt(x.maxS)+'</td>'
-      +'<td>'+(x.reports||0)+'</td>'
-      +'<td><span class="badge badge-'+x.status+'">'+x.status+'</span></td>'
-      +'<td style="font-size:.8rem;color:'+dc+'">'+fmtD(x.expiresAt)+' ('+dl+'j)</td>'
-      +'<td><div class="td-actions">'
-      +'<button class="btn btn-sm btn-secondary" onclick="openEdit(''+x.id+'')">Modifier</button>'
-      +'<button class="btn btn-sm btn-danger" onclick="deleteSchool(''+x.id+'')">Suppr.</button>'
-      +'</div></td></tr>';
-  }).join('');
+function rdSc(){
+  var s=gS();
+  document.getElementById("sco").textContent=s.length;
+  document.getElementById("stb").innerHTML=s.map(function(x){
+    var dl=dL(x.eAt),dc=dl<30?"#fca5a5":"#94a3b8";
+    return "<tr>"
+      +"<td><div style=\"font-weight:600;color:#f1f5f9\">"+x.name+"</div><div style=\"font-size:.72rem;color:#64748b\">"+(x.ville||"")+"</div></td>"
+      +"<td><a href=\"https://"+x.slug+".safeschool.fr\" target=\"_blank\" style=\"color:#a5b4fc;font-family:monospace;font-size:.78rem\">"+x.slug+".safeschool.fr</a></td>"
+      +"<td><span class=\"badge b-"+x.plan+"\">"+x.plan.toUpperCase()+"</span></td>"
+      +"<td style=\"color:#94a3b8\">"+(x.stu||0)+" / "+fmt(x.ms)+"</td>"
+      +"<td>"+(x.rep||0)+"</td>"
+      +"<td><span class=\"badge b-"+x.status+"\">"+x.status+"</span></td>"
+      +"<td style=\"font-size:.8rem;color:"+dc+"\">"+fmtD(x.eAt)+" ("+dl+"j)</td>"
+      +"<td><div class=\"tda\"><button class=\"btn bs bsm\" data-id=\""+x.id+"\" onclick=\"opEd(this.dataset.id)\">Modifier</button>"
+      +"<button class=\"btn bd bsm\" data-id=\""+x.id+"\" onclick=\"delSch(this.dataset.id)\">Suppr.</button></div></td></tr>";
+  }).join("");
 }
-
-function openEdit(id) {
-  var s = getSchools().find(function(x){ return x.id===id; });
-  if (!s) return;
-  document.getElementById('edit-id').value = s.id;
-  document.getElementById('edit-name').value = s.name;
-  document.getElementById('edit-email').value = s.email||'';
-  document.getElementById('edit-status').value = s.status;
-  ST.editPlan = s.plan;
-  document.querySelectorAll('#edit-plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c.dataset.plan===s.plan); });
-  document.getElementById('edit-modal').style.display = 'flex';
+function opEd(id){
+  var s=gS().find(function(x){return x.id===id;});
+  if(!s)return;
+  document.getElementById("eid").value=s.id;
+  document.getElementById("enm").value=s.name;
+  document.getElementById("eem").value=s.email||"";
+  document.getElementById("est").value=s.status;
+  ST.ePlan=s.plan;
+  document.querySelectorAll("#epg .pc").forEach(function(c){c.classList.toggle("on",c.dataset.plan===s.plan);});
+  document.getElementById("emod").style.display="flex";
 }
-function onEditPlanClick(el) {
-  ST.editPlan = el.dataset.plan;
-  document.querySelectorAll('#edit-plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c===el); });
+function onEPl(el){
+  ST.ePlan=el.dataset.plan;
+  document.querySelectorAll("#epg .pc").forEach(function(c){c.classList.toggle("on",c===el);});
 }
-function saveEdit() {
-  var id = document.getElementById('edit-id').value;
-  var s = getSchools(), i = s.findIndex(function(x){ return x.id===id; });
-  if (i<0) return;
-  var p = PLANS[ST.editPlan];
-  s[i].name=document.getElementById('edit-name').value.trim();
-  s[i].email=document.getElementById('edit-email').value.trim();
-  s[i].status=document.getElementById('edit-status').value;
-  s[i].plan=ST.editPlan; s[i].maxS=p.maxS; s[i].maxR=p.maxR; s[i].maxA=p.maxA;
-  saveSchools(s); closeModal(); showToast('Mis a jour'); renderSchools();
+function svEd(){
+  var id=document.getElementById("eid").value;
+  var s=gS(),i=s.findIndex(function(x){return x.id===id;});
+  if(i<0)return;
+  var p=PL[ST.ePlan];
+  s[i].name=document.getElementById("enm").value.trim();
+  s[i].email=document.getElementById("eem").value.trim();
+  s[i].status=document.getElementById("est").value;
+  s[i].plan=ST.ePlan;s[i].ms=p.ms;s[i].mr=p.mr;s[i].ma=p.ma;
+  sS(s);clMod();shTst("Mis a jour");rdSc();
 }
-function deleteSchool(id) {
-  if (!confirm('Supprimer ? Action irreversible.')) return;
-  saveSchools(getSchools().filter(function(x){ return x.id!==id; }));
-  renderSchools(); showToast('Supprime');
+function delSch(id){
+  if(!confirm("Supprimer ? Action irreversible."))return;
+  sS(gS().filter(function(x){return x.id!==id;}));
+  rdSc();shTst("Supprime");
 }
-
-function resetCreate() {
-  var n = document.getElementById('c-name');
-  if (!n) { location.reload(); return; }
-  n.value=''; document.getElementById('c-ville').value='';
-  document.getElementById('c-email').value=''; document.getElementById('c-slug').value='';
-  document.getElementById('subdomain-preview').textContent='nom-lycee.safeschool.fr';
-  document.getElementById('dns-box').style.display='none';
-  ST.plan='starter';
-  document.querySelectorAll('#plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c.dataset.plan==='starter'); });
-  renderQuota();
+function rstCr(){
+  var n=document.getElementById("cn");
+  if(!n){location.reload();return;}
+  n.value="";document.getElementById("cv").value="";
+  document.getElementById("ce").value="";document.getElementById("csl").value="";
+  document.getElementById("sdp").textContent="nom-lycee.safeschool.fr";
+  document.getElementById("dnsb").style.display="none";
+  ST.plan="starter";
+  document.querySelectorAll("#pgr .pc").forEach(function(c){c.classList.toggle("on",c.dataset.plan==="starter");});
+  rdQu();
 }
-function onNameInput() {
-  var slug = document.getElementById('c-name').value.toLowerCase()
-    .replace(/[^a-z0-9s-]/g,'').replace(/s+/g,'-').replace(/-+/g,'-').replace(/^-+|-+$/g,'').slice(0,30);
-  document.getElementById('c-slug').value = slug;
-  document.getElementById('subdomain-preview').textContent = slug ? slug+'.safeschool.fr' : 'nom-lycee.safeschool.fr';
-  var db = document.getElementById('dns-box');
-  if (slug) { db.style.display='block'; document.getElementById('dns-slug').textContent=slug+'.safeschool.fr'; }
-  else db.style.display='none';
+function onNm(){
+  var slug=document.getElementById("cn").value.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g,"").replace(/\s+/g,"-").replace(/-+/g,"-").replace(/^-+|-+$/g,"").slice(0,30);
+  document.getElementById("csl").value=slug;
+  document.getElementById("sdp").textContent=slug?slug+".safeschool.fr":"nom-lycee.safeschool.fr";
+  var db=document.getElementById("dnsb");
+  if(slug){db.style.display="block";document.getElementById("dsl").textContent=slug+".safeschool.fr";}
+  else db.style.display="none";
 }
-function onPlanClick(el) {
-  ST.plan = el.dataset.plan;
-  document.querySelectorAll('#plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c===el); });
-  renderQuota();
+function onPl(el){
+  ST.plan=el.dataset.plan;
+  document.querySelectorAll("#pgr .pc").forEach(function(c){c.classList.toggle("on",c===el);});
+  rdQu();
 }
-function renderQuota() {
-  var p = PLANS[ST.plan]||PLANS.starter;
-  document.getElementById('quota-display').innerHTML =
-    '<div class="quota-item"><div class="quota-val">'+fmt(p.maxS)+'</div><div class="quota-lbl">Eleves max</div></div>'+
-    '<div class="quota-item"><div class="quota-val">'+fmt(p.maxR)+'</div><div class="quota-lbl">Signalements/mois</div></div>'+
-    '<div class="quota-item"><div class="quota-val">'+fmt(p.maxA)+'</div><div class="quota-lbl">Admins</div></div>'+
-    '<div class="quota-item"><div class="quota-val">'+p.months+' mois</div><div class="quota-lbl">Duree</div></div>';
+function rdQu(){
+  var p=PL[ST.plan]||PL.starter;
+  document.getElementById("qdi").innerHTML=
+    "<div class=\"qi\"><div class=\"qv\">"+fmt(p.ms)+"</div><div class=\"ql\">Eleves max</div></div>"
+    +"<div class=\"qi\"><div class=\"qv\">"+fmt(p.mr)+"</div><div class=\"ql\">Signalements/mois</div></div>"
+    +"<div class=\"qi\"><div class=\"qv\">"+fmt(p.ma)+"</div><div class=\"ql\">Admins</div></div>"
+    +"<div class=\"qi\"><div class=\"qv\">"+p.mo+" mois</div><div class=\"ql\">Duree</div></div>";
 }
-function createSchool() {
-  var name=document.getElementById('c-name').value.trim();
-  var slug=document.getElementById('c-slug').value.trim();
-  var email=document.getElementById('c-email').value.trim();
-  var ville=document.getElementById('c-ville').value.trim();
-  if (!name||!slug||!email) { showToast('Champs obligatoires manquants','err'); return; }
-  if (!/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug)) { showToast('Sous-domaine invalide','err'); return; }
-  var s = getSchools();
-  if (s.find(function(x){ return x.slug===slug; })) { showToast('Sous-domaine deja utilise','err'); return; }
-  var p=PLANS[ST.plan], now=new Date(), exp=new Date(now);
-  exp.setMonth(exp.getMonth()+p.months);
-  var school = { id:'sch_'+Date.now(), name:name, ville:ville, email:email, slug:slug,
-    plan:ST.plan, status:ST.plan==='starter'?'trial':'active',
-    maxS:p.maxS, maxR:p.maxR, maxA:p.maxA,
-    createdAt:now.toISOString(), expiresAt:exp.toISOString(),
-    reports:0, students:0, adminPwd:'SS'+Math.random().toString(36).slice(2,8).toUpperCase() };
-  s.push(school); saveSchools(s); showCreationSuccess(school);
+function createSch(){
+  var name=document.getElementById("cn").value.trim();
+  var slug=document.getElementById("csl").value.trim();
+  var email=document.getElementById("ce").value.trim();
+  var ville=document.getElementById("cv").value.trim();
+  if(!name||!slug||!email){shTst("Champs obligatoires","err");return;}
+  if(!/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug)){shTst("Sous-domaine invalide","err");return;}
+  var s=gS();
+  if(s.find(function(x){return x.slug===slug;})){shTst("Sous-domaine deja utilise","err");return;}
+  var p=PL[ST.plan],now=new Date(),exp=new Date(now);
+  exp.setMonth(exp.getMonth()+p.mo);
+  var sch={id:"s"+Date.now(),name:name,ville:ville,email:email,slug:slug,
+    plan:ST.plan,status:ST.plan==="starter"?"trial":"active",
+    ms:p.ms,mr:p.mr,ma:p.ma,
+    cAt:now.toISOString(),eAt:exp.toISOString(),
+    rep:0,stu:0,apw:"SS"+Math.random().toString(36).slice(2,8).toUpperCase()};
+  s.push(sch);sS(s);showSucc(sch);
 }
-function showCreationSuccess(s) {
-  document.getElementById('page-create').innerHTML =
-    '<div class="page-title">Etablissement cree !</div>'+
-    '<div class="page-sub">'+s.name+'</div>'+
-    '<div class="card" style="max-width:600px"><div style="padding:24px">'+
-    '<div class="success-box">'+
-    '<div class="success-row"><span class="success-lbl">URL eleves</span><span class="success-val mono">'+s.slug+'.safeschool.fr</span></div>'+
-    '<div class="success-row"><span class="success-lbl">Plan</span><span class="success-val">'+s.plan.toUpperCase()+' - '+planPrice(s.plan)+'</span></div>'+
-    '<div class="success-row"><span class="success-lbl">Expire le</span><span class="success-val">'+fmtD(s.expiresAt)+'</span></div>'+
-    '<div class="success-row"><span class="success-lbl">Mot de passe admin provisoire</span><span class="success-val pwd">'+s.adminPwd+'</span></div>'+
-    '<div class="success-row"><span class="success-lbl">Contact</span><span class="success-val">'+s.email+'</span></div>'+
-    '</div>'+
-    '<div class="dns-box"><h4>DNS a ajouter (Cloudflare)</h4>'+
-    '<div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val">'+s.slug+'</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">darling-muffin-21eb90.netlify.app</span><button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button></div></div>'+
-    '<div style="display:flex;gap:12px;margin-top:8px">'+
-    '<button class="btn btn-sm" onclick="showPage('schools')">Voir les etablissements</button>'+
-    '<button class="btn btn-sm btn-secondary" onclick="showPage('create')">Creer un autre</button>'+
-    '</div></div></div>';
+function showSucc(s){
+  var el=document.getElementById("p-cr");
+  el.innerHTML="";
+  var pt=document.createElement("div");pt.className="pt";pt.textContent="Etablissement cree!";
+  var ps=document.createElement("div");ps.className="ps";ps.textContent=s.name;
+  var card=document.createElement("div");card.className="card";card.style.maxWidth="600px";
+  var inner=document.createElement("div");inner.style.padding="24px";
+  var sbox=document.createElement("div");sbox.className="sbox";
+  sbox.innerHTML="<div class=\"sr\"><span class=\"slb\">URL eleves</span><span class=\"sv mono\">"+s.slug+".safeschool.fr</span></div>"
+    +"<div class=\"sr\"><span class=\"slb\">Plan</span><span class=\"sv\">"+s.plan.toUpperCase()+" - "+plPr(s.plan)+"</span></div>"
+    +"<div class=\"sr\"><span class=\"slb\">Expire le</span><span class=\"sv\">"+fmtD(s.eAt)+"</span></div>"
+    +"<div class=\"sr\"><span class=\"slb\">Mot de passe admin</span><span class=\"sv pwd\">"+s.apw+"</span></div>"
+    +"<div class=\"sr\"><span class=\"slb\">Contact</span><span class=\"sv\">"+s.email+"</span></div>";
+  var dnsb=document.createElement("div");dnsb.className="db";
+  dnsb.innerHTML="<h4>DNS Cloudflare</h4><div class=\"dr\"><span class=\"dt\">CNAME</span><span class=\"dv\">"+s.slug+"</span><span style=\"color:#475569;margin:0 4px\">vers</span><span class=\"dv\">darling-muffin-21eb90.netlify.app</span></div>";
+  var acts=document.createElement("div");acts.style.cssText="display:flex;gap:12px;margin-top:8px";
+  var b1=document.createElement("button");b1.className="btn bsm";b1.textContent="Voir les etablissements";
+  b1.addEventListener("click",function(){showPage("sc");});
+  var b2=document.createElement("button");b2.className="btn bs bsm";b2.textContent="Creer un autre";
+  b2.addEventListener("click",function(){showPage("cr");});
+  acts.appendChild(b1);acts.appendChild(b2);
+  inner.appendChild(sbox);inner.appendChild(dnsb);inner.appendChild(acts);
+  card.appendChild(inner);
+  el.appendChild(pt);el.appendChild(ps);el.appendChild(card);
 }
-function renderDomains() {
-  var s = getSchools();
-  document.getElementById('domains-table').innerHTML = s.map(function(x){
-    var c = x.status==='active'?'#86efac':x.status==='trial'?'#fcd34d':'#64748b';
-    var l = x.status==='active'?'Actif':x.status==='trial'?'A configurer':'Inactif';
-    return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'+
-      '<td><span style="font-family:monospace;font-size:.8rem;color:#a5b4fc">'+x.slug+'.safeschool.fr</span></td>'+
-      '<td><span class="badge badge-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'+
-      '<td><span style="font-size:.78rem;font-weight:700;color:'+c+'">'+l+'</span></td>'+
-      '<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#6366f1;font-size:.78rem">Ouvrir</a></td></tr>';
-  }).join('');
+function rdDn(){
+  var s=gS();
+  document.getElementById("dntb").innerHTML=s.map(function(x){
+    var c=x.status==="active"?"#86efac":x.status==="trial"?"#fcd34d":"#64748b";
+    var l=x.status==="active"?"Actif":x.status==="trial"?"A configurer":"Inactif";
+    return "<tr><td style=\"color:#f1f5f9;font-weight:600\">"+x.name+"</td>"
+      +"<td><span style=\"font-family:monospace;font-size:.8rem;color:#a5b4fc\">"+x.slug+".safeschool.fr</span></td>"
+      +"<td><span class=\"badge b-"+x.plan+"\">"+x.plan.toUpperCase()+"</span></td>"
+      +"<td><span style=\"font-size:.78rem;font-weight:700;color:"+c+"\">"+l+"</span></td>"
+      +"<td><a href=\"https://"+x.slug+".safeschool.fr\" target=\"_blank\" style=\"color:#6366f1;font-size:.78rem\">Ouvrir</a></td></tr>";
+  }).join("");
 }
-function renderBilling() {
-  var s = getSchools();
-  var proA = s.filter(function(x){ return x.plan==='pro'&&x.status==='active'; });
-  var mrr=proA.length*49, arr=mrr*12;
-  document.getElementById('billing-stats').innerHTML =
-    sc('MRR', mrr+' EUR', 'Revenus mensuels', '#6366f1') +
-    sc('ARR', arr+' EUR', 'Projection annuelle', '#06b6d4') +
-    sc('Payants', proA.length, 'Plan Pro actif', '#16a34a') +
-    sc('Essais', s.filter(function(x){ return x.status==='trial'; }).length, 'A convertir', '#f59e0b');
-  document.getElementById('billing-table').innerHTML = s.map(function(x){
-    var dl=daysLeft(x.expiresAt), dc=dl<30?'#fca5a5':'#94a3b8';
-    return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'+
-      '<td><span class="badge badge-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'+
-      '<td style="color:'+(PLANS[x.plan].price>0?'#86efac':'#64748b')+'">'+planPrice(x.plan)+'</td>'+
-      '<td style="font-size:.8rem">'+fmtD(x.createdAt)+'</td>'+
-      '<td style="font-size:.8rem">'+fmtD(x.expiresAt)+'</td>'+
-      '<td style="font-size:.8rem;color:'+dc+';font-weight:700">'+dl+'j</td>'+
-      '<td><span class="badge badge-'+x.status+'">'+x.status+'</span></td>'+
-      '<td><button class="btn btn-sm btn-secondary" onclick="openEdit(''+x.id+'')">Gerer</button></td></tr>';
-  }).join('');
+function rdBl(){
+  var s=gS();
+  var proA=s.filter(function(x){return x.plan==="pro"&&x.status==="active";});
+  var mrr=proA.length*49,arr=mrr*12;
+  document.getElementById("bst").innerHTML=
+    stc("MRR",mrr+" EUR","Revenus mensuels","#6366f1")+
+    stc("ARR",arr+" EUR","Projection annuelle","#06b6d4")+
+    stc("Payants",proA.length,"Plan Pro actif","#16a34a")+
+    stc("Essais",s.filter(function(x){return x.status==="trial";}).length,"A convertir","#f59e0b");
+  document.getElementById("bltb").innerHTML=s.map(function(x){
+    var dl=dL(x.eAt),dc=dl<30?"#fca5a5":"#94a3b8";
+    return "<tr><td style=\"color:#f1f5f9;font-weight:600\">"+x.name+"</td>"
+      +"<td><span class=\"badge b-"+x.plan+"\">"+x.plan.toUpperCase()+"</span></td>"
+      +"<td style=\"color:"+(PL[x.plan].pr>0?"#86efac":"#64748b")+"\">"+ plPr(x.plan)+"</td>"
+      +"<td style=\"font-size:.8rem\">"+fmtD(x.cAt)+"</td>"
+      +"<td style=\"font-size:.8rem\">"+fmtD(x.eAt)+"</td>"
+      +"<td style=\"font-size:.8rem;color:"+dc+";font-weight:700\">"+dl+"j</td>"
+      +"<td><span class=\"badge b-"+x.status+"\">"+x.status+"</span></td>"
+      +"<td><button class=\"btn bs bsm\" data-id=\""+x.id+"\" onclick=\"opEd(this.dataset.id)\">Gerer</button></td></tr>";
+  }).join("");
 }
-renderQuota();
+rdQu();
 </script>
 </body>
 </html>
