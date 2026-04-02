@@ -10,242 +10,200 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-box{background:#1e293b;border-radius:20px;padding:40px;width:100%;max-width:400px;border:1px solid #334155}
 .logo{text-align:center;margin-bottom:32px}
-.logo-icon{font-size:2.5rem;margin-bottom:8px}
-.logo h1{font-size:1.5rem;font-weight:800;color:#fff}
+.logo h1{font-size:1.5rem;font-weight:800;color:#fff;margin-top:8px}
 .logo p{font-size:.85rem;color:#64748b;margin-top:4px}
-.form-group{margin-bottom:16px}
-.form-group label{display:block;font-size:.8rem;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
-.form-group input{width:100%;padding:12px 14px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:.95rem;outline:none;transition:.2s}
-.form-group input:focus{border-color:#6366f1}
-.btn{width:100%;padding:13px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;transition:.2s;margin-top:8px}
+.field label{display:block;font-size:.8rem;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.field{margin-bottom:16px}
+.field input,.field select{width:100%;padding:12px 14px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:.95rem;outline:none;transition:.2s}
+.field input:focus,.field select:focus{border-color:#6366f1}
+.error-msg{background:#450a0a;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:12px;display:none}
+.btn{display:inline-block;padding:12px 20px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer;transition:.2s}
 .btn:hover{background:#4f46e5}
-.btn-sm{width:auto;padding:7px 16px;font-size:.82rem;border-radius:8px;margin-top:0}
+.btn-full{width:100%}
+.btn-sm{padding:7px 14px;font-size:.82rem;border-radius:8px}
 .btn-danger{background:#dc2626}.btn-danger:hover{background:#b91c1c}
 .btn-success{background:#16a34a}.btn-success:hover{background:#15803d}
 .btn-secondary{background:#334155;color:#94a3b8}.btn-secondary:hover{background:#475569;color:#e2e8f0}
-.error-msg{background:#450a0a;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:12px;display:none}
-
-/* APP */
 #app{display:none}
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;overflow-y:auto}
-.sidebar-logo{padding:0 20px 24px;border-bottom:1px solid #334155;margin-bottom:16px}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;z-index:100}
+.sidebar-logo{padding:0 20px 20px;border-bottom:1px solid #334155;margin-bottom:12px}
 .sidebar-logo h2{font-size:1.1rem;font-weight:800;color:#fff}
 .sidebar-logo span{font-size:.72rem;color:#6366f1;font-weight:600}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:.88rem;color:#94a3b8;font-weight:500;transition:.15s;border-left:3px solid transparent}
 .nav-item:hover{color:#e2e8f0;background:#334155}
 .nav-item.active{color:#a5b4fc;border-left-color:#6366f1;background:rgba(99,102,241,.1)}
-.nav-icon{font-size:1rem;width:20px;text-align:center}
+.sidebar-footer{position:absolute;bottom:20px;left:0;right:0;padding:0 20px}
 .main{margin-left:220px;padding:32px;min-height:100vh}
 .page-title{font-size:1.4rem;font-weight:800;color:#f1f5f9;margin-bottom:4px}
-.page-sub{font-size:.85rem;color:#64748b;margin-bottom:28px}
-
-/* STATS */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px}
+.page-sub{font-size:.85rem;color:#64748b;margin-bottom:24px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
 .stat-card{background:#1e293b;border-radius:14px;padding:20px;border:1px solid #334155;position:relative;overflow:hidden}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,#6366f1)}
-.stat-num{font-size:2.2rem;font-weight:800;color:#f1f5f9;line-height:1;margin:6px 0 2px}
-.stat-label{font-size:.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-.stat-trend{font-size:.75rem;font-weight:700;color:#16a34a;margin-top:4px}
-
-/* TABLE */
-.card{background:#1e293b;border-radius:14px;border:1px solid #334155;overflow:hidden;margin-bottom:24px}
+.stat-num{font-size:2rem;font-weight:800;color:#f1f5f9;line-height:1;margin:6px 0 2px}
+.stat-label{font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.stat-sub{font-size:.72rem;color:#16a34a;font-weight:600;margin-top:4px}
+.card{background:#1e293b;border-radius:14px;border:1px solid #334155;overflow:hidden;margin-bottom:20px}
 .card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #334155}
 .card-header h3{font-size:.95rem;font-weight:700;color:#f1f5f9}
 table{width:100%;border-collapse:collapse}
-th{padding:10px 16px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #334155;background:#0f172a}
-td{padding:12px 16px;font-size:.85rem;color:#cbd5e1;border-bottom:1px solid #1e293b}
+th{padding:10px 16px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #334155;background:#0f172a}
+td{padding:12px 16px;font-size:.85rem;color:#cbd5e1;border-bottom:1px solid #1e293b;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(99,102,241,.04)}
-
-/* BADGES */
-.badge{padding:3px 8px;border-radius:20px;font-size:.7rem;font-weight:700}
+.td-actions{display:flex;gap:6px}
+.badge{padding:3px 8px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
 .badge-starter{background:#1e293b;color:#94a3b8;border:1px solid #334155}
 .badge-pro{background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3}
 .badge-enterprise{background:#14532d;color:#86efac;border:1px solid #166534}
 .badge-active{background:#14532d;color:#86efac}
 .badge-trial{background:#78350f;color:#fcd34d}
 .badge-expired{background:#450a0a;color:#fca5a5}
-.badge-suspended{background:#1e293b;color:#64748b}
-
-/* MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:560px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
-.modal h3{font-size:1.1rem;font-weight:800;color:#f1f5f9;margin-bottom:20px}
+.badge-suspended{background:#1e293b;color:#64748b;border:1px solid #334155}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.form-group-dark label{font-size:.75rem;font-weight:600;color:#94a3b8;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
-.form-group-dark input,.form-group-dark select,.form-group-dark textarea{width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:.88rem;outline:none;margin-bottom:12px}
-.form-group-dark input:focus,.form-group-dark select:focus{border-color:#6366f1}
-.subdomain-preview{background:#0f172a;border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.85rem;color:#a5b4fc;margin-bottom:12px;border:1px solid #334155}
-.plan-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-.plan-card{border:2px solid #334155;border-radius:10px;padding:14px;cursor:pointer;transition:.2s;text-align:center}
+.subdomain-preview{background:#0f172a;border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.88rem;color:#a5b4fc;border:1px solid #334155}
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.plan-card{border:2px solid #334155;border-radius:10px;padding:12px;cursor:pointer;transition:.2s;text-align:center}
 .plan-card:hover{border-color:#6366f1}
 .plan-card.selected{border-color:#6366f1;background:rgba(99,102,241,.1)}
-.plan-card .plan-name{font-weight:800;font-size:.9rem;color:#f1f5f9;margin-bottom:4px}
-.plan-card .plan-price{font-size:1.2rem;font-weight:800;color:#a5b4fc}
-.plan-card .plan-features{font-size:.7rem;color:#64748b;margin-top:6px;line-height:1.5}
-.quota-display{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.plan-name{font-weight:800;font-size:.88rem;color:#f1f5f9;margin-bottom:3px}
+.plan-price{font-size:1.1rem;font-weight:800;color:#a5b4fc}
+.plan-feats{font-size:.68rem;color:#64748b;margin-top:5px;line-height:1.5}
+.quota-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
 .quota-item{background:#0f172a;border-radius:8px;padding:10px;text-align:center;border:1px solid #334155}
-.quota-item .q-val{font-size:1.2rem;font-weight:800;color:#a5b4fc}
-.quota-item .q-lbl{font-size:.68rem;color:#64748b;font-weight:600;margin-top:2px}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:4px}
-.domain-info{background:#0f172a;border:1px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:16px}
-.domain-info h4{font-size:.8rem;font-weight:700;color:#60a5fa;margin-bottom:8px}
-.dns-row{display:flex;gap:8px;align-items:center;font-size:.78rem;margin-bottom:4px}
+.quota-val{font-size:1.1rem;font-weight:800;color:#a5b4fc}
+.quota-lbl{font-size:.68rem;color:#64748b;font-weight:600;margin-top:2px;text-transform:uppercase}
+.dns-box{background:#0f172a;border:1px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:14px}
+.dns-box h4{font-size:.8rem;font-weight:700;color:#60a5fa;margin-bottom:8px}
+.dns-row{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:4px;flex-wrap:wrap}
 .dns-type{background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-weight:700;font-family:monospace;flex-shrink:0}
 .dns-val{color:#94a3b8;font-family:monospace;font-size:.72rem}
-.copy-btn{background:#1e3a5f;border:none;color:#60a5fa;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:.68rem;flex-shrink:0}
-
-/* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.88rem;z-index:9999;animation:slideIn .3s ease;display:none}
-@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.copy-btn{background:#1e3a5f;border:none;color:#60a5fa;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:.68rem}
+.copy-btn:hover{background:#1e40af}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:500px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1.1rem;font-weight:800;color:#f1f5f9;margin-bottom:18px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.success-box{background:#0f172a;border-radius:12px;padding:18px;margin-bottom:16px;border:1px solid #334155}
+.success-row{margin-bottom:8px}
+.success-lbl{color:#64748b;font-size:.78rem;display:block;margin-bottom:2px}
+.success-val{color:#f1f5f9;font-weight:600}
+.success-val.mono{font-family:monospace;color:#a5b4fc}
+.success-val.pwd{font-family:monospace;color:#fbbf24;font-size:1.05rem}
+.activity-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #334155}
+.activity-item:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.toast{position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.88rem;z-index:9999;display:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div class="login-screen" id="login-screen">
   <div class="login-box">
     <div class="logo">
-      <div class="logo-icon">🛡️</div>
+      <div style="font-size:2.5rem">SHIELD</div>
       <h1>SafeSchool</h1>
-      <p>Super Admin — Acces fondateur uniquement</p>
+      <p>Super Admin - Fondateur uniquement</p>
     </div>
-    <div class="form-group">
-      <label>Email fondateur</label>
-      <input type="email" id="login-email" placeholder="am.ad.bm@gmail.com" value="am.ad.bm@gmail.com">
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" value="am.ad.bm@gmail.com" autocomplete="email">
     </div>
-    <div class="form-group">
+    <div class="field">
       <label>Mot de passe</label>
-      <input type="password" id="login-pwd" placeholder="••••••••">
+      <input type="password" id="login-pwd" placeholder="Mot de passe" autocomplete="current-password">
     </div>
-    <button class="btn" onclick="doLogin()">Connexion Super Admin</button>
+    <button class="btn btn-full" id="login-btn">Connexion Super Admin</button>
     <div class="error-msg" id="login-error">Email ou mot de passe incorrect</div>
-    <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:16px">Acces restreint — Ne pas partager</p>
+    <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Ne pas partager</p>
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
-  <div class="sidebar">
+  <nav class="sidebar">
     <div class="sidebar-logo">
       <h2>SafeSchool</h2>
       <span>Super Admin</span>
     </div>
-    <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-      <span class="nav-icon">📊</span> Vue globale
+    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">Tableau de bord</div>
+    <div class="nav-item" id="nav-schools" onclick="showPage('schools')">Etablissements</div>
+    <div class="nav-item" id="nav-create" onclick="showPage('create')">Nouvel etablissement</div>
+    <div class="nav-item" id="nav-domains" onclick="showPage('domains')">Sous-domaines</div>
+    <div class="nav-item" id="nav-billing" onclick="showPage('billing')">Abonnements</div>
+    <div class="sidebar-footer">
+      <button class="btn btn-secondary btn-sm btn-full" onclick="doLogout()">Deconnexion</button>
     </div>
-    <div class="nav-item" onclick="showPage('schools')" id="nav-schools">
-      <span class="nav-icon">🏫</span> Etablissements
-    </div>
-    <div class="nav-item" onclick="showPage('create')" id="nav-create">
-      <span class="nav-icon">➕</span> Nouvel etablissement
-    </div>
-    <div class="nav-item" onclick="showPage('domains')" id="nav-domains">
-      <span class="nav-icon">🌐</span> Sous-domaines
-    </div>
-    <div class="nav-item" onclick="showPage('billing')" id="nav-billing">
-      <span class="nav-icon">💳</span> Abonnements
-    </div>
-    <div style="position:absolute;bottom:24px;left:0;right:0;padding:0 20px">
-      <button class="btn btn-secondary btn-sm" style="width:100%" onclick="doLogout()">Deconnexion</button>
-    </div>
-  </div>
+  </nav>
 
-  <div class="main">
-
-    <!-- PAGE DASHBOARD -->
+  <main class="main">
     <div id="page-dashboard">
-      <div class="page-title">Vue globale</div>
-      <div class="page-sub">Etat en temps reel de tous les etablissements</div>
+      <div class="page-title">Tableau de bord</div>
+      <div class="page-sub">Etat en temps reel de vos etablissements</div>
       <div class="stats-grid" id="global-stats"></div>
       <div class="card">
-        <div class="card-header"><h3>Activite recente</h3></div>
-        <div id="recent-activity" style="padding:20px;color:#64748b;font-size:.85rem">Chargement...</div>
+        <div class="card-header"><h3>Activite</h3></div>
+        <div id="recent-activity" style="padding:20px"></div>
       </div>
     </div>
 
-    <!-- PAGE ETABLISSEMENTS -->
     <div id="page-schools" style="display:none">
       <div class="page-title">Etablissements</div>
-      <div class="page-sub">Gestion de tous les lycees et colleges clients</div>
+      <div class="page-sub">Gestion de tous vos lycees et colleges</div>
       <div class="card">
         <div class="card-header">
-          <h3>Tous les etablissements (<span id="school-count">0</span>)</h3>
-          <button class="btn btn-sm" onclick="showPage('create')">+ Nouvel etablissement</button>
+          <h3>Liste (<span id="school-count">0</span>)</h3>
+          <button class="btn btn-sm" onclick="showPage('create')">+ Ajouter</button>
         </div>
-        <table>
-          <thead><tr>
-            <th>Etablissement</th><th>Sous-domaine</th><th>Plan</th>
-            <th>Eleves</th><th>Signalements</th><th>Statut</th><th>Actions</th>
-          </tr></thead>
-          <tbody id="schools-table"></tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Eleves</th><th>Signalements</th><th>Statut</th><th>Expire</th><th>Actions</th></tr></thead>
+            <tbody id="schools-table"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- PAGE CREATION -->
     <div id="page-create" style="display:none">
       <div class="page-title">Nouvel etablissement</div>
-      <div class="page-sub">Creer un espace dedie pour un lycee ou college</div>
-      <div class="card" style="max-width:700px">
-        <div class="card-header"><h3>Informations de l'etablissement</h3></div>
+      <div class="page-sub">Creer un espace dedie</div>
+      <div class="card" style="max-width:660px">
+        <div class="card-header"><h3>Informations</h3></div>
         <div style="padding:24px">
           <div class="form-row">
-            <div class="form-group-dark">
-              <label>Nom de l'etablissement</label>
-              <input type="text" id="c-name" placeholder="Lycee Jean Moulin" oninput="updateSubdomain()">
-            </div>
-            <div class="form-group-dark">
-              <label>Ville</label>
-              <input type="text" id="c-ville" placeholder="Paris">
-            </div>
+            <div class="field"><label>Nom *</label><input type="text" id="c-name" placeholder="Lycee Jean Moulin" oninput="onNameInput()"></div>
+            <div class="field"><label>Ville</label><input type="text" id="c-ville" placeholder="Drancy"></div>
           </div>
-          <div class="form-group-dark">
-            <label>Email du proviseur / contact principal</label>
-            <input type="email" id="c-email" placeholder="proviseur@lycee-jm.fr">
-          </div>
-          <div class="form-group-dark">
+          <div class="field"><label>Email contact *</label><input type="email" id="c-email" placeholder="proviseur@etablissement.fr"></div>
+          <div class="field">
             <label>Sous-domaine genere</label>
-            <div class="subdomain-preview" id="subdomain-preview">jean-moulin.safeschool.fr</div>
+            <div class="subdomain-preview" id="subdomain-preview">nom-lycee.safeschool.fr</div>
             <input type="hidden" id="c-slug">
           </div>
-
-          <div style="margin-bottom:16px">
-            <div style="font-size:.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Choisir le plan</div>
-            <div class="plan-cards">
-              <div class="plan-card selected" onclick="selectPlan('starter',this)">
-                <div class="plan-name">Starter</div>
-                <div class="plan-price">0€</div>
-                <div class="plan-features">200 eleves max<br>50 signalements/mois<br>3 mois</div>
+          <div class="field">
+            <label>Plan</label>
+            <div class="plan-grid" id="plan-grid">
+              <div class="plan-card selected" data-plan="starter" onclick="onPlanClick(this)">
+                <div class="plan-name">Starter</div><div class="plan-price">Gratuit</div>
+                <div class="plan-feats">200 eleves / 50 signalements / 1 admin / 3 mois</div>
               </div>
-              <div class="plan-card" onclick="selectPlan('pro',this)">
-                <div class="plan-name">Pro</div>
-                <div class="plan-price">49€/m</div>
-                <div class="plan-features">Eleves illimites<br>Signalements illimites<br>12 mois</div>
+              <div class="plan-card" data-plan="pro" onclick="onPlanClick(this)">
+                <div class="plan-name">Pro</div><div class="plan-price">49 EUR/mois</div>
+                <div class="plan-feats">Illimite / 3 admins / 12 mois</div>
               </div>
-              <div class="plan-card" onclick="selectPlan('enterprise',this)">
-                <div class="plan-name">Enterprise</div>
-                <div class="plan-price">Sur devis</div>
-                <div class="plan-features">Multi-sites<br>API access<br>SLA 99.9%</div>
+              <div class="plan-card" data-plan="enterprise" onclick="onPlanClick(this)">
+                <div class="plan-name">Enterprise</div><div class="plan-price">Sur devis</div>
+                <div class="plan-feats">Multi-sites / API / SLA 99.9%</div>
               </div>
             </div>
           </div>
-
-          <div style="font-size:.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Quotas attribues (plan selectionne)</div>
-          <div class="quota-display" id="quota-display">
-            <div class="quota-item"><div class="q-val">200</div><div class="q-lbl">Eleves max</div></div>
-            <div class="quota-item"><div class="q-val">50</div><div class="q-lbl">Signalements/mois</div></div>
-            <div class="quota-item"><div class="q-val">1</div><div class="q-lbl">Admins</div></div>
-            <div class="quota-item"><div class="q-val">3 mois</div><div class="q-lbl">Duree</div></div>
+          <div class="field">
+            <label>Quotas attribues</label>
+            <div class="quota-grid" id="quota-display"></div>
           </div>
-
-          <div class="domain-info" id="domain-instructions" style="display:none">
-            <h4>Instructions DNS pour activer le sous-domaine</h4>
-            <div id="dns-records"></div>
-            <p style="font-size:.72rem;color:#475569;margin-top:8px">Ajouter ces enregistrements dans Cloudflare (safeschool.fr) apres la creation</p>
+          <div class="dns-box" id="dns-box" style="display:none">
+            <h4>DNS a ajouter dans Cloudflare apres creation</h4>
+            <div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val" id="dns-slug">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">darling-muffin-21eb90.netlify.app</span><button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button></div>
           </div>
-
-          <div style="display:flex;gap:12px;margin-top:8px">
+          <div style="display:flex;gap:12px">
             <button class="btn btn-success" onclick="createSchool()">Creer l'etablissement</button>
             <button class="btn btn-secondary" onclick="showPage('schools')">Annuler</button>
           </div>
@@ -253,75 +211,51 @@ tr:hover td{background:rgba(99,102,241,.04)}
       </div>
     </div>
 
-    <!-- PAGE SOUS-DOMAINES -->
     <div id="page-domains" style="display:none">
       <div class="page-title">Sous-domaines</div>
-      <div class="page-sub">Gestion des noms de domaine par etablissement</div>
+      <div class="page-sub">Configuration DNS et sous-domaines actifs</div>
       <div class="card">
-        <div class="card-header"><h3>Configuration Cloudflare / Netlify</h3></div>
+        <div class="card-header"><h3>Wildcard DNS (une seule configuration)</h3></div>
         <div style="padding:20px">
-          <div style="background:#0f172a;border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid #1e40af">
-            <h4 style="color:#60a5fa;font-size:.85rem;margin-bottom:10px">Wildcard DNS — safeschool.fr</h4>
-            <p style="font-size:.8rem;color:#94a3b8;margin-bottom:12px">Un seul enregistrement DNS couvre tous les sous-domaines :</p>
-            <div class="dns-row">
-              <span class="dns-type">CNAME</span>
-              <span class="dns-val">*.safeschool.fr</span>
-              <span style="color:#64748b;margin:0 8px">→</span>
-              <span class="dns-val">darling-muffin-21eb90.netlify.app</span>
-              <button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button>
-            </div>
-            <div class="dns-row" style="margin-top:8px">
-              <span class="dns-type">A</span>
-              <span class="dns-val">safeschool.fr</span>
-              <span style="color:#64748b;margin:0 8px">→</span>
-              <span class="dns-val">75.2.60.5</span>
-              <button class="copy-btn" onclick="copyText('75.2.60.5')">Copier</button>
-            </div>
-          </div>
-          <div class="card" style="margin-bottom:0">
-            <div class="card-header"><h3>Sous-domaines actifs</h3></div>
-            <table>
-              <thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Statut DNS</th><th>URL</th></tr></thead>
-              <tbody id="domains-table"></tbody>
-            </table>
+          <div class="dns-box">
+            <div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">darling-muffin-21eb90.netlify.app</span><button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button></div>
+            <div class="dns-row" style="margin-top:6px"><span class="dns-type">A</span><span class="dns-val">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">75.2.60.5</span><button class="copy-btn" onclick="copyText('75.2.60.5')">Copier</button></div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- PAGE ABONNEMENTS -->
-    <div id="page-billing" style="display:none">
-      <div class="page-title">Abonnements</div>
-      <div class="page-sub">Suivi des revenus et gestion des plans</div>
-      <div class="stats-grid" id="billing-stats"></div>
       <div class="card">
-        <div class="card-header"><h3>Tous les abonnements</h3></div>
-        <table>
-          <thead><tr><th>Etablissement</th><th>Plan</th><th>Montant</th><th>Debut</th><th>Expiration</th><th>Statut</th><th>Action</th></tr></thead>
-          <tbody id="billing-table"></tbody>
-        </table>
+        <div class="card-header"><h3>Sous-domaines actifs</h3></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Statut</th><th>Lien</th></tr></thead><tbody id="domains-table"></tbody></table></div>
       </div>
     </div>
 
-  </div>
+    <div id="page-billing" style="display:none">
+      <div class="page-title">Abonnements</div>
+      <div class="page-sub">Suivi des revenus et plans</div>
+      <div class="stats-grid" id="billing-stats"></div>
+      <div class="card">
+        <div class="card-header"><h3>Tous les abonnements</h3></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Plan</th><th>Montant</th><th>Debut</th><th>Expiration</th><th>J. restants</th><th>Statut</th><th>Action</th></tr></thead><tbody id="billing-table"></tbody></table></div>
+      </div>
+    </div>
+  </main>
 </div>
 
-<!-- MODAL EDITION -->
-<div class="modal-bg" id="edit-modal" style="display:none">
-  <div class="modal">
+<div class="modal-bg" id="edit-modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
     <h3>Modifier l'etablissement</h3>
     <input type="hidden" id="edit-id">
-    <div class="form-group-dark">
-      <label>Nom</label>
-      <input type="text" id="edit-name">
+    <div class="field"><label>Nom</label><input type="text" id="edit-name"></div>
+    <div class="field"><label>Email</label><input type="email" id="edit-email"></div>
+    <div class="field">
+      <label>Plan</label>
+      <div class="plan-grid" id="edit-plan-grid">
+        <div class="plan-card" data-plan="starter" onclick="onEditPlanClick(this)"><div class="plan-name">Starter</div><div class="plan-price">Gratuit</div></div>
+        <div class="plan-card" data-plan="pro" onclick="onEditPlanClick(this)"><div class="plan-name">Pro</div><div class="plan-price">49 EUR/mois</div></div>
+        <div class="plan-card" data-plan="enterprise" onclick="onEditPlanClick(this)"><div class="plan-name">Enterprise</div><div class="plan-price">Sur devis</div></div>
+      </div>
     </div>
-    <div style="font-size:.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Plan</div>
-    <div class="plan-cards" id="edit-plan-cards">
-      <div class="plan-card" onclick="selectEditPlan('starter',this)"><div class="plan-name">Starter</div><div class="plan-price">0€</div></div>
-      <div class="plan-card" onclick="selectEditPlan('pro',this)"><div class="plan-name">Pro</div><div class="plan-price">49€/m</div></div>
-      <div class="plan-card" onclick="selectEditPlan('enterprise',this)"><div class="plan-name">Enterprise</div><div class="plan-price">Sur devis</div></div>
-    </div>
-    <div class="form-group-dark">
+    <div class="field">
       <label>Statut</label>
       <select id="edit-status">
         <option value="active">Actif</option>
@@ -330,8 +264,8 @@ tr:hover td{background:rgba(99,102,241,.04)}
         <option value="expired">Expire</option>
       </select>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-modal').style.display='none'">Annuler</button>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Annuler</button>
       <button class="btn btn-sm" onclick="saveEdit()">Sauvegarder</button>
     </div>
   </div>
@@ -340,45 +274,35 @@ tr:hover td{background:rgba(99,102,241,.04)}
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG ─────────────────────────────────────────────────────────────
-var ADMIN_EMAIL = 'am.ad.bm@gmail.com';
-var ADMIN_PWD = 'SafeSchool2026!';
-var NETLIFY_URL = 'darling-muffin-21eb90.netlify.app';
-
+var CFG = { email: 'am.ad.bm@gmail.com', pwd: 'SafeSchool2026!', key: 'sa_v3' };
 var PLANS = {
-  starter: { name:'Starter', price:0, maxStudents:200, maxReports:50, maxAdmins:1, durationMonths:3, features:['200 eleves', '50 signalements/mois', '1 admin CPE', 'Support email', '3 mois max'] },
-  pro: { name:'Pro', price:49, maxStudents:9999, maxReports:9999, maxAdmins:3, durationMonths:12, features:['Eleves illimites', 'Signalements illimites', '3 admins', 'Dashboard avance', 'Support prioritaire'] },
-  enterprise: { name:'Enterprise', price:0, maxStudents:99999, maxReports:99999, maxAdmins:99, durationMonths:24, features:['Multi-etablissements', 'API access', 'Integ. ENT', 'Formation incluse', 'SLA 99.9%'] }
+  starter:    { price: 0,  maxS: 200,   maxR: 50,   maxA: 1,  months: 3 },
+  pro:        { price: 49, maxS: 9999,  maxR: 9999, maxA: 3,  months: 12 },
+  enterprise: { price: 0,  maxS: 99999, maxR: 99999,maxA: 99, months: 24 }
 };
+var ST = { plan: 'starter', editPlan: 'starter' };
 
-var currentPlan = 'starter';
-var currentEditPlan = 'starter';
+function getSchools() { try { return JSON.parse(localStorage.getItem(CFG.key) || '[]'); } catch(e) { return []; } }
+function saveSchools(l) { localStorage.setItem(CFG.key, JSON.stringify(l)); }
 
-// ── DATA ────────────────────────────────────────────────────────────────
-function getSchools() { return JSON.parse(localStorage.getItem('sa_schools') || '[]'); }
-function saveSchools(s) { localStorage.setItem('sa_schools', JSON.stringify(s)); }
-
-function initDemoData() {
-  if (localStorage.getItem('sa_schools')) return;
-  var now = new Date();
-  var d30 = new Date(now); d30.setDate(d30.getDate()-30);
-  var d90 = new Date(now); d90.setMonth(d90.getMonth()+9);
-  var schools = [
-    { id:'sch_001', name:'Lycee Jean Moulin', ville:'Drancy', email:'proviseur@jmoulin.fr', slug:'jean-moulin', plan:'pro', status:'active', maxStudents:9999, maxReports:9999, maxAdmins:3, createdAt:d30.toISOString(), expiresAt:d90.toISOString(), reportCount:18, studentCount:0 },
-    { id:'sch_002', name:'College Victor Hugo', ville:'Paris 10e', email:'direction@vhugo.fr', slug:'victor-hugo', plan:'starter', status:'trial', maxStudents:200, maxReports:50, maxAdmins:1, createdAt:new Date().toISOString(), expiresAt:new Date(now.setMonth(now.getMonth()+3)).toISOString(), reportCount:3, studentCount:0 }
-  ];
-  saveSchools(schools);
+function initDemo() {
+  if (getSchools().length) return;
+  var n = new Date(), d30 = new Date(n), e1 = new Date(n), e2 = new Date(n);
+  d30.setDate(d30.getDate()-30); e1.setMonth(e1.getMonth()+9); e2.setMonth(e2.getMonth()+2);
+  saveSchools([
+    { id:'sch_001', name:'Lycee Jean Moulin', ville:'Drancy', email:'proviseur@jmoulin.fr', slug:'jean-moulin', plan:'pro', status:'active', maxS:9999, maxR:9999, maxA:3, createdAt:d30.toISOString(), expiresAt:e1.toISOString(), reports:18, students:0, adminPwd:'SS4XK9PL' },
+    { id:'sch_002', name:'College Victor Hugo', ville:'Paris 10e', email:'direction@vhugo.fr', slug:'victor-hugo', plan:'starter', status:'trial', maxS:200, maxR:50, maxA:1, createdAt:n.toISOString(), expiresAt:e2.toISOString(), reports:3, students:0, adminPwd:'SS7RK2MN' }
+  ]);
 }
 
-// ── AUTH ────────────────────────────────────────────────────────────────
 function doLogin() {
-  var email = document.getElementById('login-email').value;
-  var pwd = document.getElementById('login-pwd').value;
-  if (email === ADMIN_EMAIL && pwd === ADMIN_PWD) {
+  var em = document.getElementById('login-email').value.trim();
+  var pw = document.getElementById('login-pwd').value;
+  if (em === CFG.email && pw === CFG.pwd) {
+    document.getElementById('login-error').style.display = 'none';
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    initDemoData();
-    showPage('dashboard');
+    initDemo(); showPage('dashboard');
   } else {
     document.getElementById('login-error').style.display = 'block';
   }
@@ -386,242 +310,213 @@ function doLogin() {
 function doLogout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-pwd').value = '';
+  document.getElementById('login-error').style.display = 'none';
 }
+document.getElementById('login-btn').addEventListener('click', doLogin);
 document.getElementById('login-pwd').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
 
-// ── NAVIGATION ──────────────────────────────────────────────────────────
-function showPage(page) {
-  ['dashboard','schools','create','domains','billing'].forEach(function(p) {
-    document.getElementById('page-'+p).style.display = p===page ? 'block' : 'none';
-    var nav = document.getElementById('nav-'+p);
-    if (nav) nav.classList.toggle('active', p===page);
+var PAGES = ['dashboard','schools','create','domains','billing'];
+function showPage(p) {
+  PAGES.forEach(function(x) {
+    var el = document.getElementById('page-'+x), nav = document.getElementById('nav-'+x);
+    if (el) el.style.display = (x===p) ? 'block' : 'none';
+    if (nav) nav.classList.toggle('active', x===p);
   });
-  if (page === 'dashboard') renderDashboard();
-  if (page === 'schools') renderSchools();
-  if (page === 'domains') renderDomains();
-  if (page === 'billing') renderBilling();
-  if (page === 'create') resetCreateForm();
+  var fn = {dashboard:renderDashboard,schools:renderSchools,domains:renderDomains,billing:renderBilling,create:resetCreate};
+  if (fn[p]) fn[p]();
 }
 
-// ── DASHBOARD ───────────────────────────────────────────────────────────
+function fmt(n) { return n >= 9999 ? 'Illimite' : String(n); }
+function fmtD(iso) { return iso ? new Date(iso).toLocaleDateString('fr-FR') : '-'; }
+function daysLeft(iso) { return iso ? Math.ceil((new Date(iso)-new Date())/86400000) : 0; }
+function planPrice(pl) { return PLANS[pl] && PLANS[pl].price > 0 ? PLANS[pl].price + ' EUR/mois' : 'Gratuit'; }
+function sc(lbl,val,sub,col) { return '<div class="stat-card" style="--c:'+col+'"><div class="stat-label">'+lbl+'</div><div class="stat-num">'+val+'</div><div class="stat-sub">'+sub+'</div></div>'; }
+
+function showToast(msg,err) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = err ? '#dc2626' : '#16a34a';
+  t.style.display = 'block'; setTimeout(function(){ t.style.display='none'; }, 3000);
+}
+function copyText(txt) { navigator.clipboard.writeText(txt).then(function(){ showToast('Copie !'); }); }
+function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
+
 function renderDashboard() {
-  var schools = getSchools();
-  var active = schools.filter(function(s) { return s.status === 'active'; }).length;
-  var trial = schools.filter(function(s) { return s.status === 'trial'; }).length;
-  var mrr = schools.filter(function(s) { return s.plan === 'pro' && s.status === 'active'; }).length * 49;
-  var totalReports = schools.reduce(function(a,s) { return a + (s.reportCount||0); }, 0);
+  var s = getSchools();
+  var active = s.filter(function(x){ return x.status==='active'; }).length;
+  var trial  = s.filter(function(x){ return x.status==='trial'; }).length;
+  var mrr    = s.filter(function(x){ return x.plan==='pro'&&x.status==='active'; }).length * 49;
+  var reps   = s.reduce(function(a,x){ return a+(x.reports||0); }, 0);
   document.getElementById('global-stats').innerHTML =
-    statCard('Etablissements', schools.length, 'Total deployes', '#6366f1') +
-    statCard('Actifs', active, 'En production', '#16a34a') +
-    statCard('Essai', trial, 'Periode pilot', '#f59e0b') +
-    statCard('MRR', mrr+'€', 'Revenus mensuels', '#06b6d4') +
-    statCard('Signalements', totalReports, 'Total traites', '#8b5cf6');
-  var activity = schools.map(function(s) {
-    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #334155">' +
-      '<div style="width:8px;height:8px;border-radius:50%;background:' + (s.status==='active'?'#16a34a':s.status==='trial'?'#f59e0b':'#64748b') + ';flex-shrink:0"></div>' +
-      '<div style="flex:1"><div style="color:#e2e8f0;font-weight:600;font-size:.85rem">' + s.name + '</div>' +
-      '<div style="font-size:.75rem;color:#64748b">' + s.slug + '.safeschool.fr — Plan ' + s.plan + '</div></div>' +
-      '<div style="font-size:.78rem;color:#94a3b8">' + s.reportCount + ' signalements</div></div>';
-  }).join('');
-  document.getElementById('recent-activity').innerHTML = activity || '<div style="color:#64748b">Aucun etablissement</div>';
-}
-function statCard(label, val, sub, color) {
-  return '<div class="stat-card" style="--c:'+color+'"><div class="stat-label">'+label+'</div><div class="stat-num">'+val+'</div><div class="stat-trend">'+sub+'</div></div>';
+    sc('Etablissements', s.length, 'Total deployes', '#6366f1') +
+    sc('Actifs', active, 'En production', '#16a34a') +
+    sc('Essais', trial, 'Periode pilote', '#f59e0b') +
+    sc('MRR', mrr+' EUR', 'Revenus mensuels', '#06b6d4') +
+    sc('Signalements', reps, 'Total cumule', '#8b5cf6');
+  document.getElementById('recent-activity').innerHTML = s.length ? s.map(function(x){
+    var dot = x.status==='active'?'#16a34a':x.status==='trial'?'#f59e0b':'#64748b';
+    return '<div class="activity-item"><div class="dot" style="background:'+dot+'"></div>'
+      +'<div style="flex:1"><div style="color:#e2e8f0;font-weight:600;font-size:.85rem">'+x.name+'</div>'
+      +'<div style="font-size:.75rem;color:#64748b">'+x.slug+'.safeschool.fr &mdash; '+x.plan.toUpperCase()+'</div></div>'
+      +'<div style="font-size:.78rem;color:#94a3b8">'+(x.reports||0)+' signalements</div></div>';
+  }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun etablissement.</p>';
 }
 
-// ── ETABLISSEMENTS ──────────────────────────────────────────────────────
 function renderSchools() {
-  var schools = getSchools();
-  document.getElementById('school-count').textContent = schools.length;
-  document.getElementById('schools-table').innerHTML = schools.map(function(s) {
-    return '<tr>' +
-      '<td><div style="font-weight:600;color:#f1f5f9">' + s.name + '</div><div style="font-size:.72rem;color:#64748b">' + s.ville + '</div></td>' +
-      '<td><a href="https://'+s.slug+'.safeschool.fr" target="_blank" style="color:#a5b4fc;font-family:monospace;font-size:.78rem">' + s.slug + '.safeschool.fr</a></td>' +
-      '<td><span class="badge badge-'+s.plan+'">'+s.plan.toUpperCase()+'</span></td>' +
-      '<td style="color:'+(s.studentCount>=s.maxStudents?'#fca5a5':'#94a3b8')+'">' + s.studentCount + '/' + (s.maxStudents>=9999?'∞':s.maxStudents) + '</td>' +
-      '<td>' + s.reportCount + '</td>' +
-      '<td><span class="badge badge-'+s.status+'">' + s.status + '</span></td>' +
-      '<td style="display:flex;gap:6px">' +
-        '<button class="btn btn-sm btn-secondary" onclick="openEdit(''+s.id+'')">Modifier</button>' +
-        '<button class="btn btn-sm btn-danger" onclick="deleteSchool(''+s.id+'')">Suppr.</button>' +
-      '</td></tr>';
+  var s = getSchools();
+  document.getElementById('school-count').textContent = s.length;
+  document.getElementById('schools-table').innerHTML = s.map(function(x){
+    var dl = daysLeft(x.expiresAt), dc = dl<30?'#fca5a5':'#94a3b8';
+    return '<tr><td><div style="font-weight:600;color:#f1f5f9">'+x.name+'</div><div style="font-size:.72rem;color:#64748b">'+(x.ville||'')+'</div></td>'
+      +'<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#a5b4fc;font-family:monospace;font-size:.78rem">'+x.slug+'.safeschool.fr</a></td>'
+      +'<td><span class="badge badge-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
+      +'<td style="color:#94a3b8">'+(x.students||0)+' / '+fmt(x.maxS)+'</td>'
+      +'<td>'+(x.reports||0)+'</td>'
+      +'<td><span class="badge badge-'+x.status+'">'+x.status+'</span></td>'
+      +'<td style="font-size:.8rem;color:'+dc+'">'+fmtD(x.expiresAt)+' ('+dl+'j)</td>'
+      +'<td><div class="td-actions">'
+      +'<button class="btn btn-sm btn-secondary" onclick="openEdit(''+x.id+'')">Modifier</button>'
+      +'<button class="btn btn-sm btn-danger" onclick="deleteSchool(''+x.id+'')">Suppr.</button>'
+      +'</div></td></tr>';
   }).join('');
 }
 
 function openEdit(id) {
-  var s = getSchools().find(function(x) { return x.id === id; });
+  var s = getSchools().find(function(x){ return x.id===id; });
   if (!s) return;
   document.getElementById('edit-id').value = s.id;
   document.getElementById('edit-name').value = s.name;
+  document.getElementById('edit-email').value = s.email||'';
   document.getElementById('edit-status').value = s.status;
-  currentEditPlan = s.plan;
-  document.querySelectorAll('#edit-plan-cards .plan-card').forEach(function(c) { c.classList.remove('selected'); });
-  var pc = document.querySelector('#edit-plan-cards .plan-card:nth-child(' + ({starter:1,pro:2,enterprise:3}[s.plan]||1) + ')');
-  if (pc) pc.classList.add('selected');
+  ST.editPlan = s.plan;
+  document.querySelectorAll('#edit-plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c.dataset.plan===s.plan); });
   document.getElementById('edit-modal').style.display = 'flex';
 }
-function selectEditPlan(plan, el) {
-  currentEditPlan = plan;
-  document.querySelectorAll('#edit-plan-cards .plan-card').forEach(function(c) { c.classList.remove('selected'); });
-  el.classList.add('selected');
+function onEditPlanClick(el) {
+  ST.editPlan = el.dataset.plan;
+  document.querySelectorAll('#edit-plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c===el); });
 }
 function saveEdit() {
   var id = document.getElementById('edit-id').value;
-  var schools = getSchools();
-  var idx = schools.findIndex(function(s) { return s.id === id; });
-  if (idx < 0) return;
-  var p = PLANS[currentEditPlan];
-  schools[idx].name = document.getElementById('edit-name').value;
-  schools[idx].status = document.getElementById('edit-status').value;
-  schools[idx].plan = currentEditPlan;
-  schools[idx].maxStudents = p.maxStudents;
-  schools[idx].maxReports = p.maxReports;
-  schools[idx].maxAdmins = p.maxAdmins;
-  saveSchools(schools);
-  document.getElementById('edit-modal').style.display = 'none';
-  showToast('Etablissement mis a jour');
-  renderSchools();
+  var s = getSchools(), i = s.findIndex(function(x){ return x.id===id; });
+  if (i<0) return;
+  var p = PLANS[ST.editPlan];
+  s[i].name=document.getElementById('edit-name').value.trim();
+  s[i].email=document.getElementById('edit-email').value.trim();
+  s[i].status=document.getElementById('edit-status').value;
+  s[i].plan=ST.editPlan; s[i].maxS=p.maxS; s[i].maxR=p.maxR; s[i].maxA=p.maxA;
+  saveSchools(s); closeModal(); showToast('Mis a jour'); renderSchools();
 }
 function deleteSchool(id) {
-  if (!confirm('Supprimer cet etablissement ? Cette action est irreversible.')) return;
-  saveSchools(getSchools().filter(function(s) { return s.id !== id; }));
-  renderSchools();
-  showToast('Etablissement supprime');
+  if (!confirm('Supprimer ? Action irreversible.')) return;
+  saveSchools(getSchools().filter(function(x){ return x.id!==id; }));
+  renderSchools(); showToast('Supprime');
 }
 
-// ── CREATION ────────────────────────────────────────────────────────────
-function resetCreateForm() {
-  document.getElementById('c-name').value = '';
-  document.getElementById('c-ville').value = '';
-  document.getElementById('c-email').value = '';
-  document.getElementById('subdomain-preview').textContent = 'nom-lycee.safeschool.fr';
-  document.getElementById('domain-instructions').style.display = 'none';
-  currentPlan = 'starter';
-  document.querySelectorAll('#page-create .plan-card').forEach(function(c,i) { c.classList.toggle('selected', i===0); });
-  updateQuota();
+function resetCreate() {
+  var n = document.getElementById('c-name');
+  if (!n) { location.reload(); return; }
+  n.value=''; document.getElementById('c-ville').value='';
+  document.getElementById('c-email').value=''; document.getElementById('c-slug').value='';
+  document.getElementById('subdomain-preview').textContent='nom-lycee.safeschool.fr';
+  document.getElementById('dns-box').style.display='none';
+  ST.plan='starter';
+  document.querySelectorAll('#plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c.dataset.plan==='starter'); });
+  renderQuota();
 }
-function updateSubdomain() {
-  var name = document.getElementById('c-name').value;
-  var slug = name.toLowerCase()
-    .replace(/[^a-z0-9s-]/g, '')
-    .replace(/s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 30);
+function onNameInput() {
+  var slug = document.getElementById('c-name').value.toLowerCase()
+    .replace(/[^a-z0-9s-]/g,'').replace(/s+/g,'-').replace(/-+/g,'-').replace(/^-+|-+$/g,'').slice(0,30);
   document.getElementById('c-slug').value = slug;
-  var preview = slug ? slug + '.safeschool.fr' : 'nom-lycee.safeschool.fr';
-  document.getElementById('subdomain-preview').textContent = preview;
-  if (slug) {
-    document.getElementById('domain-instructions').style.display = 'block';
-    document.getElementById('dns-records').innerHTML =
-      '<div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val">' + slug + '.safeschool.fr</span><span style="color:#475569;margin:0 6px">→</span><span class="dns-val">' + NETLIFY_URL + '</span></div>';
-  }
+  document.getElementById('subdomain-preview').textContent = slug ? slug+'.safeschool.fr' : 'nom-lycee.safeschool.fr';
+  var db = document.getElementById('dns-box');
+  if (slug) { db.style.display='block'; document.getElementById('dns-slug').textContent=slug+'.safeschool.fr'; }
+  else db.style.display='none';
 }
-function selectPlan(plan, el) {
-  currentPlan = plan;
-  document.querySelectorAll('#page-create .plan-card').forEach(function(c) { c.classList.remove('selected'); });
-  el.classList.add('selected');
-  updateQuota();
+function onPlanClick(el) {
+  ST.plan = el.dataset.plan;
+  document.querySelectorAll('#plan-grid .plan-card').forEach(function(c){ c.classList.toggle('selected', c===el); });
+  renderQuota();
 }
-function updateQuota() {
-  var p = PLANS[currentPlan];
+function renderQuota() {
+  var p = PLANS[ST.plan]||PLANS.starter;
   document.getElementById('quota-display').innerHTML =
-    '<div class="quota-item"><div class="q-val">' + (p.maxStudents>=9999?'Illimite':p.maxStudents) + '</div><div class="q-lbl">Eleves max</div></div>' +
-    '<div class="quota-item"><div class="q-val">' + (p.maxReports>=9999?'Illimite':p.maxReports) + '</div><div class="q-lbl">Signalements/mois</div></div>' +
-    '<div class="quota-item"><div class="q-val">' + (p.maxAdmins>=99?'Illimite':p.maxAdmins) + '</div><div class="q-lbl">Admins CPE</div></div>' +
-    '<div class="quota-item"><div class="q-val">' + p.durationMonths + ' mois</div><div class="q-lbl">Duree</div></div>';
+    '<div class="quota-item"><div class="quota-val">'+fmt(p.maxS)+'</div><div class="quota-lbl">Eleves max</div></div>'+
+    '<div class="quota-item"><div class="quota-val">'+fmt(p.maxR)+'</div><div class="quota-lbl">Signalements/mois</div></div>'+
+    '<div class="quota-item"><div class="quota-val">'+fmt(p.maxA)+'</div><div class="quota-lbl">Admins</div></div>'+
+    '<div class="quota-item"><div class="quota-val">'+p.months+' mois</div><div class="quota-lbl">Duree</div></div>';
 }
 function createSchool() {
-  var name = document.getElementById('c-name').value.trim();
-  var slug = document.getElementById('c-slug').value.trim();
-  var email = document.getElementById('c-email').value.trim();
-  var ville = document.getElementById('c-ville').value.trim();
-  if (!name || !slug || !email) { alert('Remplir tous les champs obligatoires'); return; }
-  var schools = getSchools();
-  if (schools.find(function(s) { return s.slug === slug; })) { alert('Ce sous-domaine existe deja'); return; }
-  var p = PLANS[currentPlan];
-  var now = new Date();
-  var exp = new Date(now); exp.setMonth(exp.getMonth() + p.durationMonths);
-  var school = {
-    id: 'sch_' + Date.now(),
-    name: name, ville: ville, email: email, slug: slug,
-    plan: currentPlan, status: currentPlan==='starter'?'trial':'active',
-    maxStudents: p.maxStudents, maxReports: p.maxReports, maxAdmins: p.maxAdmins,
-    createdAt: now.toISOString(), expiresAt: exp.toISOString(),
-    reportCount: 0, studentCount: 0,
-    adminPassword: 'SS' + Math.random().toString(36).slice(2,8).toUpperCase()
-  };
-  schools.push(school);
-  saveSchools(schools);
-  showToast('Etablissement cree : ' + slug + '.safeschool.fr');
-  showCreationSuccess(school);
+  var name=document.getElementById('c-name').value.trim();
+  var slug=document.getElementById('c-slug').value.trim();
+  var email=document.getElementById('c-email').value.trim();
+  var ville=document.getElementById('c-ville').value.trim();
+  if (!name||!slug||!email) { showToast('Champs obligatoires manquants','err'); return; }
+  if (!/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug)) { showToast('Sous-domaine invalide','err'); return; }
+  var s = getSchools();
+  if (s.find(function(x){ return x.slug===slug; })) { showToast('Sous-domaine deja utilise','err'); return; }
+  var p=PLANS[ST.plan], now=new Date(), exp=new Date(now);
+  exp.setMonth(exp.getMonth()+p.months);
+  var school = { id:'sch_'+Date.now(), name:name, ville:ville, email:email, slug:slug,
+    plan:ST.plan, status:ST.plan==='starter'?'trial':'active',
+    maxS:p.maxS, maxR:p.maxR, maxA:p.maxA,
+    createdAt:now.toISOString(), expiresAt:exp.toISOString(),
+    reports:0, students:0, adminPwd:'SS'+Math.random().toString(36).slice(2,8).toUpperCase() };
+  s.push(school); saveSchools(s); showCreationSuccess(school);
 }
 function showCreationSuccess(s) {
   document.getElementById('page-create').innerHTML =
-    '<div class="page-title">Etablissement cree !</div>' +
-    '<div class="page-sub">Configuration terminee pour ' + s.name + '</div>' +
-    '<div class="card" style="max-width:600px"><div style="padding:28px">' +
-    '<div style="text-align:center;margin-bottom:24px">' +
-    '<div style="font-size:3rem">✅</div>' +
-    '<div style="font-size:1.2rem;font-weight:800;color:#86efac;margin-top:8px">' + s.name + '</div></div>' +
-    '<div style="background:#0f172a;border-radius:12px;padding:20px;margin-bottom:20px">' +
-    '<div style="font-size:.75rem;color:#64748b;font-weight:700;margin-bottom:12px">DETAILS D'ACCES</div>' +
-    '<div style="margin-bottom:10px"><span style="color:#64748b;font-size:.8rem">URL espace eleves :</span><br><span style="color:#a5b4fc;font-family:monospace">' + s.slug + '.safeschool.fr</span></div>' +
-    '<div style="margin-bottom:10px"><span style="color:#64748b;font-size:.8rem">Plan :</span><br><span style="color:#f1f5f9;font-weight:700">' + s.plan.toUpperCase() + ' — ' + (PLANS[s.plan].price>0?PLANS[s.plan].price+'€/mois':'Gratuit') + '</span></div>' +
-    '<div style="margin-bottom:10px"><span style="color:#64748b;font-size:.8rem">Mot de passe admin initial :</span><br><span style="color:#fbbf24;font-family:monospace;font-size:1.1rem">' + s.adminPassword + '</span></div>' +
-    '<div><span style="color:#64748b;font-size:.8rem">Contact :</span><br><span style="color:#f1f5f9">' + s.email + '</span></div></div>' +
-    '<div class="domain-info">' +
-    '<h4>Enregistrement DNS a ajouter (Cloudflare)</h4>' +
-    '<div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val">' + s.slug + '</span><span style="color:#475569;margin:0 6px">→</span><span class="dns-val">' + NETLIFY_URL + '</span><button class="copy-btn" onclick="copyText(''+NETLIFY_URL+'')">Copier</button></div></div>' +
-    '<div style="display:flex;gap:12px;margin-top:8px">' +
-    '<button class="btn btn-sm" onclick="showPage('schools')">Voir tous les etablissements</button>' +
-    '<button class="btn btn-sm btn-secondary" onclick="showPage('create')">Creer un autre</button>' +
+    '<div class="page-title">Etablissement cree !</div>'+
+    '<div class="page-sub">'+s.name+'</div>'+
+    '<div class="card" style="max-width:600px"><div style="padding:24px">'+
+    '<div class="success-box">'+
+    '<div class="success-row"><span class="success-lbl">URL eleves</span><span class="success-val mono">'+s.slug+'.safeschool.fr</span></div>'+
+    '<div class="success-row"><span class="success-lbl">Plan</span><span class="success-val">'+s.plan.toUpperCase()+' - '+planPrice(s.plan)+'</span></div>'+
+    '<div class="success-row"><span class="success-lbl">Expire le</span><span class="success-val">'+fmtD(s.expiresAt)+'</span></div>'+
+    '<div class="success-row"><span class="success-lbl">Mot de passe admin provisoire</span><span class="success-val pwd">'+s.adminPwd+'</span></div>'+
+    '<div class="success-row"><span class="success-lbl">Contact</span><span class="success-val">'+s.email+'</span></div>'+
+    '</div>'+
+    '<div class="dns-box"><h4>DNS a ajouter (Cloudflare)</h4>'+
+    '<div class="dns-row"><span class="dns-type">CNAME</span><span class="dns-val">'+s.slug+'</span><span style="color:#475569;margin:0 4px">vers</span><span class="dns-val">darling-muffin-21eb90.netlify.app</span><button class="copy-btn" onclick="copyText('darling-muffin-21eb90.netlify.app')">Copier</button></div></div>'+
+    '<div style="display:flex;gap:12px;margin-top:8px">'+
+    '<button class="btn btn-sm" onclick="showPage('schools')">Voir les etablissements</button>'+
+    '<button class="btn btn-sm btn-secondary" onclick="showPage('create')">Creer un autre</button>'+
     '</div></div></div>';
 }
-
-// ── DOMAINES ────────────────────────────────────────────────────────────
 function renderDomains() {
-  var schools = getSchools();
-  document.getElementById('domains-table').innerHTML = schools.map(function(s) {
-    return '<tr><td style="color:#f1f5f9;font-weight:600">' + s.name + '</td>' +
-      '<td><span style="font-family:monospace;font-size:.8rem;color:#a5b4fc">' + s.slug + '.safeschool.fr</span></td>' +
-      '<td><span style="font-size:.75rem;color:#' + (s.status==='active'?'86efac':s.status==='trial'?'fcd34d':'64748b') + '">' + (s.status==='active'?'Actif':s.status==='trial'?'A configurer':'Inactif') + '</span></td>' +
-      '<td><a href="https://' + s.slug + '.safeschool.fr" target="_blank" style="color:#6366f1;font-size:.78rem">Ouvrir →</a></td></tr>';
+  var s = getSchools();
+  document.getElementById('domains-table').innerHTML = s.map(function(x){
+    var c = x.status==='active'?'#86efac':x.status==='trial'?'#fcd34d':'#64748b';
+    var l = x.status==='active'?'Actif':x.status==='trial'?'A configurer':'Inactif';
+    return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'+
+      '<td><span style="font-family:monospace;font-size:.8rem;color:#a5b4fc">'+x.slug+'.safeschool.fr</span></td>'+
+      '<td><span class="badge badge-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'+
+      '<td><span style="font-size:.78rem;font-weight:700;color:'+c+'">'+l+'</span></td>'+
+      '<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#6366f1;font-size:.78rem">Ouvrir</a></td></tr>';
   }).join('');
 }
-
-// ── ABONNEMENTS ──────────────────────────────────────────────────────────
 function renderBilling() {
-  var schools = getSchools();
-  var mrr = schools.filter(function(s) { return s.plan==='pro' && s.status==='active'; }).length * 49;
-  var arr = mrr * 12;
+  var s = getSchools();
+  var proA = s.filter(function(x){ return x.plan==='pro'&&x.status==='active'; });
+  var mrr=proA.length*49, arr=mrr*12;
   document.getElementById('billing-stats').innerHTML =
-    statCard('MRR', mrr+'€', 'Revenus mensuels recurrents', '#6366f1') +
-    statCard('ARR', arr+'€', 'Revenus annuels projetes', '#06b6d4') +
-    statCard('Clients payants', schools.filter(function(s){return s.plan==='pro'&&s.status==='active';}).length, 'Plan Pro actif', '#16a34a') +
-    statCard('Essais', schools.filter(function(s){return s.status==='trial';}).length, 'A convertir', '#f59e0b');
-  document.getElementById('billing-table').innerHTML = schools.map(function(s) {
-    var exp = new Date(s.expiresAt); var now = new Date();
-    var daysLeft = Math.ceil((exp-now)/(1000*60*60*24));
-    return '<tr><td style="color:#f1f5f9;font-weight:600">' + s.name + '</td>' +
-      '<td><span class="badge badge-'+s.plan+'">'+s.plan.toUpperCase()+'</span></td>' +
-      '<td style="color:'+(PLANS[s.plan].price>0?'#86efac':'#64748b')+'">' + (PLANS[s.plan].price>0?PLANS[s.plan].price+'€/mois':'Gratuit') + '</td>' +
-      '<td style="font-size:.8rem">' + new Date(s.createdAt).toLocaleDateString('fr-FR') + '</td>' +
-      '<td style="font-size:.8rem;color:'+(daysLeft<30?'#fca5a5':'#94a3b8')+'">' + exp.toLocaleDateString('fr-FR') + ' (' + daysLeft + 'j)</td>' +
-      '<td><span class="badge badge-'+s.status+'">'+s.status+'</span></td>' +
-      '<td><button class="btn btn-sm btn-secondary" onclick="openEdit(''+s.id+'')">Gerer</button></td></tr>';
+    sc('MRR', mrr+' EUR', 'Revenus mensuels', '#6366f1') +
+    sc('ARR', arr+' EUR', 'Projection annuelle', '#06b6d4') +
+    sc('Payants', proA.length, 'Plan Pro actif', '#16a34a') +
+    sc('Essais', s.filter(function(x){ return x.status==='trial'; }).length, 'A convertir', '#f59e0b');
+  document.getElementById('billing-table').innerHTML = s.map(function(x){
+    var dl=daysLeft(x.expiresAt), dc=dl<30?'#fca5a5':'#94a3b8';
+    return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'+
+      '<td><span class="badge badge-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'+
+      '<td style="color:'+(PLANS[x.plan].price>0?'#86efac':'#64748b')+'">'+planPrice(x.plan)+'</td>'+
+      '<td style="font-size:.8rem">'+fmtD(x.createdAt)+'</td>'+
+      '<td style="font-size:.8rem">'+fmtD(x.expiresAt)+'</td>'+
+      '<td style="font-size:.8rem;color:'+dc+';font-weight:700">'+dl+'j</td>'+
+      '<td><span class="badge badge-'+x.status+'">'+x.status+'</span></td>'+
+      '<td><button class="btn btn-sm btn-secondary" onclick="openEdit(''+x.id+'')">Gerer</button></td></tr>';
   }).join('');
 }
-
-// ── UTILS ────────────────────────────────────────────────────────────────
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.style.display = 'block';
-  setTimeout(function() { t.style.display = 'none'; }, 3000);
-}
-function copyText(txt) {
-  navigator.clipboard.writeText(txt).then(function() { showToast('Copie !'); });
-}
+renderQuota();
 </script>
 </body>
 </html>
