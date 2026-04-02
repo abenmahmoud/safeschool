@@ -6,5 +6,21 @@
   to = "/index.html"
   status = 200
 
+# Sous-domaines par etablissement : lycee-nom.safeschool.fr
+# Ajouter ici les redirections spécifiques une fois le domaine configuré
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
 [build.environment]
   NODE_VERSION = "18"
