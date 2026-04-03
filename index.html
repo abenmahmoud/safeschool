@@ -727,120 +727,48 @@ let cachedStaff = [];
 let cachedLogs = [];
 
 // Local-only state (points, badges, quiz)
-const STATUS_APP_TO_DB = { new:'nouveau', in_progress:'en_cours', resolved:'traite', archived:'archive' };
-const STATUS_DB_TO_APP = { nouveau:'new', en_cours:'in_progress', traite:'resolved', archive:'archived' };
-const TYPE_APP_TO_DB = { physical:'physique', verbal:'verbal', cyber:'cyber', exclusion:'exclusion', other:'autre' };
-const TYPE_DB_TO_APP = { physique:'physical', verbal:'verbal', cyber:'cyber', exclusion:'exclusion', discrimination:'other', autre:'other' };
-const REPORTER_ROLE_APP_TO_DB = { victim:'victime', witness:'temoin', parent:'parent', staff:'personnel', other:'autre' };
-const REPORTER_ROLE_DB_TO_APP = { victime:'victim', temoin:'witness', parent:'parent', personnel:'staff', autre:'other' };
-const URGENCY_APP_TO_DB = { 1:'faible', 2:'moyenne', 3:'haute' };
-const URGENCY_DB_TO_APP = { faible:1, moyenne:2, haute:3 };
-
-function normalizeTrackingCode(code) {
-  if (!code) return '';
-  return String(code).replace(/^SS-/i, '').toUpperCase();
-}
-function appStatusToDbStatus(status) { return STATUS_APP_TO_DB[status] || 'nouveau'; }
-function dbStatusToAppStatus(status) { return STATUS_DB_TO_APP[status] || 'new'; }
-function appTypeToDbType(type) { return TYPE_APP_TO_DB[type] || 'autre'; }
-function dbTypeToAppType(type) { return TYPE_DB_TO_APP[type] || 'other'; }
-function appReporterRoleToDb(role) { return REPORTER_ROLE_APP_TO_DB[role] || 'autre'; }
-function dbReporterRoleToApp(role) { return REPORTER_ROLE_DB_TO_APP[role] || 'other'; }
-function appUrgencyToDbUrgency(urgency) { return URGENCY_APP_TO_DB[urgency] || 'faible'; }
-function dbUrgencyToAppUrgency(urgency) { return URGENCY_DB_TO_APP[urgency] || 1; }
-function staffEmoji(role) {
-  return { cpe:'🧭', direction:'🏫', infirmier:'🩺', referent:'💻', psy:'🧠', autre:'👤' }[role] || '👤';
-}
-function normalizeReportRow(row) {
-  return {
-    id: row.id,
-    code: normalizeTrackingCode(row.tracking_code),
-    trackingCode: row.tracking_code,
-    reporterType: dbReporterRoleToApp(row.reporter_role),
-    harassmentType: dbTypeToAppType(row.type),
-    description: row.description || '',
-    location: row.location || '',
-    frequency: row.frequency || '',
-    urgency: dbUrgencyToAppUrgency(row.urgency),
-    isAnonymous: row.is_anonymous !== false,
-    reporterName: row.reporter_name || '',
-    reporterClass: row.reporter_class || '',
-    reporterEmail: row.reporter_email || '',
-    status: dbStatusToAppStatus(row.status),
-    staffReply: row.staff_reply || '',
-    staffNotes: row.admin_note || '',
-    assignedTo: row.assigned_staff_id || null,
-    createdAt: row.submitted_at || row.created_at || new Date().toISOString(),
-    history: []
-  };
-}
-
 const S = {
   reports: () => cachedReports,
   setReports: async v => {
-    cachedReports = Array.isArray(v) ? v : [];
+    cachedReports = v;
+    if (currentEtab) {
+      await fetch(`/api/reports?etab=${currentEtab.id}`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(v[0])
+      }).catch(()=>{});
+    }
   },
   updateReport: async (report) => {
-    if (!currentEtab || !report?.id) return;
-    const payload = {
-      status: appStatusToDbStatus(report.status),
-      staff_reply: report.staffReply || null,
-      admin_note: report.staffNotes || null,
-      assigned_staff_id: report.assignedTo || null,
-      updated_at: new Date().toISOString()
-    };
-    const { error } = await ssSupabase
-      .from('reports')
-      .update(payload)
-      .eq('id', report.id)
-      .eq('school_id', currentEtab.id);
-    if (error) {
-      console.error('Failed to update report', error);
-      toast('Erreur de sauvegarde du dossier', 'err');
-      throw error;
+    if (currentEtab) {
+      await fetch(`/api/reports?etab=${currentEtab.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(report)
+      }).catch(()=>{});
     }
   },
   reloadReports: async () => {
     if (!currentEtab) return;
     try {
-      const { data, error } = await ssSupabase
-        .from('reports')
-        .select('*')
-        .eq('school_id', currentEtab.id)
-        .order('submitted_at', { ascending: false });
-      if (error) throw error;
-      cachedReports = (data || []).map(normalizeReportRow);
-    } catch(e) {
-      console.error('Failed to load reports', e);
-      cachedReports = [];
-    }
+      const res = await fetch(`/api/reports?etab=${currentEtab.id}`);
+      cachedReports = await res.json();
+    } catch(e) { console.error('Failed to load reports', e); }
   },
   staff: () => cachedStaff,
   setStaff: async v => {
-    cachedStaff = Array.isArray(v) ? v : [];
+    cachedStaff = v;
+    if (currentEtab) {
+      await fetch(`/api/staff?etab=${currentEtab.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(v)
+      }).catch(()=>{});
+    }
   },
   reloadStaff: async () => {
     if (!currentEtab) return;
     try {
-      const { data, error } = await ssSupabase
-        .from('staff')
-        .select('*')
-        .eq('school_id', currentEtab.id)
-        .order('full_name', { ascending: true });
-      if (error) throw error;
-      cachedStaff = (data || []).map(row => ({
-        id: row.id,
-        name: row.full_name,
-        email: row.email || '',
-        role: row.role,
-        active: row.is_active !== false,
-        emoji: staffEmoji(row.role),
-        phone: row.phone || ''
-      }));
-    } catch(e) {
-      console.error('Failed to load staff', e);
-      cachedStaff = [];
-    }
+      const res = await fetch(`/api/staff?etab=${currentEtab.id}`);
+      cachedStaff = await res.json();
+    } catch(e) { console.error('Failed to load staff', e); }
   },
   points: () => parseInt(localStorage.getItem('ss_pts')||'0'),
   setPoints: v => localStorage.setItem('ss_pts', v),
@@ -852,31 +780,13 @@ const S = {
   addLog: async (msg,rid) => {
     cachedLogs.unshift({msg,rid,t:new Date().toISOString()});
     cachedLogs = cachedLogs.slice(0,100);
-    if (!currentEtab) return;
-    const reportId = cachedReports.find(r => r.id === rid)?.id || null;
-    await ssSupabase.from('audit_logs').insert([{ school_id: currentEtab.id, report_id: reportId, actor_type: 'admin', action: 'manual_log', message: msg }]);
   },
   reloadLogs: async () => {
     if (!currentEtab) return;
     try {
-      const { data, error } = await ssSupabase
-        .from('audit_logs')
-        .select('*')
-        .eq('school_id', currentEtab.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      cachedLogs = (data || []).map(row => ({
-        msg: row.message,
-        rid: row.report_id,
-        t: row.created_at,
-        action: row.action,
-        actorType: row.actor_type
-      }));
-    } catch(e) {
-      console.error('Failed to load logs', e);
-      cachedLogs = [];
-    }
+      const res = await fetch(`/api/logs?etab=${currentEtab.id}`);
+      cachedLogs = await res.json();
+    } catch(e) { console.error('Failed to load logs', e); }
   }
 };
 
@@ -1244,53 +1154,32 @@ function rNext(){
   rStep++;renderRStep();window.scrollTo(0,0);
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
-async function submitReport(){
-  try {
-    if(rData.isAnonymous===false){
-      rData.reporterName=document.getElementById('r-name')?.value||'';
-      rData.reporterClass=document.getElementById('r-class')?.value||'';
-      rData.reporterEmail=document.getElementById('r-email')?.value||'';
-    }
-    if(!currentEtab?.id){ toast('Établissement non sélectionné', 'err'); return; }
-
-    const code = genCode();
-    const payload = {
-      school_id: currentEtab.id,
-      tracking_code: code,
-      reporter_role: appReporterRoleToDb(rData.reporterType),
-      type: appTypeToDbType(rData.harassmentType),
-      description: rData.description || '',
-      location: rData.location || null,
-      frequency: rData.frequency || null,
-      urgency: appUrgencyToDbUrgency(rData.urgency),
-      is_anonymous: rData.isAnonymous !== false,
-      reporter_name: rData.isAnonymous === false ? (rData.reporterName || null) : null,
-      reporter_class: rData.isAnonymous === false ? (rData.reporterClass || null) : null,
-      reporter_email: rData.isAnonymous === false ? (rData.reporterEmail || null) : null,
-      status: 'nouveau',
-      source_channel: 'form'
-    };
-
-    const { data, error } = await ssSupabase
-      .from('reports')
-      .insert([payload])
-      .select('*')
-      .single();
-
-    if(error) throw error;
-
-    const report = normalizeReportRow(data);
-    cachedReports.unshift(report);
-    await S.addLog(`Nouveau signalement #${report.code} (${rData.harassmentType})`, report.id);
-
-    if(rData.reporterType==='witness'){
-      const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
-    }
-    showConfirmation(report.code, report);
-  } catch (e) {
-    console.error('Erreur submitReport', e);
-    toast(e.message || "Erreur lors de l'envoi du signalement", 'err');
+function submitReport(){
+  if(rData.isAnonymous===false){
+    rData.reporterName=document.getElementById('r-name')?.value||'';
+    rData.reporterClass=document.getElementById('r-class')?.value||'';
+    rData.reporterEmail=document.getElementById('r-email')?.value||'';
   }
+  const code=rData.isAnonymous!==false?genCode():null;
+  const report={
+    id:Date.now().toString(36).toUpperCase().slice(-6),
+    code,...rData,
+    status:'new',staffReply:'',staffNotes:'',assignedTo:null,
+    createdAt:new Date().toISOString(),history:[{s:'new',t:new Date().toISOString(),by:'Système'}]
+  };
+  cachedReports.unshift(report);
+  // Save to API
+  if(currentEtab){
+    fetch(`/api/reports?etab=${currentEtab.id}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(report)
+    }).catch(()=>{});
+  }
+  S.addLog(`Nouveau signalement #${report.id} (${rData.harassmentType})`,report.id);
+  if(rData.reporterType==='witness'){
+    const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
+  }
+  showConfirmation(code,report);
 }
 function showConfirmation(code,report){
   document.getElementById('report-container').innerHTML=`
@@ -1973,11 +1862,14 @@ async function installApp(){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-const SS_SUPABASE_PUBLISHABLE_KEY = "COLLE_ICI_TA_PUBLISHABLE_KEY_SUPABASE";
+const SS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+
+window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
+window.ENV_SUPABASE_KEY = SS_SUPABASE_ANON_KEY;
 
 const ssSupabase = window.supabase.createClient(
   SS_SUPABASE_URL,
-  SS_SUPABASE_PUBLISHABLE_KEY
+  SS_SUPABASE_ANON_KEY
 );
 </script>
 
