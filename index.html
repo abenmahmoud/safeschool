@@ -1279,7 +1279,7 @@ async function submitReport(){
     }
 
     rData.consentAccepted=!!document.getElementById('r-consent')?.checked;
-    if(!rData.consentAccepted){ toast('Tu dois accepter les conditions avant l'envoi','err'); return; }
+    if(!rData.consentAccepted){ toast("Tu dois accepter les conditions avant l\'envoi","err"); return; }
 
     var typeMap={physical:'physique',verbal:'verbal',cyber:'cyber',exclusion:'exclusion',other:'autre'};
     var roleMap={victim:'victime',witness:'temoin',parent:'parent',staff:'personnel'};
@@ -1336,7 +1336,7 @@ async function submitReport(){
     showConfirmation(data.tracking_code, report);
   } catch(err){
     console.error(err);
-    toast(err.message || 'Erreur lors de l'envoi du signalement','err');
+    toast(err.message || "Erreur lors de l\'envoi du signalement","err");
   }
 }
 function showConfirmation(code,report){
@@ -1403,13 +1403,13 @@ async function lookupCode(){
       </div>`;
       return;
     }
-    const sc={nouveau:{l:'Nouveau',i:'🔵',cls:'bn',desc:'Ton signalement a bien été reçu. L'équipe va l'examiner prochainement.'},
-      en_cours:{l:'En cours',i:'🟡',cls:'bi',desc:'L'équipe éducative traite actuellement ton dossier.'},
-      traite:{l:'Traité',i:'🟢',cls:'br',desc:'L'équipe a traité ton signalement.'},
-      archive:{l:'Archivé',i:'⚫',cls:'ba',desc:'Dossier archivé.'},
-      withdrawal_requested:{l:'Retrait demandé',i:'🟠',cls:'bi',desc:'Ta demande de retrait est en cours d'étude.'},
-      anonymized:{l:'Anonymisé',i:'⚪',cls:'ba',desc:'Le dossier a été anonymisé selon la procédure prévue.'},
-      closed:{l:'Clôturé',i:'⚫',cls:'ba',desc:'Le dossier est clôturé.'}};
+    const sc={nouveau:{l:"Nouveau",i:"🔵",cls:"bn",desc:"Ton signalement a bien été reçu. L’équipe va l’examiner prochainement."},
+      en_cours:{l:"En cours",i:"🟡",cls:"bi",desc:"L’équipe éducative traite actuellement ton dossier."},
+      traite:{l:"Traité",i:"🟢",cls:"br",desc:"L’équipe a traité ton signalement."},
+      archive:{l:"Archivé",i:"⚫",cls:"ba",desc:"Dossier archivé."},
+      withdrawal_requested:{l:"Retrait demandé",i:"🟠",cls:"bi",desc:"Ta demande de retrait est en cours d’étude."},
+      anonymized:{l:"Anonymisé",i:"⚪",cls:"ba",desc:"Le dossier a été anonymisé selon la procédure prévue."},
+      closed:{l:"Clôturé",i:"⚫",cls:"ba",desc:"Le dossier est clôturé."}};
     const s=sc[data.status]||sc.nouveau;
     el.innerHTML=`
     <div class="status-card card">
