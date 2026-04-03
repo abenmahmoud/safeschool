@@ -1862,7 +1862,10 @@ async function installApp(){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-const SS_SUPABASE_PUBLISHABLE_KEY = "COLLE_ICI_TA_PUBLISHABLE_KEY_SUPABASE";
+const SS_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XEI5R5zUFsrinPqZ2OBBiw_Yw22Lsg8";
+
+window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
+window.ENV_SUPABASE_KEY = SS_SUPABASE_PUBLISHABLE_KEY;
 
 const ssSupabase = window.supabase.createClient(
   SS_SUPABASE_URL,
