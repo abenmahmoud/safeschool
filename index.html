@@ -727,48 +727,63 @@ let cachedStaff = [];
 let cachedLogs = [];
 
 // Local-only state (points, badges, quiz)
+
 const S = {
   reports: () => cachedReports,
   setReports: async v => {
-    cachedReports = v;
-    if (currentEtab) {
-      await fetch(`/api/reports?etab=${currentEtab.id}`, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(v[0])
-      }).catch(()=>{});
-    }
+    cachedReports = Array.isArray(v) ? v : [];
+    return cachedReports;
   },
   updateReport: async (report) => {
-    if (currentEtab) {
-      await fetch(`/api/reports?etab=${currentEtab.id}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(report)
-      }).catch(()=>{});
+    if (!report || !report.id) return;
+    const payload = {};
+    if (typeof report.status !== 'undefined') payload.status = report.status;
+    if (typeof report.admin_note !== 'undefined') payload.admin_note = report.admin_note;
+    if (typeof report.staff_reply !== 'undefined') payload.staff_reply = report.staff_reply;
+    if (typeof report.assigned_staff_id !== 'undefined') payload.assigned_staff_id = report.assigned_staff_id;
+    if (ssSupabase && Object.keys(payload).length) {
+      const { error } = await ssSupabase.from('reports').update(payload).eq('id', report.id);
+      if (error) console.error('Failed to update report', error);
     }
+    const idx = cachedReports.findIndex(r => r.id === report.id);
+    if (idx > -1) cachedReports[idx] = Object.assign({}, cachedReports[idx], report);
   },
   reloadReports: async () => {
-    if (!currentEtab) return;
+    if (!currentEtab || !ssSupabase) { cachedReports = []; return []; }
     try {
-      const res = await fetch(`/api/reports?etab=${currentEtab.id}`);
-      cachedReports = await res.json();
-    } catch(e) { console.error('Failed to load reports', e); }
+      const { data, error } = await ssSupabase
+        .from('reports')
+        .select('*')
+        .eq('school_id', currentEtab.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      cachedReports = data || [];
+    } catch(e) {
+      console.error('Failed to load reports from Supabase', e);
+      cachedReports = [];
+    }
+    return cachedReports;
   },
   staff: () => cachedStaff,
   setStaff: async v => {
-    cachedStaff = v;
-    if (currentEtab) {
-      await fetch(`/api/staff?etab=${currentEtab.id}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(v)
-      }).catch(()=>{});
-    }
+    cachedStaff = Array.isArray(v) ? v : [];
+    return cachedStaff;
   },
   reloadStaff: async () => {
-    if (!currentEtab) return;
+    if (!currentEtab || !ssSupabase) { cachedStaff = []; return []; }
     try {
-      const res = await fetch(`/api/staff?etab=${currentEtab.id}`);
-      cachedStaff = await res.json();
-    } catch(e) { console.error('Failed to load staff', e); }
+      const { data, error } = await ssSupabase
+        .from('staff')
+        .select('*')
+        .eq('school_id', currentEtab.id)
+        .order('full_name', { ascending: true });
+      if (error) throw error;
+      cachedStaff = data || [];
+    } catch(e) {
+      console.error('Failed to load staff from Supabase', e);
+      cachedStaff = [];
+    }
+    return cachedStaff;
   },
   points: () => parseInt(localStorage.getItem('ss_pts')||'0'),
   setPoints: v => localStorage.setItem('ss_pts', v),
@@ -777,18 +792,48 @@ const S = {
   quizCount: () => parseInt(localStorage.getItem('ss_qc')||'0'),
   setQuizCount: v => localStorage.setItem('ss_qc', v),
   logs: () => cachedLogs,
-  addLog: async (msg,rid) => {
-    cachedLogs.unshift({msg,rid,t:new Date().toISOString()});
+  addLog: async (msg,rid, actorType='system') => {
+    const entry = { msg, rid, t:new Date().toISOString(), actorType };
+    cachedLogs.unshift(entry);
     cachedLogs = cachedLogs.slice(0,100);
+    if (!currentEtab || !ssSupabase) return entry;
+    try {
+      await ssSupabase.from('audit_logs').insert([{
+        school_id: currentEtab.id,
+        report_id: rid || null,
+        actor_type: actorType,
+        action: 'app_log',
+        message: msg
+      }]);
+    } catch(e) {
+      console.error('Failed to insert audit log', e);
+    }
+    return entry;
   },
   reloadLogs: async () => {
-    if (!currentEtab) return;
+    if (!currentEtab || !ssSupabase) { cachedLogs = []; return []; }
     try {
-      const res = await fetch(`/api/logs?etab=${currentEtab.id}`);
-      cachedLogs = await res.json();
-    } catch(e) { console.error('Failed to load logs', e); }
+      const { data, error } = await ssSupabase
+        .from('audit_logs')
+        .select('*')
+        .eq('school_id', currentEtab.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      cachedLogs = (data || []).map(x => ({
+        msg: x.message,
+        rid: x.report_id,
+        t: x.created_at,
+        actorType: x.actor_type
+      }));
+    } catch(e) {
+      console.error('Failed to load logs from Supabase', e);
+      cachedLogs = [];
+    }
+    return cachedLogs;
   }
 };
+
 
 let currentPage = 'home';
 let rStep = 1, rData = {urgency:1,isAnonymous:true};
@@ -809,7 +854,7 @@ async function loadEstablishments() {
   try {
     const { data, error } = await ssSupabase
       .from('schools')
-      .select('id, name, slug, city, is_active')
+      .select('id, name, slug, city, type, is_active, plan_code, support_mode')
       .eq('is_active', true)
       .order('name', { ascending: true });
 
@@ -821,7 +866,9 @@ async function loadEstablishments() {
       slug: s.slug,
       address: s.city || '',
       city: s.city || '',
-      type: 'lycee',
+      type: s.type || 'lycee',
+      planCode: s.plan_code || 'standard',
+      supportMode: s.support_mode || 'normal',
       isActive: s.is_active
     }));
   } catch (e) {
@@ -951,8 +998,8 @@ async function createEstablishment() {
   try {
     const { data, error } = await ssSupabase
       .from('schools')
-      .insert([{ name, slug, city: address || null, is_active: true }])
-      .select('id, name, slug, city, is_active')
+      .insert([{ name, slug, city: address || null, type, plan_code: 'standard', is_active: true }])
+      .select('id, name, slug, city, type, is_active, plan_code, support_mode')
       .single();
 
     if (error) throw error;
@@ -963,7 +1010,9 @@ async function createEstablishment() {
       slug: data.slug,
       address: data.city || '',
       city: data.city || '',
-      type,
+      type: data.type || type,
+      planCode: data.plan_code || 'standard',
+      supportMode: data.support_mode || 'normal',
       isActive: data.is_active
     };
 
@@ -998,7 +1047,7 @@ function go(page) {
   if (page==='profile') renderProfile();
   if (page==='assistant') initChat();
   if (page==='education') initQuiz();
-  if (page==='dashboard') renderDashboardV3();
+  if (page==='dashboard') { if (window.renderDashboardV3) window.renderDashboardV3(); }
   if (page==='help') renderSchoolContacts();
 }
 
@@ -1876,31 +1925,36 @@ function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dash
 // INIT
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-  // Hide main app, show establishment selector first
   document.querySelector('.ebar').style.display = 'none';
   document.querySelector('.bnav').style.display = 'none';
   document.getElementById('etab-current-bar').style.display = 'none';
 
-  // Load establishments
+  if ('serviceWorker' in navigator) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) await reg.unregister();
+    } catch(e) {}
+  }
+  if (window.caches && caches.keys) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(k => k.startsWith('ss-')).map(k => caches.delete(k)));
+    } catch(e) {}
+  }
+
   await loadEstablishments();
 
-  // Check if user had a previously selected establishment
   const savedEtabId = localStorage.getItem('ss_current_etab');
   if (savedEtabId && etabList.find(e => e.id === savedEtabId)) {
     await selectEstablishment(savedEtabId);
   } else {
-    // Show establishment selector
     document.getElementById('pg-select-etab').style.display = 'flex';
     renderEtabList();
   }
 });
 
-// PWA
-if('serviceWorker' in navigator){
-  const sw=`const C='ss-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['/']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/')))))`;
-  const blob=new Blob([sw],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-}
+// PWA install banner only (service worker disabled temporarily to avoid stale-cache issues)
+
 let deferredInstall=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
   setTimeout(()=>{
