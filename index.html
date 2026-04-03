@@ -582,7 +582,7 @@ a{text-decoration:none}
   <div style="padding:0 20px">
     <div class="fg">
       <label class="fl">Ton code de suivi</label>
-      <input type="text" class="fi fi-code" id="code-in" placeholder="AB1234" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="12" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
       <p class="fhint">6 caractères reçus à la confirmation de ton signalement</p>
     </div>
     <button class="btn btn-p btn-full btn-lg" onclick="lookupCode()">
@@ -1032,7 +1032,7 @@ function fmtTime(iso) { return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2
 // ═══════════════════════════════════════════
 // REPORT FORM
 // ═══════════════════════════════════════════
-function initReport() { rStep=1; rData={urgency:1,isAnonymous:true}; renderRStep(); }
+function initReport() { rStep=1; rData={urgency:1,isAnonymous:true,consentAccepted:false,followupEmailOptIn:false}; renderRStep(); }
 
 const rSteps = [
   {t:'Ton rôle',s:'Tu es…'},
@@ -1106,22 +1106,32 @@ function renderRStep() {
 
   if (rStep===5) h += `
     <div style="background:var(--gbg);border:1.5px solid rgba(5,150,105,.22);border-radius:var(--r12);padding:14px;margin-bottom:18px">
-      <p style="font-size:.84rem;color:#065f46;font-weight:500">🔒 <strong>Signalement anonyme recommandé.</strong> Personne ne saura qui tu es. Un code secret à 6 caractères te permettra de suivre la réponse.</p>
+      <p style="font-size:.84rem;color:#065f46;font-weight:500">🔒 <strong>Signalement anonyme recommandé.</strong> Personne ne saura qui tu es. Un code de suivi et un numéro de dossier te permettront de suivre la réponse.</p>
     </div>
     <div class="cg">
       <button class="cbtn ${rData.isAnonymous!==false?'sel':''}" onclick="setAnon(true)">
         <span class="ci">🎭</span>
-        <div class="ct"><h4>Anonyme <span style="background:var(--g);color:#fff;font-size:.68rem;padding:2px 8px;border-radius:10px;margin-left:5px;font-weight:600">RECOMMANDÉ</span></h4><p>Je reçois un code de suivi à 6 caractères</p></div>
+        <div class="ct"><h4>Anonyme <span style="background:var(--g);color:#fff;font-size:.68rem;padding:2px 8px;border-radius:10px;margin-left:5px;font-weight:600">RECOMMANDÉ</span></h4><p>Je reçois un code de suivi sans révéler mon identité</p></div>
       </button>
       <button class="cbtn ${rData.isAnonymous===false?'sel':''}" onclick="setAnon(false)">
         <span class="ci">👤</span>
-        <div class="ct"><h4>Identifié(e)</h4><p>Je donne mon nom pour être contacté(e)</p></div>
+        <div class="ct"><h4>Identifié(e)</h4><p>Je donne mes coordonnées pour être recontacté(e)</p></div>
       </button>
     </div>
     <div id="r-idfields" style="margin-top:14px;${rData.isAnonymous===false?'':'display:none'}">
       <div class="fg"><label class="fl">Prénom et Nom</label><input type="text" class="fi" id="r-name" value="${rData.reporterName||''}" placeholder="Prénom Nom"></div>
       <div class="fg"><label class="fl">Classe</label><input type="text" class="fi" id="r-class" value="${rData.reporterClass||''}" placeholder="Ex: Terminale B"></div>
       <div class="fg"><label class="fl">Email <span style="font-weight:400;color:var(--ts)">(optionnel)</span></label><input type="email" class="fi" id="r-email" value="${rData.reporterEmail||''}" placeholder="prenom@lycee.fr"></div>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-top:-4px;font-size:.82rem;color:var(--tm)">
+        <input type="checkbox" id="r-email-optin" ${rData.followupEmailOptIn?'checked':''} style="margin-top:3px">
+        <span>Je souhaite recevoir par email les mises à jour non sensibles de mon dossier.</span>
+      </label>
+    </div>
+    <div class="fg" style="margin-top:16px;margin-bottom:0">
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--tm)">
+        <input type="checkbox" id="r-consent" ${rData.consentAccepted?'checked':''} style="margin-top:3px">
+        <span>J'accepte les conditions d'utilisation et la politique de confidentialité. Je comprends que le signalement peut être conservé pendant une durée limitée avant anonymisation pour le suivi et les statistiques.</span>
+      </label>
     </div>`;
 
   h += `</div>
@@ -1154,32 +1164,80 @@ function rNext(){
   rStep++;renderRStep();window.scrollTo(0,0);
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
-function submitReport(){
-  if(rData.isAnonymous===false){
-    rData.reporterName=document.getElementById('r-name')?.value||'';
-    rData.reporterClass=document.getElementById('r-class')?.value||'';
-    rData.reporterEmail=document.getElementById('r-email')?.value||'';
+async function submitReport(){
+  try {
+    var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
+    if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
+
+    if(rData.isAnonymous===false){
+      rData.reporterName=document.getElementById('r-name')?.value.trim()||'';
+      rData.reporterClass=document.getElementById('r-class')?.value.trim()||'';
+      rData.reporterEmail=document.getElementById('r-email')?.value.trim()||'';
+      rData.followupEmailOptIn=!!document.getElementById('r-email-optin')?.checked;
+    } else {
+      rData.followupEmailOptIn=false;
+    }
+
+    rData.consentAccepted=!!document.getElementById('r-consent')?.checked;
+    if(!rData.consentAccepted){ toast('Tu dois accepter les conditions avant l'envoi','err'); return; }
+
+    var typeMap={physical:'physique',verbal:'verbal',cyber:'cyber',exclusion:'exclusion',other:'autre'};
+    var roleMap={victim:'victime',witness:'temoin',parent:'parent',staff:'personnel'};
+    var urgencyMap={1:'faible',2:'moyenne',3:'haute'};
+
+    var payload={
+      school_id: schoolId,
+      reporter_role: roleMap[rData.reporterType] || 'autre',
+      type: typeMap[rData.harassmentType] || 'autre',
+      description: rData.description || '',
+      location: rData.location || null,
+      frequency: rData.frequency || null,
+      urgency: urgencyMap[String(rData.urgency)] || 'faible',
+      is_anonymous: rData.isAnonymous !== false,
+      reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
+      reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
+      reporter_email: rData.isAnonymous !== false ? null : (rData.reporterEmail || null),
+      followup_email_opt_in: !!rData.followupEmailOptIn,
+      consent_accepted: true,
+      consent_accepted_at: new Date().toISOString(),
+      status: 'nouveau',
+      source_channel: 'form'
+    };
+
+    const { data, error } = await ssSupabase
+      .from('reports')
+      .insert([payload])
+      .select('*')
+      .single();
+
+    if(error) throw error;
+
+    var report={
+      id:data.id,
+      caseNumber:data.case_number,
+      trackingCode:data.tracking_code,
+      status:data.status,
+      staffReply:data.staff_reply || '',
+      adminNote:data.admin_note || '',
+      assignedTo:data.assigned_staff_id || null,
+      createdAt:data.created_at,
+      type:data.type,
+      description:data.description,
+      location:data.location,
+      urgency:data.urgency,
+      reporterEmail:data.reporter_email
+    };
+
+    cachedReports.unshift(report);
+    await S.addLog(`Nouveau signalement ${data.case_number || data.id}`, data.id);
+    if(rData.reporterType==='witness'){
+      const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
+    }
+    showConfirmation(data.tracking_code, report);
+  } catch(err){
+    console.error(err);
+    toast(err.message || 'Erreur lors de l'envoi du signalement','err');
   }
-  const code=rData.isAnonymous!==false?genCode():null;
-  const report={
-    id:Date.now().toString(36).toUpperCase().slice(-6),
-    code,...rData,
-    status:'new',staffReply:'',staffNotes:'',assignedTo:null,
-    createdAt:new Date().toISOString(),history:[{s:'new',t:new Date().toISOString(),by:'Système'}]
-  };
-  cachedReports.unshift(report);
-  // Save to API
-  if(currentEtab){
-    fetch(`/api/reports?etab=${currentEtab.id}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(report)
-    }).catch(()=>{});
-  }
-  S.addLog(`Nouveau signalement #${report.id} (${rData.harassmentType})`,report.id);
-  if(rData.reporterType==='witness'){
-    const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
-  }
-  showConfirmation(code,report);
 }
 function showConfirmation(code,report){
   document.getElementById('report-container').innerHTML=`
@@ -1196,7 +1254,8 @@ function showConfirmation(code,report){
     <button class="copybtn" id="cpbtn" onclick="copyCode('${code}')">📋 Copier le code</button>
   </div>
   <div style="margin:16px 20px;padding:14px 16px;background:var(--gbg);border-radius:var(--r12);border:1.5px solid rgba(5,150,105,.2)">
-    <p style="font-size:.84rem;color:#065f46;font-weight:500">✅ Numéro de suivi : <strong style="font-family:'Nunito',monospace;font-size:1.1rem;letter-spacing:.1em">${code}</strong></p>
+    <p style="font-size:.84rem;color:#065f46;font-weight:500">✅ Code de suivi : <strong style="font-family:'Nunito',monospace;font-size:1.1rem;letter-spacing:.06em">${code}</strong></p>
+    <p style="font-size:.78rem;color:#065f46;margin-top:3px">🗂️ Numéro de dossier : <strong>${report.caseNumber || 'En cours de génération'}</strong></p>
     <p style="font-size:.78rem;color:#065f46;margin-top:3px">Utilise ce code dans "Mon dossier" pour voir la réponse de l'équipe</p>
   </div>`:`
   <div style="margin:16px 20px;padding:14px 16px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.18)">
@@ -1220,64 +1279,70 @@ function copyCode(code){
 // ═══════════════════════════════════════════
 // MY REPORT LOOKUP
 // ═══════════════════════════════════════════
-function lookupCode(){
-  const code=document.getElementById('code-in').value.trim().toUpperCase();
-  if(code.length<6){toast('Entre un code à 6 caractères','err');return}
-  const rep=S.reports().find(r=>r.code===code);
+async function lookupCode(){
+  const raw=document.getElementById('code-in').value.trim().toUpperCase();
+  const code=raw.startsWith('SS-') ? raw : ('SS-' + raw.replace(/^SS-?/,''));
+  if(code.replace(/[^A-Z0-9]/g,'').length<8){toast('Entre ton code de suivi','err');return}
   const el=document.getElementById('lookup-result');
-  if(!rep){
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">Recherche du dossier…</div>';
+  try {
+    const { data, error } = await ssSupabase
+      .from('reports')
+      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency')
+      .eq('tracking_code', code)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if(error) throw error;
+    if(!data){
+      el.innerHTML=`
+      <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
+        <div style="font-size:2.5rem;margin-bottom:11px">❌</div>
+        <h3 style="color:var(--r);margin-bottom:7px">Code introuvable</h3>
+        <p style="font-size:.87rem;max-width:250px;margin:0 auto">Vérifie le code de suivi reçu après la déclaration. Exemple : SS-ABC123.</p>
+      </div>`;
+      return;
+    }
+    const sc={nouveau:{l:'Nouveau',i:'🔵',cls:'bn',desc:'Ton signalement a bien été reçu. L'équipe va l'examiner prochainement.'},
+      en_cours:{l:'En cours',i:'🟡',cls:'bi',desc:'L'équipe éducative traite actuellement ton dossier.'},
+      traite:{l:'Traité',i:'🟢',cls:'br',desc:'L'équipe a traité ton signalement.'},
+      archive:{l:'Archivé',i:'⚫',cls:'ba',desc:'Dossier archivé.'},
+      withdrawal_requested:{l:'Retrait demandé',i:'🟠',cls:'bi',desc:'Ta demande de retrait est en cours d'étude.'},
+      anonymized:{l:'Anonymisé',i:'⚪',cls:'ba',desc:'Le dossier a été anonymisé selon la procédure prévue.'},
+      closed:{l:'Clôturé',i:'⚫',cls:'ba',desc:'Le dossier est clôturé.'}};
+    const s=sc[data.status]||sc.nouveau;
     el.innerHTML=`
-    <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
-      <div style="font-size:2.5rem;margin-bottom:11px">❌</div>
-      <h3 style="color:var(--r);margin-bottom:7px">Code introuvable</h3>
-      <p style="font-size:.87rem;max-width:250px;margin:0 auto">Vérifie que tu as bien saisi les 6 caractères exacts (pas de O ni de I, remplacés par d'autres lettres).</p>
-    </div>`;return;
+    <div class="status-card card">
+      <div class="sc-header">
+        <div><p style="font-size:.78rem;color:var(--ts);margin-bottom:3px">Dossier</p><h3 style="font-size:1.05rem">${data.case_number || data.tracking_code}</h3></div>
+        <span class="badge ${s.cls}">${s.i} ${s.l}</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-status scs-${data.status==='nouveau'?'n':data.status==='en_cours'?'i':'r'}">
+          <div class="sc-dot">${s.i}</div>
+          <div><h4>${s.l}</h4><p style="font-size:.79rem;margin-top:1px">${s.desc}</p></div>
+        </div>
+        ${data.staff_reply?`
+        <div class="sc-reply">
+          <h5>💬 Réponse de l'équipe</h5>
+          <p>${data.staff_reply}</p>
+        </div>`:`
+        <div style="background:var(--bg);border-radius:var(--r12);padding:14px;text-align:center;margin-bottom:12px">
+          <p style="font-size:.86rem">⏳ L'équipe n'a pas encore publié de réponse visible.</p>
+        </div>`}
+        <div class="sc-meta">
+          <span>📌 Code de suivi : <strong>${data.tracking_code}</strong></span>
+          <span>🗂️ Numéro de dossier : <strong>${data.case_number || 'En cours de génération'}</strong></span>
+          <span>📅 Déposé le ${fmtDate(data.created_at)} à ${fmtTime(data.created_at)}</span>
+          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgency || 'faible'}</span>
+        </div>
+      </div>
+    </div>`;
+  } catch(err){
+    console.error(err);
+    el.innerHTML=`<div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)"><div style="font-size:2rem;margin-bottom:10px">⚠️</div><h3 style="color:var(--r);margin-bottom:6px">Erreur de recherche</h3><p style="font-size:.87rem;max-width:260px;margin:0 auto">Impossible de charger le dossier pour le moment.</p></div>`;
   }
-  const sc={new:{l:'Nouveau',i:'🔵',cls:'bn',desc:'Ton signalement a bien été reçu. L\'équipe va l\'examiner prochainement.'},
-    in_progress:{l:'En cours',i:'🟡',cls:'bi',desc:'L\'équipe éducative traite actuellement ton dossier.'},
-    resolved:{l:'Résolu',i:'🟢',cls:'br',desc:'L\'équipe a traité ton signalement.'},
-    archived:{l:'Archivé',i:'⚫',cls:'ba',desc:'Dossier archivé.'}};
-  const s=sc[rep.status]||sc.new;
-  const assigned=rep.assignedTo?S.staff().find(st=>st.id===rep.assignedTo):null;
-  el.innerHTML=`
-  <div class="status-card card">
-    <div class="sc-header">
-      <div><p style="font-size:.78rem;color:var(--ts);margin-bottom:3px">Dossier</p><h3 style="font-size:1.05rem">#${rep.id}</h3></div>
-      <span class="badge ${s.cls}">${s.i} ${s.l}</span>
-    </div>
-    <div class="sc-body">
-      <div class="sc-status scs-${rep.status==='new'?'n':rep.status==='in_progress'?'i':'r'}">
-        <div class="sc-dot">${s.i}</div>
-        <div><h4>${s.l}</h4><p style="font-size:.79rem;margin-top:1px">${s.desc}</p></div>
-      </div>
-      ${assigned?`
-      <div style="background:var(--pbg);border-radius:var(--r12);padding:11px 14px;display:flex;align-items:center;gap:11px;margin-bottom:12px">
-        <span style="font-size:1.3rem">${assigned.emoji}</span>
-        <div><p style="font-size:.81rem;font-weight:600;color:var(--p)">Référent assigné</p><h4 style="font-size:.9rem">${assigned.name}</h4><p style="font-size:.77rem;color:var(--tm)">${roleLabel(assigned.role)}</p></div>
-      </div>`:''}
-      ${rep.staffReply?`
-      <div class="sc-reply">
-        <h5>💬 Réponse de l'équipe</h5>
-        <p>${rep.staffReply}</p>
-      </div>`:`
-      <div style="background:var(--bg);border-radius:var(--r12);padding:14px;text-align:center;margin-bottom:12px">
-        <p style="font-size:.86rem">⏳ L'équipe n'a pas encore répondu. Reviens dans quelques heures.</p>
-      </div>`}
-      <div class="sc-meta">
-        <span>📅 Envoyé le ${fmtDate(rep.createdAt)}</span>
-        <span>📋 Type : ${tlabel(rep.harassmentType)}</span>
-        ${rep.location?`<span>📍 ${rep.location}</span>`:''}
-      </div>
-    </div>
-  </div>
-  <div style="margin-top:14px;display:flex;flex-direction:column;gap:9px">
-    <a href="tel:3018" class="btn btn-r">📞 Appeler le 3018 si urgence</a>
-    <button class="btn btn-soft" onclick="go('assistant')">🤖 Parler à Léa</button>
-  </div>`;
 }
-function tlabel(t){return{physical:'Physique',verbal:'Verbal',cyber:'Cyber',exclusion:'Exclusion',other:'Autre'}[t]||t}
-function roleLabel(r){return{cpe:'CPE',dir:'Direction',inf:'Infirmière',ref:'Référent harcèlement',psy:'Psychologue scolaire'}[r]||r}
-function roleColor(r){return{cpe:'sr-cpe',dir:'sr-dir',inf:'sr-inf',ref:'sr-ref',psy:'sr-psy'}[r]||'sr-ref'}
 
 // ═══════════════════════════════════════════
 // EDUCATION / QUIZ
