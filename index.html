@@ -507,6 +507,7 @@ a{text-decoration:none}
   </div>
   <div class="etab-footer">
     <p style="font-size:.76rem;color:var(--ts)">Chaque établissement a son propre espace sécurisé · RGPD</p>
+    <p style="font-size:.72rem;color:var(--ts);margin-top:6px">Version branchée à Supabase pour la liste des établissements.</p>
   </div>
 </div>
 
@@ -806,17 +807,27 @@ const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'
 
 async function loadEstablishments() {
   try {
-    const res = await fetch('/api/establishments');
-    etabList = await res.json();
-    if (etabList.length === 0) {
-      // Seed demo data
-      await fetch('/api/seed', { method: 'POST' });
-      const res2 = await fetch('/api/establishments');
-      etabList = await res2.json();
-    }
-  } catch(e) {
-    console.error('Failed to load establishments', e);
+    const { data, error } = await ssSupabase
+      .from('schools')
+      .select('id, name, slug, city, is_active')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    etabList = (data || []).map(s => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      address: s.city || '',
+      city: s.city || '',
+      type: 'lycee',
+      isActive: s.is_active
+    }));
+  } catch (e) {
+    console.error('Failed to load establishments from Supabase', e);
     etabList = [];
+    toast("Impossible de charger les établissements.", "err");
   }
   return etabList;
 }
@@ -930,23 +941,41 @@ async function createEstablishment() {
   if (!name) { toast('Le nom est requis', 'err'); return; }
   if (!adminEmail || !adminPassword) { toast('Email et mot de passe admin requis', 'err'); return; }
 
+  const slug = name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
   try {
-    const res = await fetch('/api/establishments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type, address, adminEmail, adminPassword })
-    });
-    const newEtab = await res.json();
-    if (res.ok) {
-      etabList.push(newEtab);
-      closeAddEtabModal();
-      renderEtabList();
-      toast(`${name} créé !`, 'ok');
-    } else {
-      toast(newEtab.error || 'Erreur', 'err');
-    }
-  } catch(e) {
-    toast('Erreur de connexion', 'err');
+    const { data, error } = await ssSupabase
+      .from('schools')
+      .insert([{ name, slug, city: address || null, is_active: true }])
+      .select('id, name, slug, city, is_active')
+      .single();
+
+    if (error) throw error;
+
+    const newEtab = {
+      id: data.id,
+      name: data.name,
+      slug: data.slug,
+      address: data.city || '',
+      city: data.city || '',
+      type,
+      isActive: data.is_active
+    };
+
+    etabList.push(newEtab);
+    etabList.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    closeAddEtabModal();
+    renderEtabList();
+    toast(`${name} créé !`, 'ok');
+    toast("Établissement créé. Le compte admin sera branché à l'étape suivante.", "info");
+  } catch (e) {
+    console.error('Erreur création établissement Supabase', e);
+    toast(e.message || 'Erreur de connexion', 'err');
   }
 }
 
@@ -1828,6 +1857,17 @@ async function installApp(){
   document.getElementById('install-banner')?.remove();
   if(outcome==='accepted')toast('SafeSchool installé ! 🎉','ok');
 }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
+const SS_SUPABASE_PUBLISHABLE_KEY = "COLLE_ICI_TA_PUBLISHABLE_KEY_SUPABASE";
+
+const ssSupabase = window.supabase.createClient(
+  SS_SUPABASE_URL,
+  SS_SUPABASE_PUBLISHABLE_KEY
+);
 </script>
 
 <script src="./dashboard-v3.js"></script></body>
