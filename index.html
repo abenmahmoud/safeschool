@@ -730,45 +730,75 @@ let cachedLogs = [];
 const S = {
   reports: () => cachedReports,
   setReports: async v => {
-    cachedReports = v;
-    if (currentEtab) {
-      await fetch(`/api/reports?etab=${currentEtab.id}`, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(v[0])
-      }).catch(()=>{});
-    }
+    cachedReports = Array.isArray(v) ? v : [];
   },
   updateReport: async (report) => {
-    if (currentEtab) {
-      await fetch(`/api/reports?etab=${currentEtab.id}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(report)
-      }).catch(()=>{});
+    if (!currentEtab || !report || !report.id) return;
+    try {
+      const payload = {
+        status: report.status || null,
+        admin_note: report.staffNotes || report.adminNote || null,
+        staff_reply: report.staffReply || null,
+        assigned_staff_id: report.assignedTo || null,
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await ssSupabase
+        .from('reports')
+        .update(payload)
+        .eq('id', report.id)
+        .eq('school_id', currentEtab.id);
+      if (error) throw error;
+      await S.reloadReports();
+    } catch (e) {
+      console.error('Failed to update report in Supabase', e);
     }
   },
   reloadReports: async () => {
     if (!currentEtab) return;
     try {
-      const res = await fetch(`/api/reports?etab=${currentEtab.id}`);
-      cachedReports = await res.json();
-    } catch(e) { console.error('Failed to load reports', e); }
+      const { data, error } = await ssSupabase
+        .from('reports')
+        .select('*')
+        .eq('school_id', currentEtab.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      cachedReports = (data || []).map(r => ({
+        ...r,
+        code: r.tracking_code || r.code || null,
+        caseNumber: r.case_number || null,
+        staffReply: r.staff_reply || '',
+        staffNotes: r.admin_note || '',
+        assignedTo: r.assigned_staff_id || null,
+        createdAt: r.created_at || r.submitted_at || null,
+        history: Array.isArray(r.history) ? r.history : []
+      }));
+    } catch(e) {
+      console.error('Failed to load reports from Supabase', e);
+      cachedReports = [];
+    }
   },
   staff: () => cachedStaff,
   setStaff: async v => {
-    cachedStaff = v;
-    if (currentEtab) {
-      await fetch(`/api/staff?etab=${currentEtab.id}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(v)
-      }).catch(()=>{});
-    }
+    cachedStaff = Array.isArray(v) ? v : [];
   },
   reloadStaff: async () => {
     if (!currentEtab) return;
     try {
-      const res = await fetch(`/api/staff?etab=${currentEtab.id}`);
-      cachedStaff = await res.json();
-    } catch(e) { console.error('Failed to load staff', e); }
+      const { data, error } = await ssSupabase
+        .from('staff')
+        .select('*')
+        .eq('school_id', currentEtab.id)
+        .order('full_name', { ascending: true });
+      if (error) throw error;
+      cachedStaff = (data || []).map(s => ({
+        ...s,
+        name: s.full_name || s.name || '',
+        active: s.is_active
+      }));
+    } catch(e) {
+      console.error('Failed to load staff from Supabase', e);
+      cachedStaff = [];
+    }
   },
   points: () => parseInt(localStorage.getItem('ss_pts')||'0'),
   setPoints: v => localStorage.setItem('ss_pts', v),
@@ -778,15 +808,42 @@ const S = {
   setQuizCount: v => localStorage.setItem('ss_qc', v),
   logs: () => cachedLogs,
   addLog: async (msg,rid) => {
-    cachedLogs.unshift({msg,rid,t:new Date().toISOString()});
+    const item = { msg, rid, t: new Date().toISOString() };
+    cachedLogs.unshift(item);
     cachedLogs = cachedLogs.slice(0,100);
+    if (!currentEtab) return;
+    try {
+      await ssSupabase.from('audit_logs').insert([{
+        school_id: currentEtab.id,
+        report_id: rid || null,
+        actor_type: 'system',
+        action: 'app_log',
+        message: msg
+      }]);
+    } catch(e) {
+      console.error('Failed to insert audit log in Supabase', e);
+    }
   },
   reloadLogs: async () => {
     if (!currentEtab) return;
     try {
-      const res = await fetch(`/api/logs?etab=${currentEtab.id}`);
-      cachedLogs = await res.json();
-    } catch(e) { console.error('Failed to load logs', e); }
+      const { data, error } = await ssSupabase
+        .from('audit_logs')
+        .select('*')
+        .eq('school_id', currentEtab.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      cachedLogs = (data || []).map(l => ({
+        ...l,
+        msg: l.message,
+        rid: l.report_id,
+        t: l.created_at
+      }));
+    } catch(e) {
+      console.error('Failed to load logs from Supabase', e);
+      cachedLogs = [];
+    }
   }
 };
 
@@ -1884,15 +1941,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load establishments
   await loadEstablishments();
 
-  // Check if user had a previously selected establishment
-  const savedEtabId = localStorage.getItem('ss_current_etab');
-  if (savedEtabId && etabList.find(e => e.id === savedEtabId)) {
-    await selectEstablishment(savedEtabId);
-  } else {
-    // Show establishment selector
-    document.getElementById('pg-select-etab').style.display = 'flex';
-    renderEtabList();
-  }
+  // Correction chirurgicale : on force l'affichage du sélecteur
+  // pour éviter les reprises automatiques figées via un ancien localStorage.
+  document.getElementById('pg-select-etab').style.display = 'flex';
+  renderEtabList();
 });
 
 // PWA
@@ -1927,14 +1979,14 @@ async function installApp(){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-const SS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+const SS_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
 
 window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
-window.ENV_SUPABASE_KEY = SS_SUPABASE_ANON_KEY;
+window.ENV_SUPABASE_KEY = SS_SUPABASE_PUBLISHABLE_KEY;
 
 const ssSupabase = window.supabase.createClient(
   SS_SUPABASE_URL,
-  SS_SUPABASE_ANON_KEY
+  SS_SUPABASE_PUBLISHABLE_KEY
 );
 </script>
 
