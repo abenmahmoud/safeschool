@@ -130,7 +130,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
 </div>
 <div id="app">
   <nav class="sb">
-    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span><div style="margin-top:6px;font-size:.65rem;color:#475569;background:#0f172a;padding:3px 8px;border-radius:6px;display:inline-block">v6.0 Pro Production</div></div>
+    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span><div style="margin-top:6px;font-size:.65rem;color:#475569;background:#0f172a;padding:3px 8px;border-radius:6px;display:inline-block">v7.0 Pro PWA</div></div>
     <div class="ni on" id="n-db" onclick="showPage('db')"><span class="ni-icon">&#128200;</span> Tableau de bord</div>
     <div class="ni" id="n-sc" onclick="showPage('sc')"><span class="ni-icon">&#127979;</span> Etablissements</div>
     <div class="ni" id="n-cr" onclick="showPage('cr')"><span class="ni-icon">&#10133;</span> Nouvel etablissement</div>
@@ -140,6 +140,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
     <div class="ni" id="n-baro" onclick="showPage('baro')"><span class="ni-icon">&#129504;</span> Barometre IA</div>
     <div class="ni" id="n-analytics" onclick="showPage('analytics')"><span class="ni-icon">&#128202;</span> Analytics IA</div>
     <div class="ni" id="n-notif" onclick="showPage('notif')"><span class="ni-icon">&#128276;</span> Notifications</div>
+    <div class="ni" id="n-push" onclick="showPage('push')"><span class="ni-icon">&#128241;</span> Push / PWA</div>
     <div class="ni" id="n-health" onclick="showPage('health')"><span class="ni-icon">&#128994;</span> Monitoring</div>
     <div style="padding:12px 20px"><a href="/pricing" target="_blank" style="display:block;padding:10px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;text-align:center;transition:.2s">&#127760; Page vitrine / Pricing</a></div>
     <div class="sbf"><button class="btn bs bsm bfull" onclick="doLogout()">Deconnexion</button></div>
@@ -343,6 +344,64 @@ tr:hover td{background:rgba(99,102,241,.03)}
         </div>
       </div>
     </div>
+    <!-- ═══════════ PUSH / PWA MANAGEMENT ═══════════ -->
+    <div id="p-push" style="display:none">
+      <div class="pt">Push Notifications & PWA</div><div class="ps">Gestion des abonnements push et de l'experience mobile</div>
+      <div class="sg" id="push-kpi"></div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><h3>Envoyer une notification push</h3></div>
+        <div style="padding:20px">
+          <div class="f"><label>Titre</label><input type="text" id="push-title" placeholder="Titre de la notification"></div>
+          <div class="f"><label>Message</label><textarea id="push-msg" placeholder="Contenu de la notification..."></textarea></div>
+          <div class="f"><label>Type</label><select id="push-type"><option value="general">General</option><option value="new-report">Nouveau signalement</option><option value="status-update">Mise a jour statut</option><option value="urgent">Urgent</option></select></div>
+          <div class="f"><label>Etablissement (vide = tous)</label><input type="text" id="push-school" placeholder="ID etablissement (optionnel)"></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn" onclick="sendPushNotif()">Envoyer la notification</button>
+            <button class="btn bs" onclick="sendTestPush()">Envoyer un test</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><h3>Configuration VAPID</h3></div>
+        <div style="padding:20px" id="push-config"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h3>Guide d'installation PWA</h3></div>
+        <div style="padding:20px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+            <div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #334155">
+              <div style="font-size:2rem;margin-bottom:8px">&#128241;</div>
+              <h4 style="color:#f1f5f9;font-size:.88rem;margin-bottom:4px">Android</h4>
+              <p style="color:#94a3b8;font-size:.78rem;line-height:1.6">Chrome > Menu (3 points) > "Ajouter a l'ecran d'accueil". L'app s'installe automatiquement avec icone et notifications.</p>
+            </div>
+            <div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #334155">
+              <div style="font-size:2rem;margin-bottom:8px">&#127822;</div>
+              <h4 style="color:#f1f5f9;font-size:.88rem;margin-bottom:4px">iPhone / iPad</h4>
+              <p style="color:#94a3b8;font-size:.78rem;line-height:1.6">Safari > Icone Partager > "Sur l'ecran d'accueil". Les notifications push fonctionnent sur iOS 16.4+.</p>
+            </div>
+            <div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #334155">
+              <div style="font-size:2rem;margin-bottom:8px">&#128187;</div>
+              <h4 style="color:#f1f5f9;font-size:.88rem;margin-bottom:4px">Desktop</h4>
+              <p style="color:#94a3b8;font-size:.78rem;line-height:1.6">Chrome/Edge > Icone d'installation dans la barre d'adresse. Fonctionne comme une app native.</p>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding:14px;background:#1e3a5f;border:1px solid #1e40af;border-radius:10px">
+            <h4 style="color:#60a5fa;font-size:.82rem;margin-bottom:6px">Fonctionnalites PWA activees</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="badge b-active">Service Worker</span>
+              <span class="badge b-active">Cache offline</span>
+              <span class="badge b-active">Push notifications</span>
+              <span class="badge b-active">Raccourcis</span>
+              <span class="badge b-active">Mode sombre</span>
+              <span class="badge b-active">Share Target</span>
+              <span class="badge b-active">Install banner</span>
+              <span class="badge b-active">Background sync</span>
+              <span class="badge b-active">Haptic feedback</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- ═══════════ MONITORING / HEALTH ═══════════ -->
     <div id="p-health" style="display:none">
       <div class="pt">Monitoring & Sante plateforme</div><div class="ps">Surveillance en temps reel de l'infrastructure SafeSchool</div>
@@ -440,14 +499,14 @@ document.getElementById('lpw').addEventListener('keydown', function(e) { if (e.k
 })();
 
 // ═══════════ NAVIGATION ═══════════
-var PGS = ['db','sc','cr','sav','dn','bl','baro','analytics','notif','health'];
+var PGS = ['db','sc','cr','sav','dn','bl','baro','analytics','notif','push','health'];
 function showPage(p) {
   PGS.forEach(function(x) {
     var el = document.getElementById('p-'+x), nav = document.getElementById('n-'+x);
     if (el) el.style.display = (x===p) ? 'block' : 'none';
     if (nav) nav.classList.toggle('on', x===p);
   });
-  var loaders = { db: loadDashboard, sc: loadSchools, dn: loadDomains, bl: loadBilling, cr: rstCr, sav: loadSavSelector, baro: loadBarometre, analytics: loadAnalyticsTrends, notif: loadNotifStats, health: loadHealth };
+  var loaders = { db: loadDashboard, sc: loadSchools, dn: loadDomains, bl: loadBilling, cr: rstCr, sav: loadSavSelector, baro: loadBarometre, analytics: loadAnalyticsTrends, notif: loadNotifStats, push: loadPushStats, health: loadHealth };
   if (loaders[p]) loaders[p]();
 }
 
@@ -1286,6 +1345,74 @@ async function generateDigest() {
     await api('POST', '/notify/digest', { schoolId: SCHOOLS[0].id, schoolName: SCHOOLS[0].name });
     shTst('Digest genere !');
   } catch(e) { shTst(e.message, true); }
+}
+
+// ═══════════ PUSH / PWA MANAGEMENT ═══════════
+async function loadPushStats() {
+  var kpiEl = document.getElementById('push-kpi');
+  var configEl = document.getElementById('push-config');
+  kpiEl.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var res = await api('GET', '/../api/push/stats');
+    kpiEl.innerHTML =
+      stc('Abonnes push', res.total || 0, 'Total enregistres', '#6366f1') +
+      stc('Actifs', res.active || 0, 'Abonnements actifs', '#16a34a') +
+      stc('Etudiants', (res.byRole || {}).student || 0, 'Abonnes eleves', '#0ea5e9') +
+      stc('Admins', ((res.byRole || {}).admin || 0) + ((res.byRole || {}).superadmin || 0), 'Abonnes admins', '#d97706');
+
+    var vapidOk = res.vapidConfigured;
+    var pushOk = res.pushReady;
+    configEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${vapidOk?'#14532d':'#450a0a'};border-radius:10px;border:1px solid ${vapidOk?'#166534':'#7f1d1d'}">
+          <span style="font-size:1.3rem">${vapidOk?'&#9989;':'&#10060;'}</span>
+          <div>
+            <div style="color:${vapidOk?'#86efac':'#fca5a5'};font-weight:700;font-size:.88rem">VAPID_PUBLIC_KEY</div>
+            <div style="color:#94a3b8;font-size:.78rem">${vapidOk?'Configure — les navigateurs peuvent s\'abonner':'Non configure — les notifications fonctionnent en mode demo'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${pushOk?'#14532d':'#450a0a'};border-radius:10px;border:1px solid ${pushOk?'#166534':'#7f1d1d'}">
+          <span style="font-size:1.3rem">${pushOk?'&#9989;':'&#10060;'}</span>
+          <div>
+            <div style="color:${pushOk?'#86efac':'#fca5a5'};font-weight:700;font-size:.88rem">VAPID_PRIVATE_KEY</div>
+            <div style="color:#94a3b8;font-size:.78rem">${pushOk?'Configure — l\'envoi push est actif':'Non configure — les notifications sont stockees sans envoi'}</div>
+          </div>
+        </div>
+        ${!vapidOk ? '<div style="padding:14px;background:#1e3a5f;border:1px solid #1e40af;border-radius:10px"><p style="color:#60a5fa;font-size:.82rem;line-height:1.6">Pour activer les push notifications reelles :<br>1. Generez des cles VAPID (npx web-push generate-vapid-keys)<br>2. Ajoutez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY dans les variables d\'environnement Netlify<br>3. Redéployez l\'application</p></div>' : ''}
+        <div style="padding:10px;background:#0f172a;border-radius:8px;border:1px solid #334155">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:#64748b;font-size:.78rem">Repartition par ecole</span>
+          </div>
+          ${Object.entries(res.bySchool || {}).map(function(e) {
+            return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b;font-size:.82rem"><span style="color:#cbd5e1">'+e[0]+'</span><span style="color:#a5b4fc;font-weight:700">'+e[1]+' abonnes</span></div>';
+          }).join('') || '<div style="color:#64748b;font-size:.82rem;text-align:center;padding:10px">Aucun abonne pour le moment</div>'}
+        </div>
+      </div>`;
+  } catch(e) {
+    kpiEl.innerHTML = stc('Push', 'N/A', 'Service indisponible', '#dc2626');
+    configEl.innerHTML = '<p style="color:#fca5a5;font-size:.85rem">Impossible de charger les stats push : ' + (e.message || e) + '</p>';
+  }
+}
+
+async function sendPushNotif() {
+  var title = document.getElementById('push-title').value.trim();
+  var msg = document.getElementById('push-msg').value.trim();
+  var type = document.getElementById('push-type').value;
+  var school = document.getElementById('push-school').value.trim();
+  if (!title || !msg) { shTst('Titre et message requis', true); return; }
+  try {
+    var res = await api('POST', '/../api/push/send', { title: title, message: msg, type: type, schoolId: school || undefined, urgent: type === 'urgent' });
+    shTst(res.message || ('Envoye a ' + (res.sent || 0) + ' abonne(s)'));
+    document.getElementById('push-title').value = '';
+    document.getElementById('push-msg').value = '';
+  } catch(e) { shTst('Erreur: ' + (e.message || e), true); }
+}
+
+async function sendTestPush() {
+  try {
+    var res = await api('POST', '/../api/push/send', { title: 'Test SafeSchool', message: 'Ceci est une notification de test envoyee depuis le panneau superadmin.', type: 'general' });
+    shTst(res.message || 'Test envoye');
+  } catch(e) { shTst('Erreur test: ' + (e.message || e), true); }
 }
 
 // ═══════════ MONITORING / HEALTH ═══════════
