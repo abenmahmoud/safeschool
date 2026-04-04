@@ -612,7 +612,7 @@ async function loadSavData() {
             + '<td style="font-family:monospace;color:#a5b4fc;font-size:.78rem">'+(r.case_number||'-')+'</td>'
             + '<td style="font-family:monospace;font-size:.78rem">'+(r.tracking_code||'-')+'</td>'
             + '<td><span class="badge b-'+({verbal:'pro',physique:'starter',cyber:'enterprise'}[r.type]||'starter')+'">'+(r.type||'-')+'</span></td>'
-            + '<td style="color:'+({haute:'#dc2626',moyenne:'#f59e0b',faible:'#16a34a'}[r.urgency]||'#94a3b8')+';font-weight:700;font-size:.82rem">'+(r.urgency||'-')+'</td>'
+            + '<td style="color:'+({haute:'#dc2626',moyenne:'#f59e0b',faible:'#16a34a'}[r.urgence]||'#94a3b8')+';font-weight:700;font-size:.82rem">'+(r.urgence||'-')+'</td>'
             + '<td><span class="badge b-'+({nouveau:'trial',en_cours:'pro',traite:'active',archive:'suspended'}[r.status]||'trial')+'">'+(statusMap[r.status]||r.status)+'</span></td>'
             + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.description||'-')+'</td>'
             + '<td style="font-size:.78rem;color:#94a3b8">'+fmtD(r.created_at)+'</td>'

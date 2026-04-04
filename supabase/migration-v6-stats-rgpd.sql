@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_reports_age_range ON reports(age_range) WHERE age
 CREATE INDEX IF NOT EXISTS idx_reports_genre ON reports(genre) WHERE genre IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_reports_duree ON reports(duree) WHERE duree IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_reports_school_type ON reports(school_id, type);
-CREATE INDEX IF NOT EXISTS idx_reports_school_urgency ON reports(school_id, urgency);
+CREATE INDEX IF NOT EXISTS idx_reports_school_urgency ON reports(school_id, urgence);
 
 -- Create a function to auto-set data retention expiry on insert
 CREATE OR REPLACE FUNCTION set_data_retention_expiry()
@@ -46,7 +46,7 @@ CREATE OR REPLACE VIEW v_report_statistics AS
 SELECT
   school_id,
   type,
-  urgency,
+  urgence,
   status,
   niveau,
   classe,
