@@ -1,0 +1,13 @@
+{
+  "name": "safeschool-saas",
+  "version": "2.0.0",
+  "private": true,
+  "description": "SafeSchool - Plateforme SaaS anti-harcèlement scolaire",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "@netlify/functions": "^3.0.0"
+  },
+  "devDependencies": {
+    "@netlify/edge-functions": "^1.0.0"
+  }
+}

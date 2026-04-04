@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SafeSchool - Super Admin</title>
+<title>SafeSchool - Super Admin Fondateur</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
 .ls{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .lb{background:#1e293b;border-radius:20px;padding:40px;width:100%;max-width:400px;border:1px solid #334155}
 .logo{text-align:center;margin-bottom:28px}
@@ -14,26 +14,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;
 .logo p{font-size:.85rem;color:#64748b;margin-top:4px}
 .f{margin-bottom:16px}
 .f label{display:block;font-size:.8rem;font-weight:600;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
-.f input,.f select{width:100%;padding:12px 14px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:.95rem;outline:none}
-.f input:focus,.f select:focus{border-color:#6366f1}
+.f input,.f select,.f textarea{width:100%;padding:12px 14px;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#e2e8f0;font-size:.95rem;outline:none;font-family:inherit}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:#6366f1}
+.f textarea{min-height:80px;resize:vertical}
 .err{background:#450a0a;color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:12px;display:none}
-.btn{display:inline-block;padding:12px 20px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer}
-.btn:hover{background:#4f46e5}
-.bfull{width:100%}
-.bsm{padding:7px 14px;font-size:.82rem;border-radius:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:12px 20px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.92rem;cursor:pointer;transition:.2s}
+.btn:hover{background:#4f46e5;transform:translateY(-1px)}
+.bfull{width:100%}.bsm{padding:7px 14px;font-size:.82rem;border-radius:8px}
 .bd{background:#dc2626}.bd:hover{background:#b91c1c}
 .bg{background:#16a34a}.bg:hover{background:#15803d}
 .bs{background:#334155;color:#94a3b8}.bs:hover{background:#475569;color:#e2e8f0}
+.bw{background:#d97706}.bw:hover{background:#b45309}
 #app{display:none}
-.sb{position:fixed;left:0;top:0;bottom:0;width:220px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;z-index:100}
+.sb{position:fixed;left:0;top:0;bottom:0;width:240px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;z-index:100;overflow-y:auto}
 .sbl{padding:0 20px 20px;border-bottom:1px solid #334155;margin-bottom:12px}
 .sbl h2{font-size:1.1rem;font-weight:800;color:#fff}
 .sbl span{font-size:.72rem;color:#6366f1;font-weight:600}
-.ni{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:.88rem;color:#94a3b8;font-weight:500;border-left:3px solid transparent}
+.ni{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;font-size:.86rem;color:#94a3b8;font-weight:500;border-left:3px solid transparent;transition:.15s}
 .ni:hover{color:#e2e8f0;background:#334155}
 .ni.on{color:#a5b4fc;border-left-color:#6366f1;background:rgba(99,102,241,.1)}
+.ni-icon{font-size:1rem;width:20px;text-align:center}
 .sbf{position:absolute;bottom:20px;left:0;right:0;padding:0 20px}
-.mn{margin-left:220px;padding:32px;min-height:100vh}
+.mn{margin-left:240px;padding:32px;min-height:100vh}
 .pt{font-size:1.4rem;font-weight:800;color:#f1f5f9;margin-bottom:4px}
 .ps{font-size:.85rem;color:#64748b;margin-bottom:24px}
 .sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
@@ -49,7 +51,8 @@ table{width:100%;border-collapse:collapse}
 th{padding:10px 16px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:1px solid #334155;background:#0f172a}
 td{padding:12px 16px;font-size:.85rem;color:#cbd5e1;border-bottom:1px solid #1e293b;vertical-align:middle}
 tr:last-child td{border-bottom:none}
-.tda{display:flex;gap:6px}
+tr:hover td{background:rgba(99,102,241,.03)}
+.tda{display:flex;gap:6px;flex-wrap:wrap}
 .badge{padding:3px 8px;border-radius:20px;font-size:.7rem;font-weight:700;white-space:nowrap}
 .b-starter{background:#1e293b;color:#94a3b8;border:1px solid #334155}
 .b-pro{background:#1e1b4b;color:#a5b4fc;border:1px solid #3730a3}
@@ -61,8 +64,9 @@ tr:last-child td{border-bottom:none}
 .fr2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .sp{background:#0f172a;border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.88rem;color:#a5b4fc;border:1px solid #334155}
 .pg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.pc{border:2px solid #334155;border-radius:10px;padding:12px;cursor:pointer;text-align:center}
+.pc{border:2px solid #334155;border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.2s}
 .pc.on{border-color:#6366f1;background:rgba(99,102,241,.1)}
+.pc:hover{border-color:#475569}
 .pn{font-weight:800;font-size:.88rem;color:#f1f5f9;margin-bottom:3px}
 .pp{font-size:1.1rem;font-weight:800;color:#a5b4fc}
 .pf{font-size:.68rem;color:#64748b;margin-top:5px;line-height:1.5}
@@ -75,21 +79,34 @@ tr:last-child td{border-bottom:none}
 .dr{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:4px;flex-wrap:wrap}
 .dt{background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-weight:700;font-family:monospace;flex-shrink:0}
 .dv{color:#94a3b8;font-family:monospace;font-size:.72rem}
-.cb{background:#1e3a5f;border:none;color:#60a5fa;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:.68rem}
 .mb{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.mo{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:500px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
+.mo{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:560px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
 .mo h3{font-size:1.1rem;font-weight:800;color:#f1f5f9;margin-bottom:18px}
-.mf{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.mf{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
 .sbox{background:#0f172a;border-radius:12px;padding:18px;margin-bottom:16px;border:1px solid #334155}
 .sr{margin-bottom:8px}
 .slb{color:#64748b;font-size:.78rem;display:block;margin-bottom:2px}
 .sv{color:#f1f5f9;font-weight:600}
 .sv.mono{font-family:monospace;color:#a5b4fc}
 .sv.pwd{font-family:monospace;color:#fbbf24;font-size:1.05rem}
-.ai{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #334155}
+.ai{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #334155;cursor:pointer;transition:.15s}
 .ai:last-child{border-bottom:none}
+.ai:hover{background:rgba(99,102,241,.05);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:8px}
 .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.toast{position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.88rem;z-index:9999;display:none}
+.toast{position:fixed;bottom:24px;right:24px;background:#16a34a;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.88rem;z-index:9999;display:none;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:#64748b}
+.spin{width:24px;height:24px;border:3px solid #334155;border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite;margin-right:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sav-card{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:12px}
+.sav-card h4{color:#a5b4fc;font-size:.85rem;font-weight:700;margin-bottom:8px}
+.sav-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b;font-size:.83rem}
+.sav-row:last-child{border-bottom:none}
+.code-box{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;font-family:monospace;color:#a5b4fc;font-size:.85rem;margin:8px 0;display:flex;align-items:center;justify-content:space-between}
+.tab-row{display:flex;gap:4px;margin-bottom:16px}
+.tab-btn{padding:8px 16px;border-radius:8px 8px 0 0;border:1px solid #334155;border-bottom:none;background:#1e293b;color:#94a3b8;font-size:.82rem;font-weight:600;cursor:pointer}
+.tab-btn.on{background:#0f172a;color:#a5b4fc;border-color:#6366f1;border-bottom:1px solid #0f172a;position:relative;z-index:1}
+@media(max-width:768px){.sb{width:100%;position:static;border-right:none;border-bottom:1px solid #334155;padding:12px 0;display:flex;overflow-x:auto;gap:0}.mn{margin-left:0;padding:16px}.ni{white-space:nowrap;padding:8px 14px;border-left:none;border-bottom:3px solid transparent}.ni.on{border-bottom-color:#6366f1;border-left-color:transparent}.sbf{display:none}.sbl{display:none}}
 </style>
 </head>
 <body>
@@ -100,85 +117,131 @@ tr:last-child td{border-bottom:none}
       <h1>SafeSchool</h1>
       <p>Super Admin - Fondateur uniquement</p>
     </div>
-    <div class="f"><label>Email</label><input type="email" id="lem" value="am.ad.bm@gmail.com"></div>
+    <div class="f"><label>Email</label><input type="email" id="lem" placeholder="admin@safeschool.fr"></div>
     <div class="f"><label>Mot de passe</label><input type="password" id="lpw" placeholder="Mot de passe"></div>
     <button class="btn bfull" id="lbtn">Connexion Super Admin</button>
-    <div class="err" id="lerr">Email ou mot de passe incorrect</div>
-    <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint</p>
+    <div class="err" id="lerr"></div>
+    <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Fondateur</p>
   </div>
 </div>
 <div id="app">
   <nav class="sb">
-    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin</span></div>
-    <div class="ni on" id="n-db" onclick="showPage('db')">Tableau de bord</div>
-    <div class="ni" id="n-sc" onclick="showPage('sc')">Etablissements</div>
-    <div class="ni" id="n-cr" onclick="showPage('cr')">Nouvel etablissement</div>
-    <div class="ni" id="n-dn" onclick="showPage('dn')">Sous-domaines</div>
-    <div class="ni" id="n-bl" onclick="showPage('bl')">Abonnements</div>
+    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span></div>
+    <div class="ni on" id="n-db" onclick="showPage('db')"><span class="ni-icon">&#128200;</span> Tableau de bord</div>
+    <div class="ni" id="n-sc" onclick="showPage('sc')"><span class="ni-icon">&#127979;</span> Etablissements</div>
+    <div class="ni" id="n-cr" onclick="showPage('cr')"><span class="ni-icon">&#10133;</span> Nouvel etablissement</div>
+    <div class="ni" id="n-sav" onclick="showPage('sav')"><span class="ni-icon">&#128295;</span> SAV / Maintenance</div>
+    <div class="ni" id="n-dn" onclick="showPage('dn')"><span class="ni-icon">&#127760;</span> Sous-domaines</div>
+    <div class="ni" id="n-bl" onclick="showPage('bl')"><span class="ni-icon">&#128176;</span> Abonnements</div>
+    <div class="ni" id="n-baro" onclick="showPage('baro')"><span class="ni-icon">&#129504;</span> Barometre IA</div>
     <div class="sbf"><button class="btn bs bsm bfull" onclick="doLogout()">Deconnexion</button></div>
   </nav>
   <main class="mn">
     <div id="p-db">
-      <div class="pt">Tableau de bord</div><div class="ps">Vue globale en temps reel</div>
+      <div class="pt">Tableau de bord</div><div class="ps">Vue globale en temps reel - Toutes les donnees de la plateforme</div>
       <div class="sg" id="gst"></div>
-      <div class="card"><div class="ch"><h3>Activite</h3></div><div id="act" style="padding:20px"></div></div>
+      <div class="card"><div class="ch"><h3>Tous les etablissements</h3><button class="btn bsm" onclick="loadDashboard()">&#128260; Actualiser</button></div><div id="act" style="padding:20px"></div></div>
     </div>
     <div id="p-sc" style="display:none">
-      <div class="pt">Etablissements</div><div class="ps">Gestion de vos lycees et colleges</div>
+      <div class="pt">Etablissements</div><div class="ps">Gestion complete de tous vos lycees et colleges</div>
       <div class="card">
         <div class="ch"><h3>Liste (<span id="sco">0</span>)</h3><button class="btn bsm" onclick="showPage('cr')">+ Ajouter</button></div>
-        <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Sous-domaine</th><th>Plan</th><th>Eleves</th><th>Signalements</th><th>Statut</th><th>Expire</th><th>Actions</th></tr></thead><tbody id="stb"></tbody></table></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Nom</th><th>Sous-domaine</th><th>Plan</th><th>Code admin</th><th>Signalements</th><th>Statut</th><th>Expire</th><th>Actions</th></tr></thead><tbody id="stb"></tbody></table></div>
       </div>
     </div>
     <div id="p-cr" style="display:none">
-      <div class="pt">Nouvel etablissement</div><div class="ps">Creer un espace securise dedie</div>
+      <div class="pt">Nouvel etablissement</div><div class="ps">Seul le superadmin peut ajouter des etablissements</div>
       <div class="card" style="max-width:660px">
         <div class="ch"><h3>Informations</h3></div>
         <div style="padding:24px">
-          <div class="fr2"><div class="f"><label>Nom *</label><input type="text" id="cn" placeholder="Lycee Jean Moulin" oninput="onNm()"></div><div class="f"><label>Ville</label><input type="text" id="cv" placeholder="Drancy"></div></div>
-          <div class="f"><label>Email contact *</label><input type="email" id="ce" placeholder="proviseur@etablissement.fr"></div>
+          <div class="fr2">
+            <div class="f"><label>Nom *</label><input type="text" id="cn" placeholder="Lycee Jean Moulin" oninput="onNm()"></div>
+            <div class="f"><label>Ville</label><input type="text" id="cv" placeholder="Drancy"></div>
+          </div>
+          <div class="fr2">
+            <div class="f"><label>Email contact *</label><input type="email" id="ce" placeholder="proviseur@etablissement.fr"></div>
+            <div class="f"><label>Type</label>
+              <select id="ctp"><option value="lycee">Lycee</option><option value="college">College</option><option value="ecole">Ecole primaire</option><option value="autre">Autre</option></select>
+            </div>
+          </div>
+          <div class="f"><label>Email admin etablissement *</label><input type="email" id="cae" placeholder="admin@lycee-moulin.fr"></div>
+          <div class="f"><label>Mot de passe admin</label><input type="text" id="cap" placeholder="Genere automatiquement si vide"></div>
           <div class="f"><label>Sous-domaine</label><div class="sp" id="sdp">nom-lycee.safeschool.fr</div><input type="hidden" id="csl"></div>
-          <div class="f"><label>Plan</label>
+          <div class="f"><label>Plan d'abonnement</label>
             <div class="pg" id="pgr">
-              <div class="pc on" data-plan="starter" onclick="onPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div><div class="pf">200 eleves / 50 sign. / 1 admin / 3 mois</div></div>
-              <div class="pc" data-plan="pro" onclick="onPl(this)"><div class="pn">Pro</div><div class="pp">49 EUR/mois</div><div class="pf">Illimite / 3 admins / 12 mois</div></div>
-              <div class="pc" data-plan="enterprise" onclick="onPl(this)"><div class="pn">Enterprise</div><div class="pp">Sur devis</div><div class="pf">Multi-sites / API / SLA 99.9%</div></div>
+              <div class="pc on" data-plan="starter" onclick="onPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div><div class="pf">200 eleves<br>50 signalements/mois<br>1 admin<br>3 mois</div></div>
+              <div class="pc" data-plan="pro" onclick="onPl(this)"><div class="pn">Pro</div><div class="pp">49 EUR/mois</div><div class="pf">Illimite<br>3 admins<br>Stats avancees<br>12 mois</div></div>
+              <div class="pc" data-plan="enterprise" onclick="onPl(this)"><div class="pn">Enterprise</div><div class="pp">Sur devis</div><div class="pf">Multi-sites<br>API / SLA 99.9%<br>24 mois</div></div>
             </div>
           </div>
           <div class="f"><label>Quotas</label><div class="qg" id="qdi"></div></div>
           <div class="db" id="dnsb" style="display:none">
-            <h4>DNS Cloudflare apres creation</h4>
+            <h4>Configuration DNS apres creation</h4>
             <div class="dr"><span class="dt">CNAME</span><span class="dv" id="dsl">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
           </div>
-          <div style="display:flex;gap:12px"><button class="btn bg" onclick="createSch()">Creer</button><button class="btn bs" onclick="showPage('sc')">Annuler</button></div>
+          <div style="display:flex;gap:12px"><button class="btn bg" onclick="createSch()">Creer l'etablissement</button><button class="btn bs" onclick="showPage('sc')">Annuler</button></div>
         </div>
       </div>
     </div>
+    <div id="p-sav" style="display:none">
+      <div class="pt">SAV / Maintenance</div><div class="ps">Acces a toutes les donnees des etablissements</div>
+      <div style="margin-bottom:16px">
+        <div class="f"><label>Selectionner un etablissement</label><select id="sav-sel" onchange="loadSavData()"><option value="">-- Choisir --</option></select></div>
+      </div>
+      <div id="sav-content"></div>
+    </div>
     <div id="p-dn" style="display:none">
-      <div class="pt">Sous-domaines</div><div class="ps">Configuration DNS</div>
-      <div class="card"><div class="ch"><h3>Wildcard DNS</h3></div><div style="padding:20px">
-        <div class="db"><div class="dr"><span class="dt">CNAME</span><span class="dv">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
-        <div class="dr" style="margin-top:6px"><span class="dt">A</span><span class="dv">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">75.2.60.5</span></div></div>
+      <div class="pt">Sous-domaines</div><div class="ps">Configuration DNS pour les sous-domaines</div>
+      <div class="card"><div class="ch"><h3>Configuration DNS Wildcard</h3></div><div style="padding:20px">
+        <div class="db"><h4>Cloudflare DNS</h4>
+          <div class="dr"><span class="dt">CNAME</span><span class="dv">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
+          <div class="dr" style="margin-top:6px"><span class="dt">A</span><span class="dv">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">75.2.60.5</span></div>
+        </div>
       </div></div>
       <div class="card"><div class="ch"><h3>Sous-domaines actifs</h3></div>
         <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Statut</th><th>Lien</th></tr></thead><tbody id="dntb"></tbody></table></div>
       </div>
     </div>
     <div id="p-bl" style="display:none">
-      <div class="pt">Abonnements</div><div class="ps">Suivi des revenus</div>
+      <div class="pt">Abonnements</div><div class="ps">Suivi des revenus et abonnements</div>
       <div class="sg" id="bst"></div>
-      <div class="card"><div class="ch"><h3>Abonnements</h3></div>
+      <div class="card"><div class="ch"><h3>Abonnements par etablissement</h3></div>
         <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Plan</th><th>Montant</th><th>Debut</th><th>Expiration</th><th>J. rest.</th><th>Statut</th><th>Action</th></tr></thead><tbody id="bltb"></tbody></table></div>
+      </div>
+    </div>
+    <div id="p-baro" style="display:none">
+      <div class="pt">Barometre IA — Lea</div><div class="ps">Statistiques des conversations et indicateurs de bien-etre par etablissement</div>
+      <div class="sg" id="baro-kpi"></div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Alertes recentes (severite elevee)</h3><button class="btn bsm" onclick="loadBarometre()">&#128260; Actualiser</button></div>
+        <div id="baro-alerts" style="padding:20px"></div>
+      </div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Repartition par categorie (toutes ecoles)</h3></div>
+        <div id="baro-categories" style="padding:20px"></div>
+      </div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Indicateurs par etablissement</h3></div>
+        <div id="baro-schools" style="padding:20px"></div>
+      </div>
+      <div class="card"><div class="ch"><h3>Rapport IA Premium</h3></div>
+        <div style="padding:20px">
+          <p style="color:#94a3b8;font-size:.85rem;margin-bottom:14px">Generez un rapport complet sur l'etat du bien-etre des eleves, basé sur les interactions avec Lea et les signalements. Ce rapport peut etre presente aux administrateurs des etablissements premium.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn bsm bg" onclick="generateReport()">Generer le rapport global</button>
+            <select id="baro-report-school" class="f" style="padding:8px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:.85rem"><option value="">-- Par etablissement --</option></select>
+            <button class="btn bsm" onclick="generateSchoolReport()">Rapport etablissement</button>
+          </div>
+          <div id="baro-report" style="margin-top:16px"></div>
+        </div>
       </div>
     </div>
   </main>
 </div>
 <div class="mb" id="emod" style="display:none" onclick="if(event.target===this)clMod()">
   <div class="mo" onclick="event.stopPropagation()">
-    <h3>Modifier</h3>
+    <h3 id="emod-title">Modifier</h3>
     <input type="hidden" id="eid">
     <div class="f"><label>Nom</label><input type="text" id="enm"></div>
-    <div class="f"><label>Email</label><input type="email" id="eem"></div>
+    <div class="f"><label>Email contact</label><input type="email" id="eem"></div>
+    <div class="f"><label>Email admin</label><input type="email" id="eae"></div>
     <div class="f"><label>Plan</label>
       <div class="pg" id="epg">
         <div class="pc" data-plan="starter" onclick="onEPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div></div>
@@ -189,244 +252,663 @@ tr:last-child td{border-bottom:none}
     <div class="f"><label>Statut</label>
       <select id="est"><option value="active">Actif</option><option value="trial">Periode essai</option><option value="suspended">Suspendu</option><option value="expired">Expire</option></select>
     </div>
+    <div id="emod-codes" style="margin-top:12px"></div>
     <div class="mf"><button class="btn bs bsm" onclick="clMod()">Annuler</button><button class="btn bsm" onclick="svEd()">Sauvegarder</button></div>
   </div>
 </div>
 <div class="toast" id="tst"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var C={em:"am.ad.bm@gmail.com",pw:"SafeSchool2026!",k:"sa_v3"};
-var PL={starter:{pr:0,ms:200,mr:50,ma:1,mo:3},pro:{pr:49,ms:9999,mr:9999,ma:3,mo:12},enterprise:{pr:0,ms:99999,mr:99999,ma:99,mo:24}};
-var ST={plan:"starter",ePlan:"starter"};
-function gS(){try{return JSON.parse(localStorage.getItem(C.k)||"[]");}catch(e){return[];}}
-function sS(l){localStorage.setItem(C.k,JSON.stringify(l));}
-function initDemo(){
-  if(gS().length)return;
-  var n=new Date(),d30=new Date(n),e1=new Date(n),e2=new Date(n);
-  d30.setDate(d30.getDate()-30);e1.setMonth(e1.getMonth()+9);e2.setMonth(e2.getMonth()+2);
-  sS([
-    {id:"s1",name:"Lycee Jean Moulin",ville:"Drancy",email:"proviseur@jm.fr",slug:"jean-moulin",plan:"pro",status:"active",ms:9999,mr:9999,ma:3,cAt:d30.toISOString(),eAt:e1.toISOString(),rep:18,stu:0,apw:"SS4XK9PL"},
-    {id:"s2",name:"College Victor Hugo",ville:"Paris 10e",email:"dir@vh.fr",slug:"victor-hugo",plan:"starter",status:"trial",ms:200,mr:50,ma:1,cAt:n.toISOString(),eAt:e2.toISOString(),rep:3,stu:0,apw:"SS7RK2MN"}
-  ]);
+// ═══════════ CONFIG ═══════════
+var API_BASE = '/api';
+var TOKEN = '';
+var SCHOOLS = [];
+var PL = {starter:{pr:0,ms:200,mr:50,ma:1,mo:3},pro:{pr:49,ms:9999,mr:9999,ma:3,mo:12},enterprise:{pr:199,ms:99999,mr:99999,ma:99,mo:24}};
+var ST = {plan:'starter', ePlan:'starter'};
+
+// Supabase for direct data access (SAV)
+var SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
+var SS_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+var supa = window.supabase.createClient(SS_SUPABASE_URL, SS_SUPABASE_KEY);
+
+// ═══════════ API HELPERS ═══════════
+async function api(method, path, body) {
+  var opts = { method: method, headers: { 'Content-Type': 'application/json', 'x-sa-token': TOKEN } };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch(API_BASE + path, opts);
+  var data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Erreur API');
+  return data;
 }
-function doLogin(){
-  var em=document.getElementById("lem").value.trim();
-  var pw=document.getElementById("lpw").value;
-  if(em===C.em&&pw===C.pw){
-    document.getElementById("lerr").style.display="none";
-    document.getElementById("ls").style.display="none";
-    document.getElementById("app").style.display="block";
-    initDemo();showPage("db");
-  }else{
-    document.getElementById("lerr").style.display="block";
+
+// ═══════════ AUTH ═══════════
+async function doLogin() {
+  var em = document.getElementById('lem').value.trim();
+  var pw = document.getElementById('lpw').value;
+  try {
+    var res = await api('POST', '/superadmin/login', { email: em, password: pw });
+    TOKEN = res.token;
+    sessionStorage.setItem('sa_token', TOKEN);
+    document.getElementById('lerr').style.display = 'none';
+    document.getElementById('ls').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    await loadDashboard();
+  } catch(e) {
+    document.getElementById('lerr').textContent = e.message || 'Identifiants incorrects';
+    document.getElementById('lerr').style.display = 'block';
   }
 }
-function doLogout(){
-  document.getElementById("app").style.display="none";
-  document.getElementById("ls").style.display="flex";
-  document.getElementById("lpw").value="";
-  document.getElementById("lerr").style.display="none";
+function doLogout() {
+  TOKEN = '';
+  sessionStorage.removeItem('sa_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('ls').style.display = 'flex';
+  document.getElementById('lpw').value = '';
 }
-document.getElementById("lbtn").addEventListener("click",doLogin);
-document.getElementById("lpw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
-var PGS=["db","sc","cr","dn","bl"];
-function showPage(p){
-  PGS.forEach(function(x){
-    var el=document.getElementById("p-"+x),nav=document.getElementById("n-"+x);
-    if(el)el.style.display=(x===p)?"block":"none";
-    if(nav)nav.classList.toggle("on",x===p);
+document.getElementById('lbtn').addEventListener('click', doLogin);
+document.getElementById('lpw').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+
+// Check saved session
+(function() {
+  var t = sessionStorage.getItem('sa_token');
+  if (t) { TOKEN = t; document.getElementById('ls').style.display = 'none'; document.getElementById('app').style.display = 'block'; loadDashboard(); }
+})();
+
+// ═══════════ NAVIGATION ═══════════
+var PGS = ['db','sc','cr','sav','dn','bl','baro'];
+function showPage(p) {
+  PGS.forEach(function(x) {
+    var el = document.getElementById('p-'+x), nav = document.getElementById('n-'+x);
+    if (el) el.style.display = (x===p) ? 'block' : 'none';
+    if (nav) nav.classList.toggle('on', x===p);
   });
-  var fn={db:rdDb,sc:rdSc,dn:rdDn,bl:rdBl,cr:rstCr};
-  if(fn[p])fn[p]();
+  var loaders = { db: loadDashboard, sc: loadSchools, dn: loadDomains, bl: loadBilling, cr: rstCr, sav: loadSavSelector, baro: loadBarometre };
+  if (loaders[p]) loaders[p]();
 }
-function fmt(n){return n>=9999?"Illimite":String(n);}
-function fmtD(iso){return iso?new Date(iso).toLocaleDateString("fr-FR"):"-";}
-function dL(iso){return iso?Math.ceil((new Date(iso)-new Date())/86400000):0;}
-function plPr(pl){return PL[pl]&&PL[pl].pr>0?PL[pl].pr+" EUR/mois":"Gratuit";}
-function stc(lb,vl,sb,co){return "<div class=\"sc\" style=\"--c:"+co+"\"><div class=\"sl\">"+lb+"</div><div class=\"sn\">"+vl+"</div><div class=\"ss\">"+sb+"</div></div>";}
-function shTst(msg,err){
-  var t=document.getElementById("tst");
-  t.textContent=msg;t.style.background=err?"#dc2626":"#16a34a";
-  t.style.display="block";setTimeout(function(){t.style.display="none";},3000);
+
+// ═══════════ HELPERS ═══════════
+function fmt(n) { return n >= 9999 ? 'Illimite' : String(n); }
+function fmtD(iso) { return iso ? new Date(iso).toLocaleDateString('fr-FR') : '-'; }
+function dL(iso) { return iso ? Math.ceil((new Date(iso) - new Date()) / 86400000) : 0; }
+function plPr(pl) { return PL[pl] && PL[pl].pr > 0 ? PL[pl].pr + ' EUR/mois' : 'Gratuit'; }
+function stc(lb, vl, sb, co) { return '<div class="sc" style="--c:'+co+'"><div class="sl">'+lb+'</div><div class="sn">'+vl+'</div><div class="ss">'+sb+'</div></div>'; }
+function shTst(msg, err) {
+  var t = document.getElementById('tst');
+  t.textContent = msg; t.style.background = err ? '#dc2626' : '#16a34a';
+  t.style.display = 'block'; setTimeout(function() { t.style.display = 'none'; }, 3000);
 }
-function cpTxt(txt){navigator.clipboard.writeText(txt).then(function(){shTst("Copie!");});}
-function clMod(){document.getElementById("emod").style.display="none";}
-function rdDb(){
-  var s=gS();
-  var act=s.filter(function(x){return x.status==="active";}).length;
-  var tri=s.filter(function(x){return x.status==="trial";}).length;
-  var mrr=s.filter(function(x){return x.plan==="pro"&&x.status==="active";}).length*49;
-  var rep=s.reduce(function(a,x){return a+(x.rep||0);},0);
-  document.getElementById("gst").innerHTML=
-    stc("Etablissements",s.length,"Total deployes","#6366f1")+
-    stc("Actifs",act,"En production","#16a34a")+
-    stc("Essais",tri,"Periode pilote","#f59e0b")+
-    stc("MRR",mrr+" EUR","Revenus mensuels","#06b6d4")+
-    stc("Signalements",rep,"Total cumule","#8b5cf6");
-  document.getElementById("act").innerHTML=s.length?s.map(function(x){
-    var dot=x.status==="active"?"#16a34a":x.status==="trial"?"#f59e0b":"#64748b";
-    return "<div class=\"ai\"><div class=\"dot\" style=\"background:"+dot+"\"></div>"
-      +"<div style=\"flex:1\"><div style=\"color:#e2e8f0;font-weight:600;font-size:.85rem\">"+x.name+"</div>"
-      +"<div style=\"font-size:.75rem;color:#64748b\">"+x.slug+".safeschool.fr - "+x.plan.toUpperCase()+"</div></div>"
-      +"<div style=\"font-size:.78rem;color:#94a3b8\">"+(x.rep||0)+" signalements</div></div>";
-  }).join(""):"<p style=\"color:#64748b;font-size:.85rem\">Aucun etablissement.</p>";
+function cpTxt(txt) { navigator.clipboard.writeText(txt).then(function() { shTst('Copie !'); }); }
+
+// ═══════════ DASHBOARD ═══════════
+async function loadDashboard() {
+  try {
+    var res = await api('GET', '/superadmin/dashboard');
+    SCHOOLS = res.schools || [];
+    document.getElementById('gst').innerHTML =
+      stc('Etablissements', res.total_schools, 'Total deployes', '#6366f1') +
+      stc('Actifs', res.active, 'En production', '#16a34a') +
+      stc('Essais', res.trial, 'Periode pilote', '#f59e0b') +
+      stc('MRR', res.mrr + ' EUR', 'Revenus mensuels', '#06b6d4') +
+      stc('ARR', res.arr + ' EUR', 'Projection annuelle', '#8b5cf6') +
+      stc('Signalements', res.total_reports, 'Total cumule', '#dc2626');
+    document.getElementById('act').innerHTML = SCHOOLS.length ? SCHOOLS.map(function(x) {
+      var dot = x.status === 'active' ? '#16a34a' : x.status === 'trial' ? '#f59e0b' : '#64748b';
+      return '<div class="ai" onclick="showSchoolDetail(\''+x.id+'\')">'
+        + '<div class="dot" style="background:'+dot+'"></div>'
+        + '<div style="flex:1"><div style="color:#e2e8f0;font-weight:600;font-size:.85rem">'+x.name+'</div>'
+        + '<div style="font-size:.75rem;color:#64748b">'+x.slug+'.safeschool.fr &middot; '+x.plan.toUpperCase()+' &middot; Admin: '+(x.admin_email||'-')+'</div></div>'
+        + '<div style="text-align:right"><div style="font-size:.78rem;color:#94a3b8">'+(x.report_count||0)+' signalements</div>'
+        + '<div style="font-size:.68rem;color:#64748b">Code: <span style="color:#fbbf24;font-family:monospace">'+(x.admin_code||'-')+'</span></div></div></div>';
+    }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun etablissement. Creez-en un depuis le menu.</p>';
+  } catch(e) {
+    document.getElementById('gst').innerHTML = '<div class="sc" style="--c:#dc2626"><div class="sl">Erreur</div><div class="sn">!</div><div class="ss">'+e.message+'</div></div>';
+  }
 }
-function rdSc(){
-  var s=gS();
-  document.getElementById("sco").textContent=s.length;
-  document.getElementById("stb").innerHTML=s.map(function(x){
-    var dl=dL(x.eAt),dc=dl<30?"#fca5a5":"#94a3b8";
-    return "<tr>"
-      +"<td><div style=\"font-weight:600;color:#f1f5f9\">"+x.name+"</div><div style=\"font-size:.72rem;color:#64748b\">"+(x.ville||"")+"</div></td>"
-      +"<td><a href=\"https://"+x.slug+".safeschool.fr\" target=\"_blank\" style=\"color:#a5b4fc;font-family:monospace;font-size:.78rem\">"+x.slug+".safeschool.fr</a></td>"
-      +"<td><span class=\"badge b-"+x.plan+"\">"+x.plan.toUpperCase()+"</span></td>"
-      +"<td style=\"color:#94a3b8\">"+(x.stu||0)+" / "+fmt(x.ms)+"</td>"
-      +"<td>"+(x.rep||0)+"</td>"
-      +"<td><span class=\"badge b-"+x.status+"\">"+x.status+"</span></td>"
-      +"<td style=\"font-size:.8rem;color:"+dc+"\">"+fmtD(x.eAt)+" ("+dl+"j)</td>"
-      +"<td><div class=\"tda\"><button class=\"btn bs bsm\" data-id=\""+x.id+"\" onclick=\"opEd(this.dataset.id)\">Modifier</button>"
-      +"<button class=\"btn bd bsm\" data-id=\""+x.id+"\" onclick=\"delSch(this.dataset.id)\">Suppr.</button></div></td></tr>";
-  }).join("");
+
+// ═══════════ SCHOOLS LIST ═══════════
+async function loadSchools() {
+  try {
+    SCHOOLS = await api('GET', '/establishments/');
+    document.getElementById('sco').textContent = SCHOOLS.length;
+    document.getElementById('stb').innerHTML = SCHOOLS.map(function(x) {
+      var dl = dL(x.expires_at), dc = dl < 30 ? '#fca5a5' : '#94a3b8';
+      return '<tr>'
+        + '<td><div style="font-weight:600;color:#f1f5f9">'+x.name+'</div><div style="font-size:.72rem;color:#64748b">'+(x.city||'')+' &middot; '+(x.type||'lycee')+'</div></td>'
+        + '<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#a5b4fc;font-family:monospace;font-size:.78rem">'+x.slug+'.safeschool.fr</a></td>'
+        + '<td><span class="badge b-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
+        + '<td><div class="code-box" style="padding:4px 8px;margin:0;font-size:.78rem"><span>'+(x.admin_code||'-')+'</span><button class="btn bsm bs" style="padding:2px 8px;font-size:.68rem" onclick="cpTxt(\''+(x.admin_code||'')+'\')">&nbsp;Copier</button></div></td>'
+        + '<td>'+(x.report_count||0)+'</td>'
+        + '<td><span class="badge b-'+x.status+'">'+x.status+'</span></td>'
+        + '<td style="font-size:.8rem;color:'+dc+'">'+fmtD(x.expires_at)+' ('+dl+'j)</td>'
+        + '<td><div class="tda">'
+        + '<button class="btn bs bsm" onclick="opEd(\''+x.id+'\')">Modifier</button>'
+        + '<button class="btn bw bsm" onclick="regenAdmin(\''+x.id+'\')">Regen Code</button>'
+        + '<button class="btn bd bsm" onclick="delSch(\''+x.id+'\')">Suppr.</button>'
+        + '</div></td></tr>';
+    }).join('');
+  } catch(e) {
+    shTst(e.message, true);
+  }
 }
-function opEd(id){
-  var s=gS().find(function(x){return x.id===id;});
-  if(!s)return;
-  document.getElementById("eid").value=s.id;
-  document.getElementById("enm").value=s.name;
-  document.getElementById("eem").value=s.email||"";
-  document.getElementById("est").value=s.status;
-  ST.ePlan=s.plan;
-  document.querySelectorAll("#epg .pc").forEach(function(c){c.classList.toggle("on",c.dataset.plan===s.plan);});
-  document.getElementById("emod").style.display="flex";
-}
-function onEPl(el){
-  ST.ePlan=el.dataset.plan;
-  document.querySelectorAll("#epg .pc").forEach(function(c){c.classList.toggle("on",c===el);});
-}
-function svEd(){
-  var id=document.getElementById("eid").value;
-  var s=gS(),i=s.findIndex(function(x){return x.id===id;});
-  if(i<0)return;
-  var p=PL[ST.ePlan];
-  s[i].name=document.getElementById("enm").value.trim();
-  s[i].email=document.getElementById("eem").value.trim();
-  s[i].status=document.getElementById("est").value;
-  s[i].plan=ST.ePlan;s[i].ms=p.ms;s[i].mr=p.mr;s[i].ma=p.ma;
-  sS(s);clMod();shTst("Mis a jour");rdSc();
-}
-function delSch(id){
-  if(!confirm("Supprimer ? Action irreversible."))return;
-  sS(gS().filter(function(x){return x.id!==id;}));
-  rdSc();shTst("Supprime");
-}
-function rstCr(){
-  var n=document.getElementById("cn");
-  if(!n){location.reload();return;}
-  n.value="";document.getElementById("cv").value="";
-  document.getElementById("ce").value="";document.getElementById("csl").value="";
-  document.getElementById("sdp").textContent="nom-lycee.safeschool.fr";
-  document.getElementById("dnsb").style.display="none";
-  ST.plan="starter";
-  document.querySelectorAll("#pgr .pc").forEach(function(c){c.classList.toggle("on",c.dataset.plan==="starter");});
+
+// ═══════════ CREATE SCHOOL ═══════════
+function rstCr() {
+  var fields = ['cn','cv','ce','cae','cap'];
+  fields.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('csl').value = '';
+  document.getElementById('sdp').textContent = 'nom-lycee.safeschool.fr';
+  document.getElementById('dnsb').style.display = 'none';
+  ST.plan = 'starter';
+  document.querySelectorAll('#pgr .pc').forEach(function(c) { c.classList.toggle('on', c.dataset.plan === 'starter'); });
   rdQu();
 }
-function onNm(){
-  var slug=document.getElementById("cn").value.toLowerCase()
-    .replace(/[^a-z0-9\s-]/g,"").replace(/\s+/g,"-").replace(/-+/g,"-").replace(/^-+|-+$/g,"").slice(0,30);
-  document.getElementById("csl").value=slug;
-  document.getElementById("sdp").textContent=slug?slug+".safeschool.fr":"nom-lycee.safeschool.fr";
-  var db=document.getElementById("dnsb");
-  if(slug){db.style.display="block";document.getElementById("dsl").textContent=slug+".safeschool.fr";}
-  else db.style.display="none";
+function onNm() {
+  var slug = document.getElementById('cn').value.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+  document.getElementById('csl').value = slug;
+  document.getElementById('sdp').textContent = slug ? slug + '.safeschool.fr' : 'nom-lycee.safeschool.fr';
+  if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = slug + '.safeschool.fr'; }
+  else document.getElementById('dnsb').style.display = 'none';
 }
-function onPl(el){
-  ST.plan=el.dataset.plan;
-  document.querySelectorAll("#pgr .pc").forEach(function(c){c.classList.toggle("on",c===el);});
+function onPl(el) {
+  ST.plan = el.dataset.plan;
+  document.querySelectorAll('#pgr .pc').forEach(function(c) { c.classList.toggle('on', c === el); });
   rdQu();
 }
-function rdQu(){
-  var p=PL[ST.plan]||PL.starter;
-  document.getElementById("qdi").innerHTML=
-    "<div class=\"qi\"><div class=\"qv\">"+fmt(p.ms)+"</div><div class=\"ql\">Eleves max</div></div>"
-    +"<div class=\"qi\"><div class=\"qv\">"+fmt(p.mr)+"</div><div class=\"ql\">Signalements/mois</div></div>"
-    +"<div class=\"qi\"><div class=\"qv\">"+fmt(p.ma)+"</div><div class=\"ql\">Admins</div></div>"
-    +"<div class=\"qi\"><div class=\"qv\">"+p.mo+" mois</div><div class=\"ql\">Duree</div></div>";
+function rdQu() {
+  var p = PL[ST.plan] || PL.starter;
+  document.getElementById('qdi').innerHTML =
+    '<div class="qi"><div class="qv">'+fmt(p.ms)+'</div><div class="ql">Eleves max</div></div>'
+    + '<div class="qi"><div class="qv">'+fmt(p.mr)+'</div><div class="ql">Signalements/mois</div></div>'
+    + '<div class="qi"><div class="qv">'+fmt(p.ma)+'</div><div class="ql">Admins</div></div>'
+    + '<div class="qi"><div class="qv">'+p.mo+' mois</div><div class="ql">Duree</div></div>';
 }
-function createSch(){
-  var name=document.getElementById("cn").value.trim();
-  var slug=document.getElementById("csl").value.trim();
-  var email=document.getElementById("ce").value.trim();
-  var ville=document.getElementById("cv").value.trim();
-  if(!name||!slug||!email){shTst("Champs obligatoires","err");return;}
-  if(!/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug)){shTst("Sous-domaine invalide","err");return;}
-  var s=gS();
-  if(s.find(function(x){return x.slug===slug;})){shTst("Sous-domaine deja utilise","err");return;}
-  var p=PL[ST.plan],now=new Date(),exp=new Date(now);
-  exp.setMonth(exp.getMonth()+p.mo);
-  var sch={id:"s"+Date.now(),name:name,ville:ville,email:email,slug:slug,
-    plan:ST.plan,status:ST.plan==="starter"?"trial":"active",
-    ms:p.ms,mr:p.mr,ma:p.ma,
-    cAt:now.toISOString(),eAt:exp.toISOString(),
-    rep:0,stu:0,apw:"SS"+Math.random().toString(36).slice(2,8).toUpperCase()};
-  s.push(sch);sS(s);showSucc(sch);
+async function createSch() {
+  var name = document.getElementById('cn').value.trim();
+  var slug = document.getElementById('csl').value.trim();
+  var email = document.getElementById('ce').value.trim();
+  var city = document.getElementById('cv').value.trim();
+  var type = document.getElementById('ctp').value;
+  var adminEmail = document.getElementById('cae').value.trim();
+  var adminPass = document.getElementById('cap').value.trim();
+
+  if (!name || !email) { shTst('Champs obligatoires manquants', true); return; }
+  if (!adminEmail) { shTst('Email admin requis', true); return; }
+
+  try {
+    var school = await api('POST', '/establishments/', {
+      name: name, slug: slug, city: city, email: email, type: type,
+      plan: ST.plan, admin_email: adminEmail, admin_password: adminPass || undefined
+    });
+
+    // Also create in Supabase for the app
+    try {
+      await supa.from('schools').insert([{
+        name: name, slug: slug, city: city || null, is_active: true
+      }]);
+    } catch(e) { console.warn('Supabase school creation skipped:', e); }
+
+    showSucc(school);
+    shTst('Etablissement cree !');
+  } catch(e) {
+    shTst(e.message, true);
+  }
 }
-function showSucc(s){
-  var el=document.getElementById("p-cr");
-  el.innerHTML="";
-  var pt=document.createElement("div");pt.className="pt";pt.textContent="Etablissement cree!";
-  var ps=document.createElement("div");ps.className="ps";ps.textContent=s.name;
-  var card=document.createElement("div");card.className="card";card.style.maxWidth="600px";
-  var inner=document.createElement("div");inner.style.padding="24px";
-  var sbox=document.createElement("div");sbox.className="sbox";
-  sbox.innerHTML="<div class=\"sr\"><span class=\"slb\">URL eleves</span><span class=\"sv mono\">"+s.slug+".safeschool.fr</span></div>"
-    +"<div class=\"sr\"><span class=\"slb\">Plan</span><span class=\"sv\">"+s.plan.toUpperCase()+" - "+plPr(s.plan)+"</span></div>"
-    +"<div class=\"sr\"><span class=\"slb\">Expire le</span><span class=\"sv\">"+fmtD(s.eAt)+"</span></div>"
-    +"<div class=\"sr\"><span class=\"slb\">Mot de passe admin</span><span class=\"sv pwd\">"+s.apw+"</span></div>"
-    +"<div class=\"sr\"><span class=\"slb\">Contact</span><span class=\"sv\">"+s.email+"</span></div>";
-  var dnsb=document.createElement("div");dnsb.className="db";
-  dnsb.innerHTML="<h4>DNS Cloudflare</h4><div class=\"dr\"><span class=\"dt\">CNAME</span><span class=\"dv\">"+s.slug+"</span><span style=\"color:#475569;margin:0 4px\">vers</span><span class=\"dv\">darling-muffin-21eb90.netlify.app</span></div>";
-  var acts=document.createElement("div");acts.style.cssText="display:flex;gap:12px;margin-top:8px";
-  var b1=document.createElement("button");b1.className="btn bsm";b1.textContent="Voir les etablissements";
-  b1.addEventListener("click",function(){showPage("sc");});
-  var b2=document.createElement("button");b2.className="btn bs bsm";b2.textContent="Creer un autre";
-  b2.addEventListener("click",function(){showPage("cr");});
-  acts.appendChild(b1);acts.appendChild(b2);
-  inner.appendChild(sbox);inner.appendChild(dnsb);inner.appendChild(acts);
-  card.appendChild(inner);
-  el.appendChild(pt);el.appendChild(ps);el.appendChild(card);
+
+function showSucc(s) {
+  var el = document.getElementById('p-cr');
+  el.innerHTML = '<div class="pt">Etablissement cree !</div><div class="ps">'+s.name+'</div>'
+    + '<div class="card" style="max-width:600px"><div style="padding:24px">'
+    + '<div class="sbox">'
+    + '<div class="sr"><span class="slb">URL eleves</span><span class="sv mono">'+s.slug+'.safeschool.fr</span></div>'
+    + '<div class="sr"><span class="slb">Plan</span><span class="sv">'+s.plan.toUpperCase()+' - '+plPr(s.plan)+'</span></div>'
+    + '<div class="sr"><span class="slb">Expire le</span><span class="sv">'+fmtD(s.expires_at)+'</span></div>'
+    + '<div class="sr"><span class="slb">Code admin</span><span class="sv pwd">'+s.admin_code+'</span></div>'
+    + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+s.admin_email+'</span></div>'
+    + '<div class="sr"><span class="slb">Mot de passe admin</span><span class="sv pwd">'+s.admin_password+'</span></div>'
+    + '</div>'
+    + '<div class="db"><h4>DNS Cloudflare</h4><div class="dr"><span class="dt">CNAME</span><span class="dv">'+s.slug+'.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div></div>'
+    + '<div style="display:flex;gap:12px;margin-top:12px">'
+    + '<button class="btn bsm" onclick="showPage(\'sc\')">Voir les etablissements</button>'
+    + '<button class="btn bs bsm" onclick="showPage(\'cr\')">Creer un autre</button>'
+    + '</div></div></div>';
 }
-function rdDn(){
-  var s=gS();
-  document.getElementById("dntb").innerHTML=s.map(function(x){
-    var c=x.status==="active"?"#86efac":x.status==="trial"?"#fcd34d":"#64748b";
-    var l=x.status==="active"?"Actif":x.status==="trial"?"A configurer":"Inactif";
-    return "<tr><td style=\"color:#f1f5f9;font-weight:600\">"+x.name+"</td>"
-      +"<td><span style=\"font-family:monospace;font-size:.8rem;color:#a5b4fc\">"+x.slug+".safeschool.fr</span></td>"
-      +"<td><span class=\"badge b-"+x.plan+"\">"+x.plan.toUpperCase()+"</span></td>"
-      +"<td><span style=\"font-size:.78rem;font-weight:700;color:"+c+"\">"+l+"</span></td>"
-      +"<td><a href=\"https://"+x.slug+".safeschool.fr\" target=\"_blank\" style=\"color:#6366f1;font-size:.78rem\">Ouvrir</a></td></tr>";
-  }).join("");
+
+// ═══════════ EDIT SCHOOL ═══════════
+function opEd(id) {
+  var s = SCHOOLS.find(function(x) { return x.id === id; });
+  if (!s) return;
+  document.getElementById('eid').value = s.id;
+  document.getElementById('enm').value = s.name;
+  document.getElementById('eem').value = s.email || '';
+  document.getElementById('eae').value = s.admin_email || '';
+  document.getElementById('est').value = s.status;
+  ST.ePlan = s.plan;
+  document.querySelectorAll('#epg .pc').forEach(function(c) { c.classList.toggle('on', c.dataset.plan === s.plan); });
+
+  // Show staff codes section
+  var codes = s.staff_codes || [];
+  document.getElementById('emod-codes').innerHTML = '<div style="margin-bottom:12px">'
+    + '<h4 style="color:#a5b4fc;font-size:.85rem;font-weight:700;margin-bottom:8px">Codes d\'identification membres ('+(codes.length)+')</h4>'
+    + (codes.length ? codes.map(function(c) {
+      return '<div class="code-box" style="font-size:.78rem"><span>'+c.code+' ('+c.role+') '+(c.used?'<span style="color:#64748b">Utilise</span>':'<span style="color:#16a34a">Disponible</span>')+'</span></div>';
+    }).join('') : '<p style="color:#64748b;font-size:.8rem">Aucun code genere</p>')
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<button class="btn bsm bg" onclick="genStaffCodes(\''+id+'\',5)">Generer 5 codes CPE</button>'
+    + '<button class="btn bsm" onclick="genStaffCodes(\''+id+'\',3,\'dir\')">3 codes Direction</button>'
+    + '</div></div>';
+
+  document.getElementById('emod').style.display = 'flex';
 }
-function rdBl(){
-  var s=gS();
-  var proA=s.filter(function(x){return x.plan==="pro"&&x.status==="active";});
-  var mrr=proA.length*49,arr=mrr*12;
-  document.getElementById("bst").innerHTML=
-    stc("MRR",mrr+" EUR","Revenus mensuels","#6366f1")+
-    stc("ARR",arr+" EUR","Projection annuelle","#06b6d4")+
-    stc("Payants",proA.length,"Plan Pro actif","#16a34a")+
-    stc("Essais",s.filter(function(x){return x.status==="trial";}).length,"A convertir","#f59e0b");
-  document.getElementById("bltb").innerHTML=s.map(function(x){
-    var dl=dL(x.eAt),dc=dl<30?"#fca5a5":"#94a3b8";
-    return "<tr><td style=\"color:#f1f5f9;font-weight:600\">"+x.name+"</td>"
-      +"<td><span class=\"badge b-"+x.plan+"\">"+x.plan.toUpperCase()+"</span></td>"
-      +"<td style=\"color:"+(PL[x.plan].pr>0?"#86efac":"#64748b")+"\">"+ plPr(x.plan)+"</td>"
-      +"<td style=\"font-size:.8rem\">"+fmtD(x.cAt)+"</td>"
-      +"<td style=\"font-size:.8rem\">"+fmtD(x.eAt)+"</td>"
-      +"<td style=\"font-size:.8rem;color:"+dc+";font-weight:700\">"+dl+"j</td>"
-      +"<td><span class=\"badge b-"+x.status+"\">"+x.status+"</span></td>"
-      +"<td><button class=\"btn bs bsm\" data-id=\""+x.id+"\" onclick=\"opEd(this.dataset.id)\">Gerer</button></td></tr>";
-  }).join("");
+function onEPl(el) {
+  ST.ePlan = el.dataset.plan;
+  document.querySelectorAll('#epg .pc').forEach(function(c) { c.classList.toggle('on', c === el); });
 }
+function clMod() { document.getElementById('emod').style.display = 'none'; }
+
+async function svEd() {
+  var id = document.getElementById('eid').value;
+  var p = PL[ST.ePlan];
+  try {
+    await api('PUT', '/establishments/' + id, {
+      name: document.getElementById('enm').value.trim(),
+      email: document.getElementById('eem').value.trim(),
+      admin_email: document.getElementById('eae').value.trim(),
+      status: document.getElementById('est').value,
+      plan: ST.ePlan,
+      max_students: p.ms, max_reports: p.mr, max_admins: p.ma
+    });
+    clMod(); shTst('Mis a jour'); loadSchools();
+  } catch(e) { shTst(e.message, true); }
+}
+
+async function delSch(id) {
+  if (!confirm('Supprimer cet etablissement ? Action irreversible.')) return;
+  try {
+    await api('DELETE', '/establishments/' + id);
+    shTst('Supprime'); loadSchools();
+  } catch(e) { shTst(e.message, true); }
+}
+
+async function regenAdmin(id) {
+  if (!confirm('Regenerer le code admin ? L\'ancien code ne fonctionnera plus.')) return;
+  try {
+    var res = await api('POST', '/establishments/' + id + '/regenerate-admin');
+    shTst('Nouveau code: ' + res.admin_code);
+    loadSchools();
+  } catch(e) { shTst(e.message, true); }
+}
+
+async function genStaffCodes(id, count, role) {
+  try {
+    await api('POST', '/establishments/' + id + '/staff-codes', { count: count, role: role || 'cpe' });
+    shTst(count + ' codes generes');
+    // Reload school data and reopen modal
+    SCHOOLS = await api('GET', '/establishments/');
+    opEd(id);
+  } catch(e) { shTst(e.message, true); }
+}
+
+// ═══════════ SAV / MAINTENANCE ═══════════
+async function loadSavSelector() {
+  try {
+    if (!SCHOOLS.length) SCHOOLS = await api('GET', '/establishments/');
+    var sel = document.getElementById('sav-sel');
+    sel.innerHTML = '<option value="">-- Choisir un etablissement --</option>'
+      + SCHOOLS.map(function(s) { return '<option value="'+s.id+'">'+s.name+' ('+s.slug+'.safeschool.fr)</option>'; }).join('');
+  } catch(e) { shTst(e.message, true); }
+}
+
+async function loadSavData() {
+  var id = document.getElementById('sav-sel').value;
+  var el = document.getElementById('sav-content');
+  if (!id) { el.innerHTML = ''; return; }
+
+  el.innerHTML = '<div class="loading"><div class="spin"></div> Chargement des donnees...</div>';
+  var school = SCHOOLS.find(function(s) { return s.id === id; });
+  if (!school) return;
+
+  // Show school info + load reports from Supabase
+  var html = '<div class="card"><div class="ch"><h3>Informations etablissement</h3></div><div style="padding:20px">'
+    + '<div class="sbox">'
+    + '<div class="sr"><span class="slb">Nom</span><span class="sv">'+school.name+'</span></div>'
+    + '<div class="sr"><span class="slb">Ville</span><span class="sv">'+(school.city||'-')+'</span></div>'
+    + '<div class="sr"><span class="slb">Sous-domaine</span><span class="sv mono">'+school.slug+'.safeschool.fr</span></div>'
+    + '<div class="sr"><span class="slb">Plan</span><span class="sv"><span class="badge b-'+school.plan+'">'+school.plan.toUpperCase()+'</span></span></div>'
+    + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+(school.admin_email||'-')+'</span></div>'
+    + '<div class="sr"><span class="slb">Code admin</span><span class="sv pwd">'+(school.admin_code||'-')+'</span></div>'
+    + '<div class="sr"><span class="slb">Mot de passe admin</span><span class="sv pwd">'+(school.admin_password||'-')+'</span></div>'
+    + '<div class="sr"><span class="slb">Statut</span><span class="sv"><span class="badge b-'+school.status+'">'+school.status+'</span></span></div>'
+    + '<div class="sr"><span class="slb">Expire</span><span class="sv">'+fmtD(school.expires_at)+'</span></div>'
+    + '</div></div></div>';
+
+  // Staff codes
+  var codes = school.staff_codes || [];
+  html += '<div class="card"><div class="ch"><h3>Codes identification membres ('+codes.length+')</h3>'
+    + '<button class="btn bsm bg" onclick="genStaffCodes(\''+id+'\',5);setTimeout(function(){loadSavData()},1500)">Generer 5 codes</button></div>'
+    + '<div style="padding:20px">' + (codes.length ? codes.map(function(c) {
+      return '<div class="sav-row"><span class="dt">'+c.code+'</span><span style="color:#94a3b8">'+c.role+'</span>'
+        + '<span style="margin-left:auto;font-size:.78rem;color:'+(c.used?'#64748b':'#16a34a')+'">'+(c.used?'Utilise':'Disponible')+'</span></div>';
+    }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun code genere.</p>') + '</div></div>';
+
+  el.innerHTML = html;
+
+  // Load reports from Supabase
+  try {
+    // Try to find the school in Supabase by slug
+    var { data: supaSchools } = await supa.from('schools').select('id').eq('slug', school.slug).limit(1);
+    var supaSchoolId = supaSchools && supaSchools.length ? supaSchools[0].id : null;
+
+    if (supaSchoolId) {
+      var { data: reports } = await supa.from('reports').select('*').eq('school_id', supaSchoolId).order('created_at', { ascending: false }).limit(100);
+      if (reports && reports.length) {
+        var statusMap = {nouveau:'Nouveau',en_cours:'En cours',traite:'Traite',archive:'Archive'};
+        var rptHtml = '<div class="card"><div class="ch"><h3>Signalements ('+reports.length+')</h3></div>'
+          + '<div style="overflow-x:auto"><table><thead><tr><th>N dossier</th><th>Code suivi</th><th>Type</th><th>Urgence</th><th>Statut</th><th>Description</th><th>Date</th><th>Reponse</th></tr></thead><tbody>';
+        reports.forEach(function(r) {
+          rptHtml += '<tr>'
+            + '<td style="font-family:monospace;color:#a5b4fc;font-size:.78rem">'+(r.case_number||'-')+'</td>'
+            + '<td style="font-family:monospace;font-size:.78rem">'+(r.tracking_code||'-')+'</td>'
+            + '<td><span class="badge b-'+({verbal:'pro',physique:'starter',cyber:'enterprise'}[r.type]||'starter')+'">'+(r.type||'-')+'</span></td>'
+            + '<td style="color:'+({haute:'#dc2626',moyenne:'#f59e0b',faible:'#16a34a'}[r.urgency]||'#94a3b8')+';font-weight:700;font-size:.82rem">'+(r.urgency||'-')+'</td>'
+            + '<td><span class="badge b-'+({nouveau:'trial',en_cours:'pro',traite:'active',archive:'suspended'}[r.status]||'trial')+'">'+(statusMap[r.status]||r.status)+'</span></td>'
+            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.description||'-')+'</td>'
+            + '<td style="font-size:.78rem;color:#94a3b8">'+fmtD(r.created_at)+'</td>'
+            + '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:'+(r.staff_reply?'#16a34a':'#64748b')+'">'+(r.staff_reply||'Pas de reponse')+'</td>'
+            + '</tr>';
+        });
+        rptHtml += '</tbody></table></div></div>';
+        el.innerHTML += rptHtml;
+      } else {
+        el.innerHTML += '<div class="card"><div class="ch"><h3>Signalements</h3></div><div style="padding:20px;color:#64748b">Aucun signalement dans Supabase pour cet etablissement.</div></div>';
+      }
+    } else {
+      el.innerHTML += '<div class="card"><div class="ch"><h3>Signalements</h3></div><div style="padding:20px;color:#64748b">Etablissement pas encore dans Supabase. Les signalements apparaitront apres la premiere utilisation.</div></div>';
+    }
+  } catch(e) {
+    el.innerHTML += '<div class="card"><div style="padding:20px;color:#fca5a5">Erreur chargement Supabase: '+e.message+'</div></div>';
+  }
+}
+
+function showSchoolDetail(id) {
+  showPage('sav');
+  setTimeout(function() {
+    document.getElementById('sav-sel').value = id;
+    loadSavData();
+  }, 100);
+}
+
+// ═══════════ DOMAINS ═══════════
+async function loadDomains() {
+  try {
+    if (!SCHOOLS.length) SCHOOLS = await api('GET', '/establishments/');
+    document.getElementById('dntb').innerHTML = SCHOOLS.map(function(x) {
+      var c = x.status === 'active' ? '#86efac' : x.status === 'trial' ? '#fcd34d' : '#64748b';
+      var l = x.status === 'active' ? 'Actif' : x.status === 'trial' ? 'A configurer' : 'Inactif';
+      return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'
+        + '<td><span style="font-family:monospace;font-size:.8rem;color:#a5b4fc">'+x.slug+'.safeschool.fr</span></td>'
+        + '<td><span class="badge b-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
+        + '<td><span style="font-size:.78rem;font-weight:700;color:'+c+'">'+l+'</span></td>'
+        + '<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#6366f1;font-size:.78rem">Ouvrir</a></td></tr>';
+    }).join('');
+  } catch(e) { shTst(e.message, true); }
+}
+
+// ═══════════ BILLING ═══════════
+async function loadBilling() {
+  try {
+    if (!SCHOOLS.length) SCHOOLS = await api('GET', '/establishments/');
+    var proA = SCHOOLS.filter(function(x) { return x.plan === 'pro' && x.status === 'active'; });
+    var entA = SCHOOLS.filter(function(x) { return x.plan === 'enterprise' && x.status === 'active'; });
+    var mrr = proA.length * 49 + entA.length * 199;
+    document.getElementById('bst').innerHTML =
+      stc('MRR', mrr + ' EUR', 'Revenus mensuels', '#6366f1') +
+      stc('ARR', (mrr * 12) + ' EUR', 'Projection annuelle', '#06b6d4') +
+      stc('Pro actifs', proA.length, '49 EUR/mois chacun', '#16a34a') +
+      stc('Enterprise', entA.length, 'Sur devis', '#8b5cf6') +
+      stc('Essais', SCHOOLS.filter(function(x) { return x.status === 'trial'; }).length, 'A convertir', '#f59e0b');
+    document.getElementById('bltb').innerHTML = SCHOOLS.map(function(x) {
+      var dl = dL(x.expires_at), dc = dl < 30 ? '#fca5a5' : '#94a3b8';
+      return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'
+        + '<td><span class="badge b-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
+        + '<td style="color:'+(PL[x.plan].pr > 0 ? '#86efac' : '#64748b')+'">'+plPr(x.plan)+'</td>'
+        + '<td style="font-size:.8rem">'+fmtD(x.created_at)+'</td>'
+        + '<td style="font-size:.8rem">'+fmtD(x.expires_at)+'</td>'
+        + '<td style="font-size:.8rem;color:'+dc+';font-weight:700">'+dl+'j</td>'
+        + '<td><span class="badge b-'+x.status+'">'+x.status+'</span></td>'
+        + '<td><button class="btn bs bsm" onclick="opEd(\''+x.id+'\')">Gerer</button></td></tr>';
+    }).join('');
+  } catch(e) { shTst(e.message, true); }
+}
+
+// ═══════════ BAROMETRE IA — LEA STATS ═══════════
+var CAT_LABELS = {
+  urgence_psy: 'Urgence psychologique',
+  sante_mentale: 'Sante mentale',
+  sante_physique: 'Sante physique',
+  isolement: 'Isolement / Exclusion',
+  harcelement: 'Harcelement (general)',
+  harcelement_physique: 'Harcelement physique',
+  harcelement_verbal: 'Harcelement verbal',
+  cyber: 'Cyberharcelement',
+  urgence: 'Danger / Urgence',
+  orientation: 'Demande d\'orientation',
+  general: 'General'
+};
+var CAT_COLORS = {
+  urgence_psy: '#dc2626',
+  sante_mentale: '#f59e0b',
+  sante_physique: '#ea580c',
+  isolement: '#8b5cf6',
+  harcelement: '#dc2626',
+  harcelement_physique: '#b91c1c',
+  harcelement_verbal: '#f97316',
+  cyber: '#7c3aed',
+  urgence: '#dc2626',
+  orientation: '#3b82f6',
+  general: '#64748b'
+};
+var SEV_LABELS = { 0: 'Normal', 1: 'Faible', 2: 'Modere', 3: 'Eleve' };
+var SEV_COLORS = { 0: '#64748b', 1: '#16a34a', 2: '#f59e0b', 3: '#dc2626' };
+
+async function loadBarometre() {
+  try {
+    var report = await api('GET', '/lea-stats/report');
+    var alerts = await api('GET', '/lea-stats/alerts');
+
+    // KPIs
+    document.getElementById('baro-kpi').innerHTML =
+      stc('Conversations', report.totalConversations || 0, 'Total Lea', '#6366f1') +
+      stc('Messages', report.totalMessages || 0, 'Echanges analyses', '#3b82f6') +
+      stc('Alertes', report.totalAlerts || 0, 'Severite >= 2', '#dc2626') +
+      stc('Ecoles actives', (report.schoolBreakdown || []).length, 'Avec donnees Lea', '#16a34a');
+
+    // Severity bar
+    var s = report.globalSeverity || {};
+    var sTotal = Object.values(s).reduce(function(a,b) { return a + b; }, 0) || 1;
+    var sevHtml = '<div style="display:flex;gap:8px;margin-bottom:14px">';
+    [0,1,2,3].forEach(function(lv) {
+      var pct = Math.round((s[lv] || 0) / sTotal * 100);
+      sevHtml += '<div style="flex:1;background:#0f172a;border-radius:8px;padding:10px;text-align:center;border:1px solid '+SEV_COLORS[lv]+'">'
+        + '<div style="font-size:1.3rem;font-weight:800;color:'+SEV_COLORS[lv]+'">'+(s[lv]||0)+'</div>'
+        + '<div style="font-size:.68rem;color:#94a3b8">'+SEV_LABELS[lv]+' ('+pct+'%)</div></div>';
+    });
+    sevHtml += '</div>';
+
+    // Categories
+    var cats = report.globalCategories || {};
+    var catEntries = Object.entries(cats).sort(function(a,b) { return b[1] - a[1]; });
+    var catHtml = sevHtml + '<div style="display:flex;flex-direction:column;gap:6px">';
+    catEntries.forEach(function(e) {
+      var cat = e[0], count = e[1];
+      var pct = Math.round(count / (report.totalMessages || 1) * 100);
+      var col = CAT_COLORS[cat] || '#64748b';
+      catHtml += '<div style="display:flex;align-items:center;gap:10px">'
+        + '<div style="width:180px;font-size:.82rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(CAT_LABELS[cat]||cat)+'</div>'
+        + '<div style="flex:1;height:20px;background:#0f172a;border-radius:4px;overflow:hidden;border:1px solid #334155">'
+        + '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:3px;transition:.3s"></div></div>'
+        + '<div style="width:60px;text-align:right;font-size:.82rem;font-weight:700;color:'+col+'">'+count+' ('+pct+'%)</div></div>';
+    });
+    catHtml += '</div>';
+    document.getElementById('baro-categories').innerHTML = catHtml || '<p style="color:#64748b">Aucune donnee de conversation encore.</p>';
+
+    // Alerts
+    var allAlerts = [];
+    (alerts || []).forEach(function(schoolAlerts) {
+      (schoolAlerts.alerts || []).forEach(function(a) {
+        a.schoolId = schoolAlerts.schoolId;
+        allAlerts.push(a);
+      });
+    });
+    allAlerts.sort(function(a,b) { return new Date(b.ts) - new Date(a.ts); });
+    var recentAlerts = allAlerts.slice(0, 30);
+
+    if (recentAlerts.length) {
+      var alertHtml = '<div style="display:flex;flex-direction:column;gap:6px">';
+      recentAlerts.forEach(function(a) {
+        var col = SEV_COLORS[a.severity] || '#64748b';
+        alertHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#0f172a;border-radius:8px;border-left:3px solid '+col+'">'
+          + '<div style="font-size:.72rem;font-weight:700;color:'+col+';min-width:70px">Severite '+a.severity+'</div>'
+          + '<div style="flex:1;font-size:.82rem;color:#e2e8f0">'+(CAT_LABELS[a.cat]||a.cat)+'</div>'
+          + '<div style="font-size:.78rem;color:#a5b4fc">'+(a.schoolName||a.schoolId)+'</div>'
+          + '<div style="font-size:.72rem;color:#64748b">'+fmtD(a.ts)+'</div></div>';
+      });
+      alertHtml += '</div>';
+      document.getElementById('baro-alerts').innerHTML = alertHtml;
+    } else {
+      document.getElementById('baro-alerts').innerHTML = '<p style="color:#64748b;font-size:.85rem">Aucune alerte elevee pour le moment. C\'est bon signe.</p>';
+    }
+
+    // Per-school breakdown
+    var breakdown = report.schoolBreakdown || [];
+    if (breakdown.length) {
+      var schoolHtml = '<div style="overflow-x:auto"><table><thead><tr><th>Ecole</th><th>Conversations</th><th>Messages</th><th>Cat. principale</th><th>Alertes sev.3</th><th>Derniere MAJ</th></tr></thead><tbody>';
+      breakdown.forEach(function(s) {
+        var topCat = '-';
+        if (s.categories) {
+          var entries = Object.entries(s.categories).sort(function(a,b) { return b[1]-a[1]; });
+          if (entries.length) topCat = CAT_LABELS[entries[0][0]] || entries[0][0];
+        }
+        var sev3 = (s.severityHits && s.severityHits[3]) || 0;
+        schoolHtml += '<tr>'
+          + '<td style="color:#f1f5f9;font-weight:600">'+s.schoolId+'</td>'
+          + '<td>'+(s.totalConversations||0)+'</td>'
+          + '<td>'+(s.totalMessages||0)+'</td>'
+          + '<td style="font-size:.82rem">'+topCat+'</td>'
+          + '<td style="color:'+(sev3>0?'#dc2626':'#16a34a')+';font-weight:700">'+sev3+'</td>'
+          + '<td style="font-size:.78rem;color:#64748b">'+fmtD(s.lastUpdated)+'</td></tr>';
+      });
+      schoolHtml += '</tbody></table></div>';
+      document.getElementById('baro-schools').innerHTML = schoolHtml;
+    } else {
+      document.getElementById('baro-schools').innerHTML = '<p style="color:#64748b;font-size:.85rem">Aucune donnee Lea encore disponible.</p>';
+    }
+
+    // Fill school selector for reports
+    if (!SCHOOLS.length) SCHOOLS = await api('GET', '/establishments/');
+    var sel = document.getElementById('baro-report-school');
+    sel.innerHTML = '<option value="">-- Par etablissement --</option>'
+      + SCHOOLS.map(function(s) { return '<option value="'+s.id+'">'+s.name+'</option>'; }).join('');
+
+  } catch(e) {
+    document.getElementById('baro-kpi').innerHTML = stc('Erreur', '!', e.message, '#dc2626');
+  }
+}
+
+async function generateReport() {
+  var el = document.getElementById('baro-report');
+  el.innerHTML = '<div class="loading"><div class="spin"></div> Generation du rapport...</div>';
+  try {
+    var report = await api('GET', '/lea-stats/report');
+    var now = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    var cats = report.globalCategories || {};
+    var s = report.globalSeverity || {};
+
+    var html = '<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;margin-top:12px">'
+      + '<h3 style="color:#f1f5f9;font-size:1.1rem;margin-bottom:4px">Rapport SafeSchool — Barometre IA</h3>'
+      + '<p style="color:#64748b;font-size:.82rem;margin-bottom:16px">Genere le '+now+'</p>'
+      + '<div style="border-top:1px solid #334155;padding-top:14px">'
+      + '<h4 style="color:#a5b4fc;font-size:.9rem;margin-bottom:8px">Synthese globale</h4>'
+      + '<p style="color:#cbd5e1;font-size:.85rem;line-height:1.7;margin-bottom:10px">'
+      + 'La plateforme a enregistre <strong>'+(report.totalConversations||0)+'</strong> conversations et <strong>'+(report.totalMessages||0)+'</strong> messages avec l\'assistante Lea. '
+      + '<strong>'+(report.totalAlerts||0)+'</strong> alertes de severite elevee ont ete detectees. '
+      + (report.schoolBreakdown||[]).length + ' etablissements sont actifs sur le barometre.</p>';
+
+    // Top categories
+    var topCats = Object.entries(cats).sort(function(a,b) { return b[1]-a[1]; }).slice(0,5);
+    if (topCats.length) {
+      html += '<h4 style="color:#a5b4fc;font-size:.9rem;margin:14px 0 8px">Thematiques les plus frequentes</h4><ol style="padding-left:16px">';
+      topCats.forEach(function(e) {
+        html += '<li style="color:#cbd5e1;font-size:.85rem;margin-bottom:4px"><strong>'+(CAT_LABELS[e[0]]||e[0])+'</strong> : '+e[1]+' messages</li>';
+      });
+      html += '</ol>';
+    }
+
+    // Severity analysis
+    html += '<h4 style="color:#a5b4fc;font-size:.9rem;margin:14px 0 8px">Analyse de severite</h4>'
+      + '<p style="color:#cbd5e1;font-size:.85rem;line-height:1.7">'
+      + 'Normal: '+(s[0]||0)+' | Faible: '+(s[1]||0)+' | Modere: '+(s[2]||0)+' | <span style="color:#dc2626;font-weight:700">Eleve: '+(s[3]||0)+'</span></p>';
+
+    // Recommendations
+    html += '<h4 style="color:#a5b4fc;font-size:.9rem;margin:14px 0 8px">Recommandations</h4><ul style="padding-left:16px">';
+    if ((s[3]||0) > 0) html += '<li style="color:#fca5a5;font-size:.85rem;margin-bottom:4px">Des conversations a severite elevee ont ete detectees. Verifiez les alertes et contactez les etablissements concernes.</li>';
+    if (cats.sante_mentale > 5) html += '<li style="color:#fcd34d;font-size:.85rem;margin-bottom:4px">Thematique sante mentale elevee. Sensibilisez les CPE et infirmier(e)s scolaires.</li>';
+    if (cats.isolement > 3) html += '<li style="color:#c4b5fd;font-size:.85rem;margin-bottom:4px">L\'isolement est un sujet recurrent. Recommandez des actions de cohesion de groupe.</li>';
+    if (cats.cyber > 3) html += '<li style="color:#c4b5fd;font-size:.85rem;margin-bottom:4px">Le cyberharcelement est present. Organisez des ateliers de sensibilisation numerique.</li>';
+    html += '<li style="color:#86efac;font-size:.85rem;margin-bottom:4px">Continuez a promouvoir l\'utilisation de Lea aupres des eleves pour une detection precoce.</li>';
+    html += '</ul></div></div>';
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5">Erreur: '+e.message+'</p>';
+  }
+}
+
+async function generateSchoolReport() {
+  var schoolId = document.getElementById('baro-report-school').value;
+  if (!schoolId) { shTst('Selectionnez un etablissement', true); return; }
+  var el = document.getElementById('baro-report');
+  el.innerHTML = '<div class="loading"><div class="spin"></div> Generation du rapport...</div>';
+  try {
+    var data = await api('GET', '/lea-stats/school/' + schoolId);
+    var school = SCHOOLS.find(function(s) { return s.id === schoolId; }) || { name: schoolId };
+    var stats = data.stats || {};
+    var alerts = data.alerts || [];
+    var now = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    var html = '<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;margin-top:12px">'
+      + '<h3 style="color:#f1f5f9;font-size:1.1rem;margin-bottom:4px">Rapport — '+school.name+'</h3>'
+      + '<p style="color:#64748b;font-size:.82rem;margin-bottom:16px">Genere le '+now+'</p>'
+      + '<div style="border-top:1px solid #334155;padding-top:14px">'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      + '<div style="background:#1e293b;padding:12px;border-radius:8px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a5b4fc">'+(stats.totalConversations||0)+'</div><div style="font-size:.7rem;color:#64748b">Conversations</div></div>'
+      + '<div style="background:#1e293b;padding:12px;border-radius:8px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a5b4fc">'+(stats.totalMessages||0)+'</div><div style="font-size:.7rem;color:#64748b">Messages</div></div>'
+      + '<div style="background:#1e293b;padding:12px;border-radius:8px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#dc2626">'+alerts.filter(function(a){return a.severity>=2}).length+'</div><div style="font-size:.7rem;color:#64748b">Alertes</div></div></div>';
+
+    if (stats.categories) {
+      html += '<h4 style="color:#a5b4fc;font-size:.88rem;margin-bottom:6px">Thematiques</h4>';
+      Object.entries(stats.categories).sort(function(a,b){return b[1]-a[1]}).forEach(function(e) {
+        html += '<div style="font-size:.82rem;color:#cbd5e1;margin-bottom:3px">'+(CAT_LABELS[e[0]]||e[0])+': <strong>'+e[1]+'</strong></div>';
+      });
+    }
+
+    if (alerts.length) {
+      html += '<h4 style="color:#a5b4fc;font-size:.88rem;margin:12px 0 6px">Dernieres alertes</h4>';
+      alerts.slice(-10).reverse().forEach(function(a) {
+        html += '<div style="font-size:.82rem;color:#cbd5e1;padding:4px 0;border-bottom:1px solid #1e293b">'
+          + '<span style="color:'+SEV_COLORS[a.severity]+';font-weight:700">Sev.'+a.severity+'</span> '+(CAT_LABELS[a.cat]||a.cat)+' — <span style="color:#64748b">'+fmtD(a.ts)+'</span></div>';
+      });
+    }
+
+    html += '</div></div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#fca5a5">Erreur: '+e.message+'</p>';
+  }
+}
+
 rdQu();
 </script>
 </body>
