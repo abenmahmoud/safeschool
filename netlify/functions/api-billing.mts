@@ -54,20 +54,21 @@ const PLANS: Record<string, PlanDef> = {
     trial_days: 14,
     popular: true,
     features: [
-      'Jusqu\'a 500 eleves',
-      'Signalements avances avec IA',
+      'Eleves illimites',
+      'Signalements illimites',
+      '1 compte admin',
+      'Statistiques avancees',
       'Tableau de bord complet',
-      'Statistiques LEA detaillees',
       'Support prioritaire',
       'Export PDF & CSV',
       'Alertes en temps reel',
-      'Multi-utilisateurs (10 max)',
-      'API access'
+      'Sous-domaine dedie',
+      'Barometre IA bien-etre'
     ],
     limits: {
-      max_students: 500,
+      max_students: 9999,
       max_staff: 10,
-      max_reports_month: 500,
+      max_reports_month: 9999,
       storage_gb: 10,
       api_calls_month: 50000
     },
@@ -75,19 +76,20 @@ const PLANS: Record<string, PlanDef> = {
   },
   enterprise: {
     name: 'Enterprise',
-    price: 19900,
+    price: 0,
     currency: 'EUR',
     interval: 'month',
     trial_days: 30,
     features: [
       'Eleves illimites',
       'Toutes fonctionnalites Pro',
+      'Nombre d\'admins selon devis',
+      'Acces complet aux statistiques',
       'IA avancee & predictive',
       'Tableau de bord multi-etablissement',
-      'Support dedie & SLA',
+      'Support dedie & SLA 99.9%',
       'Integration Pronote / EMS',
       'Formation equipe incluse',
-      'Utilisateurs illimites',
       'API illimitee',
       'Personnalisation marque blanche',
       'Audit & conformite RGPD'
@@ -107,7 +109,7 @@ const PLANS: Record<string, PlanDef> = {
 // Auth helpers (mirrors api-superadmin / api-establishments pattern)
 // ---------------------------------------------------------------------------
 
-// ── V8 Pro — Environment-driven auth ──
+// ── V8 Extra Pro — Environment-driven auth ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
 const SUPERADMIN_PASS  = Netlify.env.get('SUPERADMIN_PASS')  || 'SafeSchool2026!';
 
@@ -232,8 +234,8 @@ export default async (req: Request, context: Context) => {
       id,
       name: plan.name,
       price: plan.price,
-      price_display: plan.price === 0 ? 'Gratuit' : `${(plan.price / 100).toFixed(0)}\u20AC/mois`,
-      price_annual_display: plan.price === 0 ? 'Gratuit' : `${((plan.price * 10) / 100).toFixed(0)}\u20AC/an`,
+      price_display: id === 'enterprise' ? 'Sur devis' : plan.price === 0 ? 'Gratuit' : `${(plan.price / 100).toFixed(0)}\u20AC/mois`,
+      price_annual_display: id === 'enterprise' ? 'Sur devis' : plan.price === 0 ? 'Gratuit' : `${((plan.price * 10) / 100).toFixed(0)}\u20AC/an`,
       currency: plan.currency,
       interval: plan.interval,
       trial_days: plan.trial_days,
@@ -241,7 +243,7 @@ export default async (req: Request, context: Context) => {
       limits: plan.limits,
       popular: plan.popular || false,
       stripe_price_id: plan.stripe_price_id,
-      cta: plan.price === 0 ? 'Commencer gratuitement' : plan.popular ? 'Essai gratuit' : 'Contacter les ventes'
+      cta: id === 'enterprise' ? 'Demander un devis' : plan.price === 0 ? 'Commencer gratuitement' : plan.popular ? 'Essai gratuit' : 'Contacter les ventes'
     }));
 
     const comparison = {
@@ -249,18 +251,21 @@ export default async (req: Request, context: Context) => {
         {
           name: 'Eleves & Personnel',
           items: [
-            { label: 'Nombre d\'eleves', starter: '50', pro: '500', enterprise: 'Illimite' },
-            { label: 'Comptes personnel', starter: '5', pro: '10', enterprise: 'Illimite' }
+            { label: 'Nombre d\'eleves', starter: '200', pro: 'Illimite', enterprise: 'Illimite' },
+            { label: 'Comptes admin', starter: '1', pro: '1', enterprise: 'Selon devis' }
           ]
         },
         {
           name: 'Fonctionnalites',
           items: [
             { label: 'Signalements de base', starter: true, pro: true, enterprise: true },
+            { label: 'Statistiques avancees', starter: false, pro: true, enterprise: true },
             { label: 'IA avancee', starter: false, pro: true, enterprise: true },
             { label: 'Alertes temps reel', starter: false, pro: true, enterprise: true },
+            { label: 'Barometre IA bien-etre', starter: false, pro: true, enterprise: true },
             { label: 'Multi-etablissement', starter: false, pro: false, enterprise: true },
-            { label: 'Marque blanche', starter: false, pro: false, enterprise: true }
+            { label: 'Marque blanche', starter: false, pro: false, enterprise: true },
+            { label: 'Acces complet statistiques Supabase', starter: false, pro: false, enterprise: true }
           ]
         },
         {

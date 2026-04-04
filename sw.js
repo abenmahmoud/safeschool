@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
-// SafeSchool V8 Pro — Service Worker
+// SafeSchool V8.1 Extra Pro — Service Worker
 // Offline-first, Push Notifications, Background Sync, Smart Cache
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'ss-v8-pro-2';
+const CACHE_VERSION = 'ss-v8-extra-pro-1';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
