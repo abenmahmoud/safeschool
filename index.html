@@ -909,7 +909,7 @@ async function loadEstablishments() {
   try {
     const { data, error } = await ssSupabase
       .from('schools')
-      .select('id, name, slug, city, is_active')
+      .select('id, name, slug, city, is_active, plan_code, support_mode')
       .eq('is_active', true)
       .order('name', { ascending: true });
 
@@ -922,7 +922,9 @@ async function loadEstablishments() {
       address: s.city || '',
       city: s.city || '',
       type: 'lycee',
-      isActive: s.is_active
+      isActive: s.is_active,
+      planCode: s.plan_code || 'standard',
+      supportMode: s.support_mode || 'normal'
     }));
   } catch (e) {
     console.error('Failed to load establishments from Supabase', e);
@@ -1014,6 +1016,14 @@ function showAddEtabModal() {
         <input type="text" class="fi" id="new-etab-addr" placeholder="Adresse de l'établissement">
       </div>
       <div class="fg">
+        <label class="fl">Abonnement *</label>
+        <select class="fsel" id="new-etab-plan">
+          <option value="standard">Standard</option>
+          <option value="premium">Premium</option>
+          <option value="max">Max</option>
+        </select>
+      </div>
+      <div class="fg">
         <label class="fl">Email administrateur *</label>
         <input type="email" class="fi" id="new-etab-email" placeholder="admin@etablissement.fr">
       </div>
@@ -1035,7 +1045,8 @@ async function createEstablishment() {
   const name = document.getElementById('new-etab-name').value.trim();
   const type = document.getElementById('new-etab-type').value;
   const address = document.getElementById('new-etab-addr').value.trim();
-  const adminEmail = document.getElementById('new-etab-email').value.trim();
+  const planCode = document.getElementById('new-etab-plan').value;
+  const adminEmail = document.getElementById('new-etab-email').value.trim().toLowerCase();
   const adminPassword = document.getElementById('new-etab-pass').value;
 
   if (!name) { toast('Le nom est requis', 'err'); return; }
@@ -1051,8 +1062,8 @@ async function createEstablishment() {
   try {
     const { data, error } = await ssSupabase
       .from('schools')
-      .insert([{ name, slug, city: address || null, is_active: true }])
-      .select('id, name, slug, city, is_active')
+      .insert([{ name, slug, city: address || null, is_active: true, plan_code: planCode, support_mode: 'normal' }])
+      .select('id, name, slug, city, is_active, plan_code, support_mode')
       .single();
 
     if (error) throw error;
@@ -1064,15 +1075,22 @@ async function createEstablishment() {
       address: data.city || '',
       city: data.city || '',
       type,
-      isActive: data.is_active
+      isActive: data.is_active,
+      planCode: data.plan_code || 'standard',
+      supportMode: data.support_mode || 'normal'
     };
 
     etabList.push(newEtab);
     etabList.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+
+    const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+    creds[newEtab.id] = { email: adminEmail, password: adminPassword };
+    localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
+
     closeAddEtabModal();
     renderEtabList();
     toast(`${name} créé !`, 'ok');
-    toast("Établissement créé. Le compte admin sera branché à l'étape suivante.", "info");
+    toast(`Compte admin local prêt · plan ${planCode.toUpperCase()}`, 'info');
   } catch (e) {
     console.error('Erreur création établissement Supabase', e);
     toast(e.message || 'Erreur de connexion', 'err');
@@ -2041,10 +2059,11 @@ const SS_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3
 window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
 window.ENV_SUPABASE_KEY = SS_SUPABASE_PUBLISHABLE_KEY;
 
-const ssSupabase = window.supabase.createClient(
+window.ssSupabase = window.supabase.createClient(
   SS_SUPABASE_URL,
   SS_SUPABASE_PUBLISHABLE_KEY
 );
+const ssSupabase = window.ssSupabase;
 </script>
 
 <script src="./dashboard-v3.js"></script></body>
