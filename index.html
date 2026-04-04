@@ -760,7 +760,7 @@ function normalizeReportFromDb(r){
     frequency: r.frequency || '',
     harassmentType: dbTypeToUi(r.type),
     type: r.type || null,
-    urgency: dbUrgencyToUi(r.urgency),
+    urgency: dbUrgencyToUi(r.urgence),
     reporterType: r.reporter_role || '',
     isAnonymous: r.is_anonymous !== false,
     reporterName: r.reporter_name || '',
@@ -1461,7 +1461,7 @@ async function submitReport(){
       description: rData.description || '',
       location: rData.location || null,
       frequency: rData.frequency || null,
-      urgency: urgencyMap[String(rData.urgency)] || 'faible',
+      urgence: urgencyMap[String(rData.urgency)] || 'faible',
       is_anonymous: rData.isAnonymous !== false,
       reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
       reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
@@ -1498,7 +1498,7 @@ async function submitReport(){
       type:data.type,
       description:data.description,
       location:data.location,
-      urgency:data.urgency,
+      urgency:data.urgence,
       reporterEmail:data.reporter_email
     };
 
@@ -1568,7 +1568,7 @@ async function lookupCode(){
     // Search by tracking_code
     let { data, error } = await ssSupabase
       .from('reports')
-      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency, description')
+      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgence, description')
       .or(`tracking_code.eq.${code},case_number.eq.${raw}`)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -1614,7 +1614,7 @@ async function lookupCode(){
           <span>📌 Code de suivi : <strong>${data.tracking_code}</strong></span>
           <span>🗂️ Numéro de dossier : <strong>${data.case_number || 'En cours de génération'}</strong></span>
           <span>📅 Déposé le ${fmtDate(data.created_at)} à ${fmtTime(data.created_at)}</span>
-          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgency || 'faible'}</span>
+          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgence || 'faible'}</span>
         </div>
       </div>
     </div>`;
