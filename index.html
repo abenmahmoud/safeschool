@@ -1903,5 +1903,24 @@ const ssSupabase = window.supabase.createClient(
 );
 </script>
 
-<script src="./dashboard-v3.js"></script></body>
+<script src="./dashboard-v3.js"></script>
+<!-- SUPABASE CLIENT -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
+
+const SS_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+
+window.ssSupabase = window.supabase.createClient(
+  SS_SUPABASE_URL,
+  SS_SUPABASE_PUBLISHABLE_KEY
+);
+
+console.log("✅ Supabase connecté OK");
+</script>
+
+<script src="./dashboard-v3.js"></script>
+
+</body>
 </html>
