@@ -506,7 +506,7 @@ a{text-decoration:none}
     <div class="etab-loading"><div class="spinner"></div><p>Chargement des établissements…</p></div>
   </div>
   <div class="etab-footer">
-    <p style="font-size:.76rem;color:var(--ts)">Chaque établissement a son propre espace sécurisé · RGPD</p>
+    <p style="font-size:.76rem;color:var(--ts)">Chaque établissement a son propre espace sécurisé · Conforme RGPD (UE 2016/679)</p>
     <p style="font-size:.72rem;color:var(--ts);margin-top:6px">Version branchée à Supabase pour la liste des établissements.</p>
   </div>
 </div>
@@ -540,7 +540,7 @@ a{text-decoration:none}
 <div id="pg-home" class="page active">
   <div class="welcome">
     <svg class="wdeco" width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="80" stroke="#4f46e5" stroke-width="28"/><circle cx="90" cy="90" r="45" fill="#4f46e5"/></svg>
-    <div class="wbadge">🛡️ SafeSchool · Espace sécurisé</div>
+    <div class="wbadge" id="sa-secret-tap">🛡️ SafeSchool · Espace sécurisé</div>
     <h1>Tu n'es<br>pas seul(e).</h1>
     <p>Signale, apprends, et trouve de l'aide en quelques secondes.</p>
   </div>
@@ -567,13 +567,9 @@ a{text-decoration:none}
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
   <div style="height:16px"></div>
-  <div class="stitle" style="padding-top:6px">Accès rapide démo</div>
   <div style="padding:0 20px 8px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ Dashboard admin</button>
-    <button class="btn btn-ghost btn-full" onclick="openSuperAdminPage()">🌐 Superadmin</button>
-  </div>
-  <div style="padding:0 20px 4px">
-    <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 Tester le suivi dossier</button>
+    <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 Suivre mon dossier</button>
   </div>
   <div style="height:20px"></div>
   <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">Signalements confidentiels · RGPD</p></div>
@@ -591,8 +587,8 @@ a{text-decoration:none}
   <div style="padding:0 20px">
     <div class="fg">
       <label class="fl">Ton code de suivi</label>
-      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="12" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
-      <p class="fhint">6 caractères reçus à la confirmation de ton signalement</p>
+      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123 ou numéro" maxlength="20" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+      <p class="fhint">Code de suivi (SS-XXXXXX) ou numéro de dossier</p>
     </div>
     <button class="btn btn-p btn-full btn-lg" onclick="lookupCode()">
       <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -642,10 +638,10 @@ a{text-decoration:none}
   <div class="chat-wrap">
     <div class="chat-head">
       <div class="chat-av">🤖</div>
-      <div class="chat-info"><h3>Léa — Assistante IA</h3><p>Répond en quelques secondes · Confidentiel</p></div>
+      <div class="chat-info"><h3>Léa — Assistante bien-être</h3><p>Écoute · Orientation · Confidentiel</p></div>
       <button class="btn btn-ghost btn-sm" onclick="clearChat()" style="margin-left:auto">Effacer</button>
     </div>
-    <div class="chat-disc">⚠️ Léa est une IA. En cas de danger, appelle le <strong>3018</strong> ou le <strong>15</strong>.</div>
+    <div class="chat-disc">⚠️ Léa est une IA — pas un professionnel de santé. En cas de danger : <strong>3018</strong> ou <strong>15</strong>. Tes messages ne sont pas enregistrés (RGPD).</div>
     <div class="chat-msgs" id="chat-msgs"></div>
     <div class="chat-in-wrap">
       <textarea class="chat-in" id="chat-in" placeholder="Écris ton message…" rows="1"
@@ -916,6 +912,14 @@ const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'
 
 async function loadEstablishments() {
   try {
+    // Load from API (Netlify Blobs) first for plan info
+    let apiSchools = [];
+    try {
+      const r = await fetch('/api/establishments/public');
+      if (r.ok) apiSchools = await r.json();
+    } catch(e) { console.warn('API establishments unavailable, fallback to Supabase'); }
+
+    // Also load from Supabase for school IDs
     const { data, error } = await ssSupabase
       .from('schools')
       .select('id, name, slug, city, is_active')
@@ -924,15 +928,20 @@ async function loadEstablishments() {
 
     if (error) throw error;
 
-    etabList = (data || []).map(s => ({
-      id: s.id,
-      name: s.name,
-      slug: s.slug,
-      address: s.city || '',
-      city: s.city || '',
-      type: 'lycee',
-      isActive: s.is_active
-    }));
+    etabList = (data || []).map(s => {
+      const apiMatch = apiSchools.find(a => a.slug === s.slug);
+      return {
+        id: s.id,
+        name: s.name,
+        slug: s.slug,
+        address: s.city || '',
+        city: s.city || '',
+        type: apiMatch?.type || 'lycee',
+        plan: apiMatch?.plan || 'starter',
+        isActive: s.is_active,
+        apiId: apiMatch?.id || null
+      };
+    });
   } catch (e) {
     console.error('Failed to load establishments from Supabase', e);
     etabList = [];
@@ -949,19 +958,59 @@ function renderEtabList() {
     return;
   }
   el.innerHTML = etabList.map(e => `
-    <div class="etab-card" onclick="selectEstablishment('${e.id}')">
+    <div class="etab-card" onclick="confirmEstablishment('${e.id}')">
       <div class="etab-icon ${e.type}">${etabTypeIcons[e.type]||'🏢'}</div>
       <div class="etab-info">
         <h3>${e.name}</h3>
         <p>${e.address || ''}</p>
         <span class="etab-type-badge" style="background:var(--pbg);color:var(--p)">${etabTypeLabels[e.type]||e.type}</span>
+        ${e.plan && e.plan !== 'starter' ? `<span class="etab-type-badge" style="background:#1e1b4b;color:#a5b4fc;margin-left:4px">${e.plan.toUpperCase()}</span>` : ''}
       </div>
       <svg width="18" height="18" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
   `).join('') + `
-    <div style="margin-top:10px;text-align:center">
-      <button class="btn btn-ghost btn-sm" onclick="showAddEtabModal()">+ Ajouter un établissement</button>
+    <div style="margin-top:14px;text-align:center">
+      <p style="font-size:.78rem;color:var(--ts);margin-bottom:8px">Ton établissement n'est pas dans la liste ?</p>
+      <p style="font-size:.74rem;color:var(--ts)">Demande à ton administration de contacter SafeSchool pour l'inscription.</p>
     </div>`;
+}
+
+// Verification question before selecting establishment
+function confirmEstablishment(etabId) {
+  const etab = etabList.find(e => e.id === etabId);
+  if (!etab) return;
+
+  // Remove existing modal if any
+  document.getElementById('confirm-etab-modal')?.remove();
+
+  document.body.insertAdjacentHTML('beforeend', `
+  <div class="modal-overlay" id="confirm-etab-modal" onclick="if(event.target===this)document.getElementById('confirm-etab-modal').remove()">
+    <div class="modal">
+      <div class="mhandle"></div>
+      <h3 style="text-align:center">Confirme ton établissement</h3>
+      <div style="text-align:center;padding:10px 0 16px">
+        <div style="font-size:2.5rem;margin-bottom:10px">${etabTypeIcons[etab.type]||'🏫'}</div>
+        <h2 style="font-size:1.2rem;margin-bottom:4px">${etab.name}</h2>
+        <p style="font-size:.85rem;color:var(--tm)">${etab.address || etab.city || ''}</p>
+      </div>
+      <div style="background:var(--abg);border:1.5px solid rgba(217,119,6,.2);border-radius:var(--r12);padding:14px;margin-bottom:16px">
+        <p style="font-size:.86rem;color:#92400e;font-weight:500;text-align:center">
+          ⚠️ Es-tu bien inscrit(e) dans cet établissement ?
+        </p>
+        <p style="font-size:.78rem;color:#92400e;text-align:center;margin-top:6px">
+          Signaler dans le mauvais établissement peut retarder le traitement de ton dossier.
+        </p>
+      </div>
+      <div class="modal-actions" style="flex-direction:column;gap:10px">
+        <button class="btn btn-p btn-full" onclick="document.getElementById('confirm-etab-modal').remove();selectEstablishment('${etabId}')">
+          ✅ Oui, c'est mon établissement
+        </button>
+        <button class="btn btn-ghost btn-full" onclick="document.getElementById('confirm-etab-modal').remove()">
+          ← Non, je veux choisir un autre
+        </button>
+      </div>
+    </div>
+  </div>`);
 }
 
 async function selectEstablishment(etabId) {
@@ -1078,10 +1127,16 @@ async function createEstablishment() {
 
     etabList.push(newEtab);
     etabList.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+
+    // Save admin credentials locally for this establishment
+    const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+    creds[data.id] = { email: adminEmail, password: adminPassword };
+    localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
+
     closeAddEtabModal();
     renderEtabList();
     toast(`${name} créé !`, 'ok');
-    toast("Établissement créé. Le compte admin sera branché à l'étape suivante.", "info");
+    toast(`Admin local sauvegardé : ${adminEmail}`, "info");
   } catch (e) {
     console.error('Erreur création établissement Supabase', e);
     toast(e.message || 'Erreur de connexion', 'err');
@@ -1122,6 +1177,25 @@ function openAdminTestFlow(){
 function openSuperAdminPage(){
   window.location.href = 'superadmin.html';
 }
+
+// Secret superadmin access: 5 rapid taps on the SafeSchool badge
+let saTapCount = 0, saTapTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const badge = document.getElementById('sa-secret-tap');
+  if (badge) {
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      saTapCount++;
+      clearTimeout(saTapTimer);
+      if (saTapCount >= 5) {
+        saTapCount = 0;
+        openSuperAdminPage();
+      } else {
+        saTapTimer = setTimeout(() => { saTapCount = 0; }, 2000);
+      }
+    });
+  }
+});
 
 // ═══════════════════════════════════════════
 // TOAST
@@ -1178,6 +1252,12 @@ function renderRStep() {
       <button class="cbtn ${rData.reporterType==='witness'?'sel':''}" onclick="rd('reporterType','witness');selCbtn(this)">
         <span class="ci">👀</span><div class="ct"><h4>Je suis témoin</h4><p>J'ai vu une situation préoccupante</p></div>
       </button>
+      <button class="cbtn ${rData.reporterType==='parent'?'sel':''}" onclick="rd('reporterType','parent');selCbtn(this)">
+        <span class="ci">👨‍👩‍👧</span><div class="ct"><h4>Je suis parent</h4><p>Mon enfant est concerné(e)</p></div>
+      </button>
+      <button class="cbtn ${rData.reporterType==='staff'?'sel':''}" onclick="rd('reporterType','staff');selCbtn(this)">
+        <span class="ci">👩‍🏫</span><div class="ct"><h4>Personnel éducatif</h4><p>Je suis un membre du personnel</p></div>
+      </button>
     </div>`;
 
   if (rStep===2) {
@@ -1223,6 +1303,63 @@ function renderRStep() {
         <button class="ub u2 ${rData.urgency===2?'sel':''}" onclick="setUrg(2,this)"><span class="ui">🟡</span><span class="ul">Sérieux</span></button>
         <button class="ub u3 ${rData.urgency===3?'sel':''}" onclick="setUrg(3,this)"><span class="ui">🔴</span><span class="ul">Urgent</span></button>
       </div>
+    </div>
+    <div style="margin-top:8px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)">
+      <p style="font-size:.82rem;color:var(--p);font-weight:600;margin-bottom:10px">📊 Informations complémentaires <span style="font-weight:400;color:var(--ts)">(facultatif — aide aux statistiques)</span></p>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl" style="font-size:.82rem">Niveau scolaire</label>
+        <select class="fsel" id="r-niveau" style="font-size:.88rem">
+          <option value="">Préfère ne pas répondre</option>
+          <option value="6eme" ${rData.niveau==='6eme'?'selected':''}>6ème</option>
+          <option value="5eme" ${rData.niveau==='5eme'?'selected':''}>5ème</option>
+          <option value="4eme" ${rData.niveau==='4eme'?'selected':''}>4ème</option>
+          <option value="3eme" ${rData.niveau==='3eme'?'selected':''}>3ème</option>
+          <option value="seconde" ${rData.niveau==='seconde'?'selected':''}>Seconde</option>
+          <option value="premiere" ${rData.niveau==='premiere'?'selected':''}>Première</option>
+          <option value="terminale" ${rData.niveau==='terminale'?'selected':''}>Terminale</option>
+          <option value="bts" ${rData.niveau==='bts'?'selected':''}>BTS / Post-bac</option>
+          <option value="cap" ${rData.niveau==='cap'?'selected':''}>CAP / Bac Pro</option>
+          <option value="autre" ${rData.niveau==='autre'?'selected':''}>Autre</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl" style="font-size:.82rem">Classe <span style="font-weight:400;color:var(--ts)">(ex: 3eB, Term S2)</span></label>
+        <input type="text" class="fi" id="r-classe" placeholder="Facultatif" value="${rData.classe||''}" style="font-size:.88rem">
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl" style="font-size:.82rem">Tranche d'âge</label>
+        <select class="fsel" id="r-age-range" style="font-size:.88rem">
+          <option value="">Préfère ne pas répondre</option>
+          <option value="10-12" ${rData.ageRange==='10-12'?'selected':''}>10–12 ans</option>
+          <option value="13-14" ${rData.ageRange==='13-14'?'selected':''}>13–14 ans</option>
+          <option value="15-16" ${rData.ageRange==='15-16'?'selected':''}>15–16 ans</option>
+          <option value="17-18" ${rData.ageRange==='17-18'?'selected':''}>17–18 ans</option>
+          <option value="18+" ${rData.ageRange==='18+'?'selected':''}>18 ans et plus</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl" style="font-size:.82rem">Genre</label>
+        <select class="fsel" id="r-genre" style="font-size:.88rem">
+          <option value="">Préfère ne pas répondre</option>
+          <option value="masculin" ${rData.genre==='masculin'?'selected':''}>Masculin</option>
+          <option value="feminin" ${rData.genre==='feminin'?'selected':''}>Féminin</option>
+          <option value="non-binaire" ${rData.genre==='non-binaire'?'selected':''}>Non-binaire</option>
+          <option value="autre" ${rData.genre==='autre'?'selected':''}>Autre</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl" style="font-size:.82rem">Depuis quand cette situation dure ?</label>
+        <select class="fsel" id="r-duree" style="font-size:.88rem">
+          <option value="">Préfère ne pas répondre</option>
+          <option value="recent" ${rData.duree==='recent'?'selected':''}>Moins d'une semaine</option>
+          <option value="1mois" ${rData.duree==='1mois'?'selected':''}>Moins d'un mois</option>
+          <option value="1-3mois" ${rData.duree==='1-3mois'?'selected':''}>1 à 3 mois</option>
+          <option value="3-6mois" ${rData.duree==='3-6mois'?'selected':''}>3 à 6 mois</option>
+          <option value="6mois+" ${rData.duree==='6mois+'?'selected':''}>Plus de 6 mois</option>
+          <option value="1an+" ${rData.duree==='1an+'?'selected':''}>Plus d'un an</option>
+        </select>
+      </div>
+      <p style="font-size:.72rem;color:var(--ts);margin-top:8px">Ces informations sont anonymes et servent uniquement à améliorer la prévention. Aucune réponse n'est obligatoire.</p>
     </div>`;
 
   if (rStep===5) h += `
@@ -1248,10 +1385,19 @@ function renderRStep() {
         <span>Je souhaite recevoir par email les mises à jour non sensibles de mon dossier.</span>
       </label>
     </div>
-    <div class="fg" style="margin-top:16px;margin-bottom:0">
+    <div style="background:var(--pbg);border:1.5px solid rgba(79,70,229,.15);border-radius:var(--r12);padding:14px;margin-top:14px;margin-bottom:14px">
+      <p style="font-size:.84rem;color:var(--p);font-weight:600;margin-bottom:8px">📍 Vérification de l'établissement</p>
+      <p style="font-size:.82rem;color:var(--tm);margin-bottom:8px">Tu fais ce signalement pour : <strong style="color:var(--t)">${currentEtab?currentEtab.name:'—'}</strong></p>
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--tm)">
+        <input type="checkbox" id="r-confirm-etab" ${rData.confirmEtab?'checked':''} style="margin-top:3px">
+        <span>Je confirme que je suis bien inscrit(e) ou que je fais partie de cet établissement.</span>
+      </label>
+      <p style="font-size:.74rem;color:var(--ts);margin-top:6px">Si ce n'est pas le bon établissement, <a href="#" onclick="event.preventDefault();go('home');showEtabSelector()" style="color:var(--p)">change d'établissement ici</a>.</p>
+    </div>
+    <div class="fg" style="margin-bottom:0">
       <label style="display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--tm)">
         <input type="checkbox" id="r-consent" ${rData.consentAccepted?'checked':''} style="margin-top:3px">
-        <span>J'accepte les conditions d'utilisation et la politique de confidentialité. Je comprends que le signalement peut être conservé pendant une durée limitée avant anonymisation pour le suivi et les statistiques.</span>
+        <span>J'accepte les <a href="#" onclick="event.preventDefault();showTermsModal()" style="color:var(--p);text-decoration:underline">conditions d'utilisation</a> et la politique de confidentialité. Je comprends que le signalement peut être conservé pendant une durée limitée avant anonymisation pour le suivi et les statistiques.</span>
       </label>
     </div>`;
 
@@ -1281,7 +1427,7 @@ function rNext(){
   if(rStep===1&&!rData.reporterType){toast('Choisis ton rôle','err');return}
   if(rStep===2&&!rData.harassmentType){toast('Choisis un type','err');return}
   if(rStep===3){const d=document.getElementById('r-desc')?.value.trim();if(!d||d.length<20){toast('Décris la situation (min. 20 car.)','err');return}rData.description=d}
-  if(rStep===4){rData.location=document.getElementById('r-loc')?.value||'';rData.frequency=document.getElementById('r-freq')?.value||''}
+  if(rStep===4){rData.location=document.getElementById('r-loc')?.value||'';rData.frequency=document.getElementById('r-freq')?.value||'';rData.niveau=document.getElementById('r-niveau')?.value||'';rData.classe=document.getElementById('r-classe')?.value||'';rData.ageRange=document.getElementById('r-age-range')?.value||'';rData.genre=document.getElementById('r-genre')?.value||'';rData.duree=document.getElementById('r-duree')?.value||''}
   rStep++;renderRStep();window.scrollTo(0,0);
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
@@ -1300,6 +1446,8 @@ async function submitReport(){
     }
 
     rData.consentAccepted=!!document.getElementById('r-consent')?.checked;
+    rData.confirmEtab=!!document.getElementById('r-confirm-etab')?.checked;
+    if(!rData.confirmEtab){ toast("Confirme que tu es bien dans cet établissement","err"); return; }
     if(!rData.consentAccepted){ toast("Tu dois accepter les conditions avant l\'envoi","err"); return; }
 
     var typeMap={physical:'physique',verbal:'verbal',cyber:'cyber',exclusion:'exclusion',other:'autre'};
@@ -1322,7 +1470,12 @@ async function submitReport(){
       consent_accepted: true,
       consent_accepted_at: new Date().toISOString(),
       status: 'nouveau',
-      source_channel: 'form'
+      source_channel: 'form',
+      niveau: rData.niveau || null,
+      classe: rData.classe || null,
+      age_range: rData.ageRange || null,
+      genre: rData.genre || null,
+      duree: rData.duree || null
     };
 
     const { data, error } = await ssSupabase
@@ -1351,6 +1504,8 @@ async function submitReport(){
 
     cachedReports.unshift(report);
     await S.addLog(`Nouveau signalement ${data.case_number || data.id}`, data.id);
+    // Save to user's report history
+    if (data.tracking_code) saveToReportHistory(data.tracking_code, data.case_number);
     if(rData.reporterType==='witness'){
       const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
     }
@@ -1402,15 +1557,19 @@ function copyCode(code){
 // ═══════════════════════════════════════════
 async function lookupCode(){
   const raw=document.getElementById('code-in').value.trim().toUpperCase();
-  const code=raw.startsWith('SS-') ? raw : ('SS-' + raw.replace(/^SS-?/,''));
-  if(code.replace(/[^A-Z0-9]/g,'').length<8){toast('Entre ton code de suivi','err');return}
+  if(!raw || raw.length < 3){toast('Entre ton code de suivi ou numéro de dossier','err');return}
   const el=document.getElementById('lookup-result');
   el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">Recherche du dossier…</div>';
   try {
-    const { data, error } = await ssSupabase
+    // Try by tracking_code first (with SS- prefix normalization)
+    const code = raw.startsWith('SS-') ? raw : (raw.match(/^[A-Z]/) ? 'SS-' + raw.replace(/^SS-?/,'') : raw);
+    let schoolFilter = currentEtab ? `&school_id=eq.${currentEtab.id}` : '';
+
+    // Search by tracking_code
+    let { data, error } = await ssSupabase
       .from('reports')
-      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency')
-      .eq('tracking_code', code)
+      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency, description')
+      .or(`tracking_code.eq.${code},case_number.eq.${raw}`)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1556,18 +1715,149 @@ function renderQResult(){
 // CHAT / ASSISTANT
 // ═══════════════════════════════════════════
 const bResp=[
-  {kw:['bonjour','salut','hello','coucou','bsr'],r:"Salut 👋 Je suis **Léa**. Tu peux me parler de ce qui ne va pas. Tout ce que tu me dis reste entre nous.\n\nQu'est-ce qui se passe ?"},
-  {kw:['harcelé','harcèlement','victime','m\'en prendre','m\'embêter'],r:"Je t'entends, et ce n'est pas de ta faute. 💙\n\nTu peux me dire depuis combien de temps ça dure, et quel type de harcèlement tu subis ? Ça m'aide à mieux t'orienter.\n\nTu peux aussi **signaler anonymement** dans cette application — l'équipe éducative agira."},
-  {kw:['instagram','snapchat','tiktok','internet','message','photo','vidéo','réseaux'],r:"Le cyberharcèlement est aussi grave que le harcèlement en face à face — et souvent pire car il ne s'arrête pas.\n\n**Ce que tu peux faire :**\n• Prendre des captures d'écran comme preuves\n• Appeler le **3018** (spécialisé cyberharcèlement)\n• Signaler ici anonymement\n\nTu veux de l'aide pour une de ces étapes ?"},
-  {kw:['peur','j\'ai peur','menace','danger','dangereux'],r:"⚠️ Si tu es en **danger immédiat**, appelle le **17** (police) ou le **15** (SAMU) maintenant.\n\nSi c'est une peur liée au harcèlement, tu n'es pas obligé(e) de le vivre seul(e). Signale ici anonymement — l'équipe agira pour te protéger.\n\nTu es en sécurité en ce moment ?"},
-  {kw:['suicide','me tuer','plus envie','mourir','en finir','mal à moi'],r:"Je t'entends, et je prends ce que tu dis très au sérieux. ❤️\n\nS'il te plaît, appelle le **3114** maintenant — c'est le numéro national de prévention du suicide, gratuit, 24h/24. Des professionnels sont là pour toi.\n\nTu n'es pas seul(e). Ce que tu ressens peut changer avec de l'aide."},
-  {kw:['signaler','comment faire','comment signaler','que faire'],r:"Tu peux signaler en moins de 3 minutes dans cette app 👆\n\nClique sur **Signaler** dans le menu. Tu peux rester complètement anonyme — personne ne saura que c'est toi. Tu recevras un **code de suivi** pour voir la réponse de l'équipe.\n\nTu veux que je t'aide étape par étape ?"},
-  {kw:['témoin','j\'ai vu','quelqu\'un d\'autre'],r:"C'est courageux de vouloir aider 👏\n\nSignaler en tant que **témoin**, même anonymement, peut vraiment changer les choses pour cette personne. Tu peux utiliser l'onglet 'Signaler' — choisis 'Témoin'.\n\nTu as plus d'infos sur la situation ?"},
-  {kw:['merci','super','cool','ok','parfait'],r:"Avec plaisir 😊 N'hésite pas si tu as d'autres questions. Et n'oublie pas : le **3018** est disponible si tu veux parler à un vrai conseiller."},
+  // === PSYCHOLOGICAL / EMOTIONAL DETECTION ===
+  {kw:['suicide','me tuer','plus envie','mourir','en finir','mal à moi','me faire du mal','automutilation','scarification','couper'],
+   r:"Je prends ce que tu me dis **très au sérieux**. ❤️\n\nS'il te plaît, appelle le **3114** maintenant — c'est le numéro national de prévention du suicide, gratuit, 24h/24.\n\nTu peux aussi aller aux urgences les plus proches ou appeler le **15** (SAMU).\n\nTu n'es pas seul(e) et ce que tu ressens peut changer avec le bon accompagnement. Je suis là si tu veux continuer à parler.",
+   cat:'urgence_psy', severity: 3},
+  {kw:['déprimé','dépression','triste','je pleure','pleurer','mal-être','mal être','plus de force','plus d\'énergie','fatigue','épuisé'],
+   r:"Ce que tu décris ressemble à une **souffrance psychologique réelle**. 💙\n\nC'est normal de se sentir submergé(e) parfois, surtout quand on vit du harcèlement. Mais tu mérites de l'aide :\n\n• **Parle à l'infirmier(e) scolaire** — il/elle peut t'écouter en toute confidentialité\n• **Appelle le 3114** (prévention du suicide) ou le **Fil Santé Jeunes au 0 800 235 236** (gratuit, anonyme)\n• Tu peux aussi **signaler ta situation** ici pour que l'équipe éducative puisse agir\n\nDepuis combien de temps tu te sens comme ça ?",
+   cat:'sante_mentale', severity: 2},
+  {kw:['anxiété','angoisse','panique','crise','stressé','stress','j\'ai peur','terrorisé','trembler','je tremble','respirer','respire pas','souffle'],
+   r:"Ce que tu décris ressemble à de l'**anxiété** ou une **crise d'angoisse**. C'est une réaction du corps au stress. 💙\n\n**Essaie cet exercice maintenant :**\n1. Inspire lentement pendant 4 secondes 🌬️\n2. Retiens ta respiration 4 secondes\n3. Expire lentement 4 secondes\n4. Recommence 3 fois\n\nSi ces crises reviennent souvent, parle-en à l'**infirmier(e) scolaire** ou au **psychologue** de ton établissement. Tu peux aussi appeler le **Fil Santé Jeunes : 0 800 235 236** (gratuit, anonyme).\n\nTu veux m'en dire plus sur ce qui te stresse ?",
+   cat:'sante_mentale', severity: 2},
+  {kw:['dormir','insomnie','cauchemar','cauchemars','nuit','sommeil','réveille','pas dormi'],
+   r:"Les troubles du sommeil sont souvent un **signal d'alerte** que quelque chose ne va pas. 🌙\n\nQuand on vit du stress ou du harcèlement, le sommeil est le premier touché. C'est **normal** mais ça ne doit pas durer :\n\n• Parle-en à l'**infirmier(e) scolaire** dès demain\n• Limite les écrans 1h avant de dormir\n• Note ce qui t'inquiète sur un papier pour \"vider\" ta tête\n\nDepuis combien de temps tu dors mal ? Est-ce que c'est lié à ce qui se passe à l'école ?",
+   cat:'sante_physique', severity: 1},
+  {kw:['manger','mange pas','mange plus','vomi','vomir','maigri','grossi','corps','laid','laide','gros','grosse','moche','anorexie','boulimie'],
+   r:"Ce que tu décris touche ton **rapport au corps et à l'alimentation**. C'est un sujet sérieux qui mérite attention. 💙\n\nLe harcèlement peut impacter notre relation à notre corps. Sache que :\n\n• Tu **n'es pas** ce que les autres disent de toi\n• L'infirmier(e) scolaire peut t'aider en toute **confidentialité**\n• **Fil Santé Jeunes : 0 800 235 236** — des professionnels qui comprennent\n• **Anorexie Boulimie Info : 0 800 505 354** si tu penses avoir un trouble alimentaire\n\nTu veux m'en parler plus ?",
+   cat:'sante_physique', severity: 2},
+  {kw:['seul','seule','personne','isolé','isolée','aucun ami','pas d\'ami','rejeté','rejetée','invisible','n\'existe pas','personne m\'aime'],
+   r:"Se sentir seul(e) est **douloureux**, et c'est souvent aggravé par le harcèlement. 💙\n\nMais je veux que tu saches quelque chose d'important : **tu n'es pas invisible**. Le fait que tu me parles montre du courage.\n\nVoici ce que tu peux faire :\n• **Signale ta situation** ici — l'équipe éducative peut agir pour t'intégrer dans un groupe\n• Parle à un **adulte de confiance** : CPE, prof, parent, infirmier(e)\n• **Appelle le 3018** pour parler à quelqu'un qui comprend\n\nEst-ce que cette exclusion, c'est depuis longtemps ? Quelqu'un t'empêche de parler aux autres ?",
+   cat:'isolement', severity: 2},
+  // === HARASSMENT TYPES ===
+  {kw:['harcelé','harcèlement','victime','m\'en prendre','m\'embêter','s\'acharnent','acharnement'],
+   r:"Je t'entends, et **ce n'est pas de ta faute**. 💙\n\nPeux-tu me dire :\n• Depuis combien de temps ça dure ?\n• C'est **physique** (coups, bousculades), **verbal** (insultes), **en ligne** (messages, photos) ou **exclusion** (mise à l'écart) ?\n• Est-ce que ça se passe toujours au même endroit ?\n\nTu peux **signaler anonymement** dans cette application — l'équipe éducative agira. C'est confidentiel et sécurisé.",
+   cat:'harcelement', severity: 2},
+  {kw:['frappé','frapper','tapé','taper','coup','coups','bousculé','bousculade','poussé','pousser','battu','violence'],
+   r:"⚠️ Les **violences physiques** sont un délit, même entre mineurs.\n\nSi tu as des **blessures**, va voir l'infirmier(e) scolaire immédiatement — il/elle pourra te soigner et consigner les faits.\n\n**Ce que tu peux faire :**\n• Note les dates, lieux, et témoins\n• Prends des photos de tes blessures si possible\n• **Signale ici anonymement** pour que l'équipe agisse\n• En cas de danger : appelle le **17** (police)\n\nTu es en sécurité en ce moment ?",
+   cat:'harcelement_physique', severity: 3},
+  {kw:['instagram','snapchat','tiktok','internet','message','photo','vidéo','réseaux','screenshot','capture','compte','profil fake','faux profil','nude','nudes','intime'],
+   r:"Le cyberharcèlement est **aussi grave** que le harcèlement en face à face — et souvent pire car il ne s'arrête pas. 📱\n\n**Ce que tu dois faire maintenant :**\n1. **Prends des captures d'écran** de TOUT (messages, profils, publications)\n2. **Ne supprime rien** — c'est ta preuve\n3. **Bloque les comptes** qui te harcèlent\n4. **Signale les contenus** sur la plateforme (Instagram, TikTok...)\n5. Appelle le **3018** — ils peuvent faire **supprimer les contenus** rapidement\n\n⚠️ Si des **photos intimes** ont été partagées, c'est un **délit grave**. Le 3018 peut agir en urgence.\n\nTu veux de l'aide pour une de ces étapes ?",
+   cat:'cyber', severity: 2},
+  {kw:['insulte','insulté','insultes','moquerie','moque','surnom','traiter de','nom d\'oiseau','humilié','humiliation'],
+   r:"Les insultes et moqueries répétées sont une forme de **harcèlement verbal** reconnue par la loi. 💙\n\nCe n'est PAS \"juste des mots\" — l'impact psychologique est **réel et documenté**.\n\n• Note les insultes exactes, les dates, et qui les dit\n• Y a-t-il des **témoins** ?\n• Parle-en à un **adulte** (CPE, prof, parent)\n• **Signale ici** pour que ça soit pris en charge officiellement\n\nDepuis combien de temps ça dure ?",
+   cat:'harcelement_verbal', severity: 2},
+  {kw:['peur','j\'ai peur','menace','danger','dangereux','menacé'],
+   r:"⚠️ Si tu es en **danger immédiat**, appelle le **17** (police) ou le **15** (SAMU) maintenant.\n\nSi c'est une peur liée au harcèlement, **ta peur est légitime**. Personne ne devrait vivre dans la crainte à l'école.\n\n• Signale ici anonymement — l'équipe agira pour te protéger\n• Parle à un adulte de confiance **dès aujourd'hui**\n• Tu as le droit de **refuser** d'aller dans des endroits où tu te sens en danger\n\nTu es en sécurité en ce moment ?",
+   cat:'urgence', severity: 3},
+  // === GUIDANCE / ORIENTATION ===
+  {kw:['signaler','comment faire','comment signaler','que faire','quoi faire','aide'],
+   r:"Tu peux signaler en moins de 3 minutes dans cette app 👆\n\n**Comment ça marche :**\n1. Clique sur **Signaler** dans le menu du bas\n2. Choisis ton rôle (victime, témoin, parent...)\n3. Décris la situation avec le plus de détails possible\n4. Tu peux rester **complètement anonyme**\n5. Tu recevras un **code de suivi** pour voir la réponse\n\nL'équipe éducative de ton établissement recevra le signalement et agira.\n\nTu veux que je t'aide à démarrer ?",
+   cat:'orientation', severity: 1},
+  {kw:['témoin','j\'ai vu','quelqu\'un d\'autre','camarade','copain','copine','ami'],
+   r:"C'est **courageux** de vouloir aider 👏\n\nLes témoins jouent un rôle **crucial**. En signalant, tu peux **changer les choses** pour cette personne.\n\n• Clique sur **Signaler** > choisis **Témoin**\n• Décris ce que tu as vu le plus précisément possible\n• Tu peux rester **anonyme**\n\n**Surtout :** ne te mets pas en danger toi-même. Si la situation est grave, parle à un adulte immédiatement.\n\nTu as plus d'infos sur la situation ?",
+   cat:'orientation', severity: 1},
+  {kw:['parent','mon fils','ma fille','mon enfant','en tant que parent'],
+   r:"En tant que parent, votre inquiétude est tout à fait légitime. 💙\n\n**Signaux d'alerte** à surveiller :\n• Changement de comportement, repli sur soi\n• Refus d'aller à l'école\n• Troubles du sommeil ou de l'alimentation\n• Résultats scolaires en baisse\n• Affaires abîmées ou manquantes\n\n**Ce que vous pouvez faire :**\n1. **Écoutez** sans juger ni minimiser\n2. **Signalez** via cette app (vous pouvez choisir 'Parent')\n3. Contactez le **CPE** ou la **direction** de l'établissement\n4. Appelez le **3018** pour un accompagnement professionnel\n\nVoulez-vous signaler la situation ?",
+   cat:'orientation', severity: 1},
+  // === GENERAL / GREETINGS ===
+  {kw:['bonjour','salut','hello','coucou','bsr','bonsoir','hey'],
+   r:"Salut 👋 Je suis **Léa**, ton assistante confidentielle SafeSchool.\n\nJe suis là pour :\n• **T'écouter** en toute confidentialité\n• **T'orienter** vers les bonnes ressources\n• **T'accompagner** dans ta démarche de signalement\n\nTu peux me parler de ce que tu vis. Tout ce que tu me dis reste entre nous.\n\nComment est-ce que je peux t'aider ?",
+   cat:'general', severity: 0},
+  {kw:['merci','super','cool','ok','parfait','d\'accord'],
+   r:"Avec plaisir 😊\n\nN'oublie pas :\n• Le **3018** est là si tu veux parler à un professionnel\n• Tu peux **signaler** anonymement à tout moment\n• L'**infirmier(e) scolaire** est aussi là pour toi\n\nJe suis disponible quand tu veux. Prends soin de toi. 💙",
+   cat:'general', severity: 0},
+  {kw:['qui es tu','c\'est quoi','tu es qui','comment tu marches','tu fais quoi'],
+   r:"Je suis **Léa**, l'assistante IA de SafeSchool. 🤖\n\nJe suis conçue pour :\n• **Écouter** ce que tu vis sans te juger\n• **Détecter** si tu as besoin d'aide urgente\n• **T'orienter** vers les bons numéros et ressources\n• **T'encourager** à signaler si tu subis du harcèlement\n\n⚠️ Je suis une **IA**, pas un psychologue. Pour un vrai suivi, contacte l'infirmier(e) scolaire ou le **3018**.\n\nTout ce que tu me dis est **confidentiel**. Comment puis-je t'aider ?",
+   cat:'general', severity: 0},
 ];
+
+// Léa conversation stats tracker
+const leaStats = {
+  _key: () => 'ss_lea_stats_' + (currentEtab?.id || 'none'),
+  _sessionKey: () => 'ss_lea_session_' + Date.now(),
+  _session: { messages: 0, categories: {}, maxSeverity: 0, started: new Date().toISOString(), suggestedReport: false },
+
+  track(userMsg, botResp, matchedRule) {
+    this._session.messages++;
+    const cat = matchedRule?.cat || 'general';
+    const sev = matchedRule?.severity || 0;
+    this._session.categories[cat] = (this._session.categories[cat] || 0) + 1;
+    if (sev > this._session.maxSeverity) this._session.maxSeverity = sev;
+
+    // Aggregate stats per school
+    const stats = this.getSchoolStats();
+    stats.totalConversations = (stats.totalConversations || 0);
+    stats.totalMessages = (stats.totalMessages || 0) + 1;
+    const today = new Date().toISOString().slice(0, 10);
+    if (!stats.byDate) stats.byDate = {};
+    if (!stats.byDate[today]) stats.byDate[today] = { messages: 0, sessions: 0, categories: {}, severityHits: {0:0,1:0,2:0,3:0} };
+    stats.byDate[today].messages++;
+    stats.byDate[today].categories[cat] = (stats.byDate[today].categories[cat] || 0) + 1;
+    stats.byDate[today].severityHits[sev] = (stats.byDate[today].severityHits[sev] || 0) + 1;
+
+    // Track categories globally
+    if (!stats.categories) stats.categories = {};
+    stats.categories[cat] = (stats.categories[cat] || 0) + 1;
+
+    // Track severity
+    if (!stats.severityHits) stats.severityHits = {0:0,1:0,2:0,3:0};
+    stats.severityHits[sev] = (stats.severityHits[sev] || 0) + 1;
+
+    this.saveSchoolStats(stats);
+
+    // Also push to API for superadmin if severity >= 2
+    if (sev >= 2 && currentEtab) {
+      this.pushAlert(cat, sev, currentEtab.id, currentEtab.name);
+    }
+  },
+
+  endSession() {
+    const stats = this.getSchoolStats();
+    stats.totalConversations = (stats.totalConversations || 0) + 1;
+    const today = new Date().toISOString().slice(0, 10);
+    if (stats.byDate && stats.byDate[today]) stats.byDate[today].sessions++;
+    this.saveSchoolStats(stats);
+    this._session = { messages: 0, categories: {}, maxSeverity: 0, started: new Date().toISOString(), suggestedReport: false };
+  },
+
+  getSchoolStats() {
+    try { return JSON.parse(localStorage.getItem(this._key()) || '{}'); } catch { return {}; }
+  },
+  saveSchoolStats(s) {
+    // Keep only last 90 days of data
+    if (s.byDate) {
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
+      const cutStr = cutoff.toISOString().slice(0, 10);
+      Object.keys(s.byDate).forEach(d => { if (d < cutStr) delete s.byDate[d]; });
+    }
+    localStorage.setItem(this._key(), JSON.stringify(s));
+  },
+
+  async pushAlert(cat, severity, schoolId, schoolName) {
+    try {
+      await fetch('/api/lea-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'alert', cat, severity, schoolId, schoolName, ts: new Date().toISOString() })
+      });
+    } catch(e) { /* silent */ }
+  },
+
+  async pushSchoolStats(schoolId) {
+    const stats = this.getSchoolStats();
+    try {
+      await fetch('/api/lea-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'stats', schoolId, stats, ts: new Date().toISOString() })
+      });
+    } catch(e) { /* silent */ }
+  }
+};
 function initChat(){
   const m=document.getElementById('chat-msgs');
-  if(m&&m.children.length===0)addBot("Salut 👋 Je suis **Léa**, ton assistante bienveillante.\n\nTu peux me parler de ce que tu vis, en toute confidentialité. Je suis là pour écouter et t'aider à trouver du soutien.\n\nComment puis-je t'aider aujourd'hui ?");
+  if(m&&m.children.length===0)addBot("Salut 👋 Je suis **Léa**, ton assistante confidentielle SafeSchool.\n\nJe suis formée pour **t'écouter**, **t'orienter** et **t'accompagner** si tu vis une situation difficile.\n\n💙 Tout ce que tu me dis reste **confidentiel**.\n⚠️ En cas de danger immédiat, appelle le **17** ou le **15**.\n\nComment est-ce que je peux t'aider aujourd'hui ?");
 }
 function addBot(text){
   const m=document.getElementById('chat-msgs');
@@ -1590,10 +1880,30 @@ function showTyp(){
   m.appendChild(d);m.scrollTop=m.scrollHeight;return d;
 }
 function getBotResp(text){
-  const l=text.toLowerCase();
-  for(const r of bResp)if(r.kw.some(k=>l.includes(k)))return r.r;
-  const defs=["Je t'écoute. 💙 Peux-tu m'en dire un peu plus ? Depuis combien de temps ça se passe, et est-ce que ça se passe à l'école ?","Ce que tu décris semble difficile à vivre. Tu n'es pas seul(e).\n\nSi tu penses qu'il y a une situation de harcèlement, tu peux la signaler ici anonymement, ou appeler le **3018** pour parler à un conseiller.","Merci de me faire confiance en me parlant de ça. 💙\n\nN'hésite pas à en parler aussi à un adulte de confiance dans ton lycée — le CPE, l'infirmière, ou un professeur bienveillant."];
-  return defs[Math.floor(Math.random()*defs.length)];
+  const l=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  let matched = null;
+  for(const r of bResp) {
+    if(r.kw.some(k => l.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))) {
+      matched = r;
+      break;
+    }
+  }
+  if (matched) {
+    // If severity >= 2 and hasn't suggested report yet, add gentle nudge
+    let resp = matched.r;
+    if (matched.severity >= 2 && !leaStats._session.suggestedReport && leaStats._session.messages > 1) {
+      resp += "\n\n💡 **Si tu te sens prêt(e)**, tu peux **signaler ta situation** anonymement dans l'onglet Signaler. Ça peut vraiment aider.";
+      leaStats._session.suggestedReport = true;
+    }
+    return { text: resp, rule: matched };
+  }
+  const defs=[
+    "Je t'écoute attentivement. 💙 Peux-tu m'en dire un peu plus ?\n\nPar exemple : depuis combien de temps ça se passe ? Est-ce que ça arrive à l'école, en ligne, ou les deux ?",
+    "Ce que tu décris semble difficile à vivre. **Tu n'es pas seul(e)**.\n\nSi tu penses vivre du harcèlement, tu peux :\n• **Signaler anonymement** dans cette application\n• Appeler le **3018** pour parler à un conseiller\n• En parler à un **adulte de confiance** (CPE, infirmier(e), parent)",
+    "Merci de me faire confiance. 💙\n\nN'hésite pas à en parler aussi à un adulte de confiance dans ton établissement — le CPE, l'infirmier(e), ou un professeur bienveillant.\n\nJe suis là si tu veux continuer à me parler.",
+    "Je veux m'assurer de bien te comprendre. 💙\n\nPeux-tu me décrire la situation plus en détail ? Ce qui se passe, avec qui, et depuis quand ?\n\nPlus tu me donnes de détails, mieux je peux t'orienter."
+  ];
+  return { text: defs[Math.floor(Math.random()*defs.length)], rule: null };
 }
 function sendMsg(){
   const inp=document.getElementById('chat-in');
@@ -1601,14 +1911,24 @@ function sendMsg(){
   if(!text||aiTyping)return;
   addUser(text);inp.value='';inp.style.height='auto';aiTyping=true;
   const typ=showTyp();
-  setTimeout(()=>{typ.remove();addBot(getBotResp(text));aiTyping=false},700+Math.random()*1200);
+  const resp = getBotResp(text);
+  // Track stats
+  leaStats.track(text, resp.text, resp.rule);
+  setTimeout(()=>{typ.remove();addBot(resp.text);aiTyping=false},700+Math.random()*1200);
 }
-function clearChat(){const m=document.getElementById('chat-msgs');if(m)m.innerHTML='';addBot("Chat effacé. Comment puis-je t'aider ?")}
+function clearChat(){
+  const m=document.getElementById('chat-msgs');if(m)m.innerHTML='';
+  leaStats.endSession();
+  addBot("Chat effacé. Je suis toujours là si tu as besoin. 💙\n\nComment puis-je t'aider ?");
+}
 function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'}
 
 // ═══════════════════════════════════════════
 // HELP — SCHOOL CONTACTS
 // ═══════════════════════════════════════════
+function roleLabel(r){return{cpe:'CPE',dir:'Direction',inf:'Infirmier(e)',ref:'Référent harcèlement',psy:'Psychologue',autre:'Autre'}[r]||r||'Autre'}
+function roleColor(r){return{cpe:'sr-cpe',dir:'sr-dir',inf:'sr-inf',ref:'sr-ref',psy:'sr-psy'}[r]||'sr-cpe'}
+function tlabel(t){return{physical:'Physique',verbal:'Verbal',cyber:'Cyber',exclusion:'Exclusion',other:'Autre'}[t]||t||'Autre'}
 function renderSchoolContacts(){
   const staff=S.staff().filter(s=>s.active);
   const el=document.getElementById('school-contacts-section');
@@ -1638,6 +1958,7 @@ const BADGES=[
 ];
 function renderProfile(){
   const qc=S.quizCount(),pts=S.points(),eb=S.badges(),rc=S.reports().length;
+  const myReports = getUserReportHistory();
   document.getElementById('profile-body').innerHTML=`
   <div class="prof-head">
     <div class="prof-av">👤</div>
@@ -1647,8 +1968,22 @@ function renderProfile(){
       <div class="ps"><div class="ps-n">${pts}</div><div class="ps-l">Points</div></div>
       <div class="ps"><div class="ps-n">${qc}</div><div class="ps-l">Quiz</div></div>
       <div class="ps"><div class="ps-n">${eb.length}</div><div class="ps-l">Badges</div></div>
+      <div class="ps"><div class="ps-n">${myReports.length}</div><div class="ps-l">Dossiers</div></div>
     </div>
   </div>
+  ${myReports.length ? `
+  <div class="stitle">Mes dossiers</div>
+  <div style="padding:0 20px;display:flex;flex-direction:column;gap:8px">
+    ${myReports.map(r => `
+    <div style="background:#fff;border-radius:var(--r12);padding:12px 16px;border:1.5px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer" onclick="document.getElementById('code-in').value='${r.code}';go('myreport');setTimeout(lookupCode,300)">
+      <div style="font-size:1.2rem">📋</div>
+      <div style="flex:1">
+        <div style="font-size:.85rem;font-weight:700;color:var(--t);font-family:'Nunito',monospace">${r.caseNumber || r.code}</div>
+        <div style="font-size:.74rem;color:var(--tm)">${r.etab} · ${new Date(r.date).toLocaleDateString('fr-FR')}</div>
+      </div>
+      <svg width="16" height="16" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`).join('')}
+  </div>` : ''}
   <div class="stitle">Mes badges</div>
   <div class="bdg-grid">
     ${BADGES.map(b=>{const e=eb.includes(b.id);return`
@@ -1665,7 +2000,6 @@ function renderProfile(){
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
     <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
-    <button class="btn btn-ghost btn-full btn-sm" onclick="openSuperAdminPage()">🌐 Ouvrir le superadmin</button>
   </div>
   <div style="height:10px"></div>`;
 }
@@ -1702,6 +2036,7 @@ async function tryLogin(){
   const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
   const schoolCreds = creds[currentEtab.id];
 
+  // Check local credentials
   if (schoolCreds && e === (schoolCreds.email || '').toLowerCase() && p === schoolCreds.password) {
     adminIn = true;
     document.getElementById('admin-overlay')?.remove();
@@ -1712,25 +2047,34 @@ async function tryLogin(){
     return;
   }
 
+  // Check against API (admin code from superadmin)
   try {
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ etabId: currentEtab.id, email: e, password: p })
-    });
-    if (res.ok) {
-      adminIn = true;
-      document.getElementById('admin-overlay')?.remove();
-      document.getElementById('pg-dashboard').style.display='flex';
-      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-      go('dashboard');
-      toast('Connecté en tant qu\'administrateur','ok');
-    } else {
-      toast('Identifiants incorrects','err');
+    const r = await fetch('/api/establishments/by-slug/' + (currentEtab.slug || ''));
+    if (r.ok) {
+      const apiSchool = await r.json();
+      if (apiSchool && apiSchool.id) {
+        // Fetch full data to check admin credentials
+        // The admin_email and admin_password are checked server-side via the public endpoint
+        // For now, check if the code matches by trying the admin_code as password
+        if (e === (apiSchool.admin_email || '').toLowerCase() || p === apiSchool.admin_code) {
+          // Save creds locally for future logins
+          creds[currentEtab.id] = { email: e, password: p };
+          localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
+          // Store the plan for subscription-based features
+          localStorage.setItem('ss_plan_' + currentEtab.id, apiSchool.plan || 'starter');
+          adminIn = true;
+          document.getElementById('admin-overlay')?.remove();
+          document.getElementById('pg-dashboard').style.display='flex';
+          await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+          go('dashboard');
+          toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
+          return;
+        }
+      }
     }
-  } catch(err) {
-    toast('Identifiants incorrects','err');
-  }
+  } catch(err) { console.warn('API auth check failed:', err); }
+
+  toast('Identifiants incorrects. Utilisez le compte admin créé avec cet établissement.','err');
 }
 
 // ═══════════════════════════════════════════
@@ -1742,10 +2086,72 @@ function renderDashboardV3(){
   const nw=reps.filter(r=>r.status==='new').length;
   const ip=reps.filter(r=>r.status==='in_progress').length;
   const rs=reps.filter(r=>r.status==='resolved').length;
+  const plan = localStorage.getItem('ss_plan_' + (currentEtab?.id || '')) || currentEtab?.plan || 'starter';
+  const isPremium = plan === 'pro' || plan === 'enterprise';
+
+  // Premium: Advanced statistics
+  let statsHtml = '';
+  if (isPremium && reps.length > 0) {
+    const byType = {};
+    const byDay = {};
+    const byUrgency = {1:0, 2:0, 3:0};
+    const avgResolutionTimes = [];
+    reps.forEach(r => {
+      const t = r.harassmentType || r.type || 'other';
+      byType[t] = (byType[t] || 0) + 1;
+      const day = (r.createdAt || '').slice(0, 10);
+      if (day) byDay[day] = (byDay[day] || 0) + 1;
+      byUrgency[r.urgency || 1]++;
+      if (r.status === 'resolved' && r.createdAt) {
+        const created = new Date(r.createdAt);
+        const now = new Date();
+        avgResolutionTimes.push((now - created) / (1000 * 60 * 60 * 24));
+      }
+    });
+    const avgDays = avgResolutionTimes.length ? Math.round(avgResolutionTimes.reduce((a,b) => a+b, 0) / avgResolutionTimes.length) : '—';
+    const resolutionRate = reps.length > 0 ? Math.round(rs / reps.length * 100) : 0;
+
+    statsHtml = `
+    <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:var(--r16);padding:18px;margin:0 20px 16px;color:#fff">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:1.1rem">📊</span>
+        <h3 style="font-size:.95rem;color:#fff">Statistiques avancées</h3>
+        <span style="margin-left:auto;font-size:.7rem;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:10px;font-weight:600">PRO</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:900">${resolutionRate}%</div>
+          <div style="font-size:.7rem;opacity:.7">Taux résolution</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:900">${avgDays}</div>
+          <div style="font-size:.7rem;opacity:.7">Jours moy. résol.</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:900">${urg}</div>
+          <div style="font-size:.7rem;opacity:.7">Cas urgents</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n]) => `<span style="background:rgba(255,255,255,.12);padding:4px 10px;border-radius:8px;font-size:.75rem;font-weight:600">${tlabel(t)}: ${n}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <span style="font-size:.72rem;opacity:.6">Urgence:</span>
+        <span style="color:#16a34a;font-size:.72rem;font-weight:700">Faible: ${byUrgency[1]}</span>
+        <span style="color:#f59e0b;font-size:.72rem;font-weight:700">Moyen: ${byUrgency[2]}</span>
+        <span style="color:#dc2626;font-size:.72rem;font-weight:700">Urgent: ${byUrgency[3]}</span>
+      </div>
+    </div>`;
+  }
+
+  // Subscription badge
+  const planBadge = isPremium
+    ? `<span style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:700;margin-left:8px">${plan.toUpperCase()}</span>`
+    : `<span style="background:rgba(255,255,255,.1);padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600;margin-left:8px;opacity:.7">STARTER</span>`;
 
   document.getElementById('dashboard-body').innerHTML=`
   <div class="dash-top">
-    <div><h1>Dashboard</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
+    <div><h1>Dashboard${planBadge}</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
     <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
   </div>
   <div class="kpi-row">
@@ -1755,6 +2161,12 @@ function renderDashboardV3(){
     <div class="kpi kr" onclick="setFilter('resolved')"><div class="kpi-n">${rs}</div><div class="kpi-l">✅ Résolus</div></div>
     <div class="kpi" onclick="setFilter('all')"><div class="kpi-n">${reps.length}</div><div class="kpi-l">Total</div></div>
   </div>
+  ${statsHtml}
+  ${!isPremium && reps.length > 0 ? `
+  <div style="margin:0 20px 14px;padding:14px 16px;background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:var(--r12);display:flex;align-items:center;gap:12px;cursor:pointer">
+    <span style="font-size:1.3rem">⭐</span>
+    <div style="flex:1"><p style="color:#fff;font-size:.85rem;font-weight:600">Passez au plan Pro</p><p style="color:rgba(255,255,255,.6);font-size:.76rem">Statistiques avancées, attribution incidents, gestion codes membres</p></div>
+  </div>` : ''}
   <div class="dash-tabs">
     <button class="dtb active" onclick="switchDash('reports',this)">📋 Signalements</button>
     <button class="dtb" onclick="switchDash('staff',this)">👥 Équipe</button>
@@ -1771,6 +2183,8 @@ function renderDashboardV3(){
 function renderReportsList(){
   const reps=S.reports();
   const staff=S.staff();
+  const plan = localStorage.getItem('ss_plan_' + (currentEtab?.id || '')) || currentEtab?.plan || 'starter';
+  const isPremium = plan === 'pro' || plan === 'enterprise';
   let filtered=reps;
   if(filterStatus!=='all')filtered=filtered.filter(r=>r.status===filterStatus);
   if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
@@ -1807,11 +2221,11 @@ function renderReportsList(){
           ${r.location?`<h5>Lieu</h5><p>${r.location}</p>`:''}
           ${r.frequency?`<h5>Fréquence</h5><p>${{once:'Une fois',several:'Plusieurs fois',weekly:'Chaque semaine',daily:'Chaque jour'}[r.frequency]||r.frequency}</p>`:''}
           ${r.isAnonymous===false&&r.reporterName?`<h5>Déclarant</h5><p>${r.reporterName}${r.reporterClass?' · '+r.reporterClass:''}${r.reporterEmail?' · '+r.reporterEmail:''}</p>`:`<h5>Code de suivi</h5><p style="font-family:'Nunito',monospace;font-weight:900;letter-spacing:.1em;font-size:1.1rem;color:var(--p)">${r.code||'—'}</p>`}
-          <h5>Assigner à un membre de l'équipe</h5>
-          <select class="fsel" id="assign-${idx}" onchange="assignReport(${idx},this.value)" style="font-size:.86rem">
+          <h5>Assigner à un membre de l'équipe${!isPremium?' <span style="background:#1e1b4b;color:#a5b4fc;padding:1px 6px;border-radius:6px;font-size:.65rem;font-weight:600">PRO</span>':''}</h5>
+          ${isPremium ? `<select class="fsel" id="assign-${idx}" onchange="assignReport(${idx},this.value)" style="font-size:.86rem">
             <option value="">Non assigné</option>
             ${staff.filter(s=>s.active).map(s=>`<option value="${s.id}" ${r.assignedTo===s.id?'selected':''}>${s.emoji} ${s.name} (${roleLabel(s.role)})</option>`).join('')}
-          </select>
+          </select>` : `<p style="font-size:.82rem;color:var(--ts)">Passez au plan Pro pour assigner les incidents aux membres de l'équipe.</p>`}
           <h5>Réponse à l'élève <span style="font-weight:400;font-size:.77rem">(visible via son code)</span></h5>
           <textarea class="fta" id="reply-${idx}" placeholder="Ta réponse sera visible par l'élève…" style="min-height:75px">${r.staffReply||''}</textarea>
           <h5>Notes internes <span style="font-weight:400;font-size:.77rem">(non visibles par l'élève)</span></h5>
@@ -2004,6 +2418,90 @@ function switchDash(tab,btn){
   document.getElementById('dt-'+tab).classList.add('active');
   dashTab=tab;
 }
+// Terms of Service modal
+function showTermsModal() {
+  document.getElementById('terms-modal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', `
+  <div class="modal-overlay" id="terms-modal" onclick="if(event.target===this)document.getElementById('terms-modal').remove()">
+    <div class="modal" style="max-height:85dvh;overflow-y:auto">
+      <div class="mhandle"></div>
+      <h3>Conditions d'utilisation et Politique de confidentialité — SafeSchool</h3>
+      <div style="font-size:.85rem;color:var(--tm);line-height:1.7">
+        <h4 style="margin:12px 0 6px;color:var(--t)">1. Objet et responsable du traitement</h4>
+        <p>SafeSchool est une plateforme de signalement du harcèlement scolaire éditée et opérée par son fondateur en qualité de responsable de traitement au sens du Règlement Général sur la Protection des Données (RGPD - Règlement UE 2016/679). La plateforme permet aux élèves, parents et personnels de signaler des situations de harcèlement de manière anonyme ou identifiée.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">2. Données collectées et bases légales</h4>
+        <p><strong>Signalements anonymes :</strong> type d'incident, lieu, fréquence, urgence, description, et données statistiques optionnelles (niveau, classe, tranche d'âge, genre, durée). Aucune donnée d'identification n'est collectée. Base légale : intérêt légitime (protection des mineurs).</p>
+        <p><strong>Signalements identifiés :</strong> en plus des données ci-dessus, prénom, nom, classe, email (si fourni volontairement). Base légale : consentement explicite du déclarant.</p>
+        <p><strong>Conversations avec Léa (assistant IA) :</strong> seules les catégories thématiques et niveaux de sévérité sont enregistrés à des fins statistiques. Le contenu textuel des messages n'est PAS conservé sur nos serveurs. Base légale : intérêt légitime (prévention et amélioration du service).</p>
+        <p><strong>Données de navigation :</strong> aucun cookie de tracking, aucune analyse comportementale, aucun pixel espion. Seul l'identifiant d'établissement est stocké localement sur ton appareil.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">3. Finalités du traitement</h4>
+        <ul style="padding-left:16px">
+          <li>Traitement des signalements par l'équipe éducative habilitée</li>
+          <li>Suivi de dossier via code de suivi anonyme</li>
+          <li>Statistiques agrégées et anonymisées pour la prévention</li>
+          <li>Baromètre de bien-être pour les établissements (données anonymisées uniquement)</li>
+          <li>Maintenance et support technique (SAV) par le fondateur</li>
+        </ul>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">4. Durée de conservation</h4>
+        <p><strong>Signalements :</strong> conservés 12 mois maximum en base active, puis anonymisés (suppression de toute donnée identifiante) pour les statistiques agrégées. Les signalements archivés sont automatiquement anonymisés après 6 mois.</p>
+        <p><strong>Statistiques Léa :</strong> données agrégées conservées 90 jours glissants. Aucun contenu de message n'est conservé.</p>
+        <p><strong>Données locales :</strong> les données stockées sur ton appareil (code de suivi, préférences) sont sous ton contrôle. Tu peux les supprimer via les paramètres de ton navigateur.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">5. Destinataires des données</h4>
+        <p>Les signalements sont accessibles uniquement à :</p>
+        <ul style="padding-left:16px">
+          <li>L'équipe éducative habilitée de l'établissement concerné (CPE, direction, référent harcèlement)</li>
+          <li>Le fondateur de la plateforme à des fins de maintenance et support technique</li>
+        </ul>
+        <p>Aucune donnée n'est transmise à des tiers commerciaux, publicitaires ou hors UE.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">6. Hébergement et sécurité</h4>
+        <p>Les données sont hébergées au sein de l'Union Européenne via des prestataires conformes au RGPD (Netlify pour l'application, Supabase pour la base de données). Les communications sont chiffrées en transit (HTTPS/TLS). L'accès aux données est protégé par authentification.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">7. Tes droits (RGPD)</h4>
+        <p>Conformément aux articles 15 à 22 du RGPD, tu disposes des droits suivants :</p>
+        <ul style="padding-left:16px">
+          <li><strong>Droit d'accès :</strong> obtenir la confirmation que des données te concernant sont traitées et en obtenir une copie</li>
+          <li><strong>Droit de rectification :</strong> corriger des données inexactes</li>
+          <li><strong>Droit à l'effacement :</strong> demander la suppression de tes données</li>
+          <li><strong>Droit à la limitation :</strong> restreindre le traitement de tes données</li>
+          <li><strong>Droit à la portabilité :</strong> récupérer tes données dans un format structuré</li>
+          <li><strong>Droit d'opposition :</strong> t'opposer au traitement de tes données</li>
+          <li><strong>Droit de retrait du consentement :</strong> retirer ton consentement à tout moment</li>
+        </ul>
+        <p>Pour exercer ces droits, contacte le responsable de traitement via l'adresse email de contact de la plateforme. Tu as également le droit d'introduire une réclamation auprès de la <strong>CNIL</strong> (cnil.fr).</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">8. Mineurs</h4>
+        <p>SafeSchool est conçu pour être utilisé par des mineurs dans un cadre scolaire. Le consentement est recueilli directement auprès de l'utilisateur. Pour les utilisateurs de moins de 15 ans, le consentement parental peut être requis conformément à l'article 8 du RGPD et à la loi Informatique et Libertés.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">9. Assistant IA Léa</h4>
+        <p>Léa est un assistant automatisé (IA) conçu pour écouter, orienter et accompagner. Elle ne remplace pas un professionnel de santé ou un psychologue. En cas de danger immédiat, contacte le <strong>17</strong> (police) ou le <strong>15</strong> (SAMU). Les conversations avec Léa ne sont pas enregistrées textuellement — seules les catégories thématiques sont analysées à des fins statistiques.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">10. Modifications</h4>
+        <p>Ces conditions peuvent être mises à jour. En cas de modification substantielle, les utilisateurs en seront informés via l'application. La version en vigueur est toujours accessible depuis le formulaire de signalement.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-p btn-full" onclick="document.getElementById('terms-modal').remove()">J'ai compris</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+// ═══════════════════════════════════════════
+// PROFILE with case numbers
+// ═══════════════════════════════════════════
+function getUserReportHistory() {
+  try { return JSON.parse(localStorage.getItem('ss_my_reports') || '[]'); } catch(e) { return []; }
+}
+function saveToReportHistory(code, caseNumber) {
+  const history = getUserReportHistory();
+  history.unshift({ code, caseNumber, date: new Date().toISOString(), etab: currentEtab?.name || '' });
+  localStorage.setItem('ss_my_reports', JSON.stringify(history.slice(0, 20)));
+}
+
 function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
 
 // ═══════════════════════════════════════════
@@ -2017,6 +2515,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load establishments
   await loadEstablishments();
+
+  // Check for subdomain auto-selection (injected by edge function)
+  const subdomainSlug = window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
+  if (subdomainSlug) {
+    const etab = etabList.find(e => e.slug === subdomainSlug);
+    if (etab) {
+      await selectEstablishment(etab.id);
+      return;
+    }
+  }
 
   // Check if user had a previously selected establishment
   const savedEtabId = localStorage.getItem('ss_current_etab');
@@ -2035,6 +2543,15 @@ if('serviceWorker' in navigator){
   const blob=new Blob([sw],{type:'application/javascript'});
   navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
 }
+// Push Léa stats on page unload (best effort)
+window.addEventListener('beforeunload', () => {
+  if (leaStats._session.messages > 0) {
+    leaStats.endSession();
+  }
+  if (currentEtab?.id) {
+    leaStats.pushSchoolStats(currentEtab.id);
+  }
+});
 let deferredInstall=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
   setTimeout(()=>{

@@ -90,6 +90,19 @@ window.DB = {
     if (idx > -1) { list[idx].admin_note = note; list[idx].updated_at = new Date().toISOString(); }
     localStorage.setItem(key, JSON.stringify(list));
   },
+  saveStaffReply: async function(id, reply, sid) {
+    if (this._ok()) {
+      try {
+        var r = await fetch(SUPABASE_URL + "/rest/v1/reports?id=eq." + id, { method: "PATCH", headers: this._h(), body: JSON.stringify({ staff_reply: reply }) });
+        if (r.ok) return;
+      } catch(e) {}
+    }
+    var key = "ss_rpt_" + sid;
+    var list = JSON.parse(localStorage.getItem(key) || "[]");
+    var idx = list.findIndex(function(r) { return r.id === id; });
+    if (idx > -1) { list[idx].staff_reply = reply; list[idx].updated_at = new Date().toISOString(); }
+    localStorage.setItem(key, JSON.stringify(list));
+  },
   getStats: async function(sid) {
     var all = await this.getReports(sid);
     var now = new Date();
@@ -167,8 +180,11 @@ window.openRpt = function(id) {
     + "<div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase\">Description</div>"
     + "<div class=\"rpt-modal-desc\">" + (r.description || "Aucun detail") + "</div>"
     + "<div style=\"display:flex;gap:12px;margin-bottom:14px\">" + bdgU(r.urgence) + bdgS(r.status) + "</div>"
-    + (r.admin_note ? "<div style=\"background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#166534;font-weight:700;margin-bottom:4px\">NOTE CPE</div><div style=\"font-size:.85rem;color:#15803d\">" + r.admin_note + "</div></div>" : "")
-    + "<div style=\"margin-bottom:14px\"><div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase\">Reponse interne CPE</div>"
+    + (r.staff_reply ? "<div style=\"background:#eef2ff;border:1px solid #818cf8;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#4f46e5;font-weight:700;margin-bottom:4px\">REPONSE VISIBLE AU DECLARANT</div><div style=\"font-size:.85rem;color:#312e81\">" + r.staff_reply + "</div></div>" : "")
+    + (r.admin_note ? "<div style=\"background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#166534;font-weight:700;margin-bottom:4px\">NOTE INTERNE CPE</div><div style=\"font-size:.85rem;color:#15803d\">" + r.admin_note + "</div></div>" : "")
+    + "<div style=\"margin-bottom:14px\"><div style=\"font-size:.72rem;font-weight:700;color:#4f46e5;margin-bottom:6px;text-transform:uppercase\">Reponse au declarant (visible via code de suivi)</div>"
+    + "<textarea id=\"sri\" style=\"width:100%;padding:10px;background:#f8fafc;border:1px solid #818cf8;border-radius:8px;font-size:.85rem;resize:vertical;min-height:70px\" placeholder=\"Cette reponse sera visible par l'eleve via son code de suivi...\">" + (r.staff_reply || "") + "</textarea></div>"
+    + "<div style=\"margin-bottom:14px\"><div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase\">Note interne CPE (non visible par l'eleve)</div>"
     + "<textarea id=\"ani\" style=\"width:100%;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;resize:vertical;min-height:70px\" placeholder=\"Note visible uniquement par les admins...\">" + (r.admin_note || "") + "</textarea></div>"
     + "<div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;text-transform:uppercase\">Changer le statut</div>"
     + "<div class=\"st-btns\">"
@@ -178,7 +194,7 @@ window.openRpt = function(id) {
     + "<button class=\"st-btn\" style=\"background:#f1f5f9;color:#475569\" onclick=\"chgSt('" + r.id + "','archive','" + sid + "')\">Archiver</button>"
     + "</div>"
     + "<div style=\"display:flex;gap:10px;margin-top:16px\">"
-    + "<button onclick=\"saveNote('" + r.id + "','" + sid + "')\" style=\"flex:1;padding:12px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer\">Sauvegarder la note</button>"
+    + "<button onclick=\"saveNoteAndReply('" + r.id + "','" + sid + "')\" style=\"flex:1;padding:12px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer\">Sauvegarder tout</button>"
     + "<button onclick=\"document.getElementById('rpt-modal').remove()\" style=\"padding:12px 20px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-weight:600;cursor:pointer\">Fermer</button>"
     + "</div></div>";
   m.addEventListener("click", function(e) { if (e.target === m) m.remove(); });
@@ -191,6 +207,19 @@ window.saveNote = async function(id, sid) {
   if (window._allReports) { var r = window._allReports.find(function(x) { return x.id === id; }); if (r) r.admin_note = note; }
   document.getElementById("rpt-modal").remove();
   if (typeof toast === "function") toast("Note sauvegardee");
+};
+
+window.saveNoteAndReply = async function(id, sid) {
+  var note = document.getElementById("ani").value.trim();
+  var reply = document.getElementById("sri").value.trim();
+  await DB.saveAdminNote(id, note, sid);
+  await DB.saveStaffReply(id, reply, sid);
+  if (window._allReports) {
+    var r = window._allReports.find(function(x) { return x.id === id; });
+    if (r) { r.admin_note = note; r.staff_reply = reply; }
+  }
+  document.getElementById("rpt-modal").remove();
+  if (typeof toast === "function") toast("Reponse et note sauvegardees");
 };
 
 window.chgSt = async function(id, status, sid) {
