@@ -582,7 +582,7 @@ a{text-decoration:none}
   <div style="padding:0 20px">
     <div class="fg">
       <label class="fl">Ton code de suivi</label>
-      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="12" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+      <input type="text" class="fi fi-code" id="code-in" placeholder="AB1234" maxlength="6" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
       <p class="fhint">6 caractères reçus à la confirmation de ton signalement</p>
     </div>
     <button class="btn btn-p btn-full btn-lg" onclick="lookupCode()">
@@ -726,127 +726,49 @@ let cachedReports = [];
 let cachedStaff = [];
 let cachedLogs = [];
 
-function dbStatusToUi(s){
-  return ({nouveau:'new', en_cours:'in_progress', traite:'resolved', archive:'archived', withdrawal_requested:'archived', anonymized:'archived', closed:'archived'})[s] || s || 'new';
-}
-function uiStatusToDb(s){
-  return ({new:'nouveau', in_progress:'en_cours', resolved:'traite', archived:'archive'})[s] || s || 'nouveau';
-}
-function dbUrgencyToUi(u){
-  return ({faible:1, moyenne:2, haute:3})[u] || u || 1;
-}
-function uiUrgencyToDb(u){
-  return ({1:'faible', 2:'moyenne', 3:'haute', faible:'faible', moyenne:'moyenne', haute:'haute'})[u] || 'faible';
-}
-function dbTypeToUi(t){
-  return ({physique:'physical', verbal:'verbal', cyber:'cyber', exclusion:'exclusion', autre:'other'})[t] || t || 'other';
-}
-function uiTypeToDb(t){
-  return ({physical:'physique', verbal:'verbal', cyber:'cyber', exclusion:'exclusion', other:'autre'})[t] || t || 'autre';
-}
-function normalizeReportFromDb(r){
-  return {
-    id: r.id,
-    code: r.tracking_code || null,
-    trackingCode: r.tracking_code || null,
-    caseNumber: r.case_number || null,
-    description: r.description || '',
-    location: r.location || '',
-    frequency: r.frequency || '',
-    harassmentType: dbTypeToUi(r.type),
-    type: r.type || null,
-    urgency: dbUrgencyToUi(r.urgency),
-    reporterType: r.reporter_role || '',
-    isAnonymous: r.is_anonymous !== false,
-    reporterName: r.reporter_name || '',
-    reporterClass: r.reporter_class || '',
-    reporterEmail: r.reporter_email || '',
-    followupEmailOptIn: !!r.followup_email_opt_in,
-    consentAccepted: !!r.consent_accepted,
-    status: dbStatusToUi(r.status),
-    staffReply: r.staff_reply || '',
-    staffNotes: r.admin_note || '',
-    assignedTo: r.assigned_staff_id || null,
-    createdAt: r.created_at || new Date().toISOString(),
-    history: Array.isArray(r.history) ? r.history : []
-  };
-}
-function normalizeStaffFromDb(s){
-  return {
-    id: s.id,
-    name: s.full_name || s.name || '',
-    email: s.email || '',
-    role: s.role || 'autre',
-    active: s.is_active !== false,
-    createdAt: s.created_at || new Date().toISOString()
-  };
-}
-function normalizeLogFromDb(l){
-  return {
-    id: l.id,
-    msg: l.message || '',
-    rid: l.report_id || null,
-    t: l.created_at || new Date().toISOString(),
-    actor: l.actor_type || 'system',
-    action: l.action || 'app_log'
-  };
-}
-
-
 // Local-only state (points, badges, quiz)
 const S = {
   reports: () => cachedReports,
-  setReports: async v => { cachedReports = Array.isArray(v) ? v : []; },
+  setReports: async v => {
+    cachedReports = v;
+    if (currentEtab) {
+      await fetch(`/api/reports?etab=${currentEtab.id}`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(v[0])
+      }).catch(()=>{});
+    }
+  },
   updateReport: async (report) => {
-    if (!currentEtab || !report || !report.id) return;
-    try {
-      const payload = {
-        status: uiStatusToDb(report.status),
-        admin_note: report.staffNotes || report.adminNote || null,
-        staff_reply: report.staffReply || null,
-        assigned_staff_id: report.assignedTo || null,
-        updated_at: new Date().toISOString()
-      };
-      const { error } = await ssSupabase.from('reports').update(payload).eq('id', report.id).eq('school_id', currentEtab.id);
-      if (error) throw error;
-      await S.reloadReports();
-    } catch(e) {
-      console.error('Failed to update report in Supabase', e);
+    if (currentEtab) {
+      await fetch(`/api/reports?etab=${currentEtab.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(report)
+      }).catch(()=>{});
     }
   },
   reloadReports: async () => {
     if (!currentEtab) return;
     try {
-      const { data, error } = await ssSupabase
-        .from('reports')
-        .select('*')
-        .eq('school_id', currentEtab.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      cachedReports = (data || []).map(normalizeReportFromDb);
-    } catch(e) {
-      console.error('Failed to load reports from Supabase', e);
-      cachedReports = [];
-    }
+      const res = await fetch(`/api/reports?etab=${currentEtab.id}`);
+      cachedReports = await res.json();
+    } catch(e) { console.error('Failed to load reports', e); }
   },
   staff: () => cachedStaff,
   setStaff: async v => {
-    cachedStaff = Array.isArray(v) ? v : [];
+    cachedStaff = v;
+    if (currentEtab) {
+      await fetch(`/api/staff?etab=${currentEtab.id}`, {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(v)
+      }).catch(()=>{});
+    }
   },
   reloadStaff: async () => {
     if (!currentEtab) return;
     try {
-      const { data, error } = await ssSupabase
-        .from('staff')
-        .select('*')
-        .eq('school_id', currentEtab.id)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      cachedStaff = (data || []).map(normalizeStaffFromDb);
-    } catch(e) {
-      console.error('Failed to load staff from Supabase', e);
-      cachedStaff = [];
-    }
+      const res = await fetch(`/api/staff?etab=${currentEtab.id}`);
+      cachedStaff = await res.json();
+    } catch(e) { console.error('Failed to load staff', e); }
   },
   points: () => parseInt(localStorage.getItem('ss_pts')||'0'),
   setPoints: v => localStorage.setItem('ss_pts', v),
@@ -856,37 +778,15 @@ const S = {
   setQuizCount: v => localStorage.setItem('ss_qc', v),
   logs: () => cachedLogs,
   addLog: async (msg,rid) => {
-    const item = { msg, rid, t:new Date().toISOString() };
-    cachedLogs.unshift(item);
+    cachedLogs.unshift({msg,rid,t:new Date().toISOString()});
     cachedLogs = cachedLogs.slice(0,100);
-    if (!currentEtab) return;
-    try {
-      await ssSupabase.from('audit_logs').insert([{
-        school_id: currentEtab.id,
-        report_id: rid || null,
-        actor_type: 'system',
-        action: 'app_log',
-        message: msg
-      }]);
-    } catch(e) {
-      console.error('Failed to insert audit log in Supabase', e);
-    }
   },
   reloadLogs: async () => {
     if (!currentEtab) return;
     try {
-      const { data, error } = await ssSupabase
-        .from('audit_logs')
-        .select('*')
-        .eq('school_id', currentEtab.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      cachedLogs = (data || []).map(normalizeLogFromDb);
-    } catch(e) {
-      console.error('Failed to load logs from Supabase', e);
-      cachedLogs = [];
-    }
+      const res = await fetch(`/api/logs?etab=${currentEtab.id}`);
+      cachedLogs = await res.json();
+    } catch(e) { console.error('Failed to load logs', e); }
   }
 };
 
@@ -909,7 +809,7 @@ async function loadEstablishments() {
   try {
     const { data, error } = await ssSupabase
       .from('schools')
-      .select('id, name, slug, city, is_active, plan_code, support_mode')
+      .select('id, name, slug, city, is_active')
       .eq('is_active', true)
       .order('name', { ascending: true });
 
@@ -922,9 +822,7 @@ async function loadEstablishments() {
       address: s.city || '',
       city: s.city || '',
       type: 'lycee',
-      isActive: s.is_active,
-      planCode: s.plan_code || 'standard',
-      supportMode: s.support_mode || 'normal'
+      isActive: s.is_active
     }));
   } catch (e) {
     console.error('Failed to load establishments from Supabase', e);
@@ -1016,14 +914,6 @@ function showAddEtabModal() {
         <input type="text" class="fi" id="new-etab-addr" placeholder="Adresse de l'établissement">
       </div>
       <div class="fg">
-        <label class="fl">Abonnement *</label>
-        <select class="fsel" id="new-etab-plan">
-          <option value="standard">Standard</option>
-          <option value="premium">Premium</option>
-          <option value="max">Max</option>
-        </select>
-      </div>
-      <div class="fg">
         <label class="fl">Email administrateur *</label>
         <input type="email" class="fi" id="new-etab-email" placeholder="admin@etablissement.fr">
       </div>
@@ -1045,8 +935,7 @@ async function createEstablishment() {
   const name = document.getElementById('new-etab-name').value.trim();
   const type = document.getElementById('new-etab-type').value;
   const address = document.getElementById('new-etab-addr').value.trim();
-  const planCode = document.getElementById('new-etab-plan').value;
-  const adminEmail = document.getElementById('new-etab-email').value.trim().toLowerCase();
+  const adminEmail = document.getElementById('new-etab-email').value.trim();
   const adminPassword = document.getElementById('new-etab-pass').value;
 
   if (!name) { toast('Le nom est requis', 'err'); return; }
@@ -1062,8 +951,8 @@ async function createEstablishment() {
   try {
     const { data, error } = await ssSupabase
       .from('schools')
-      .insert([{ name, slug, city: address || null, is_active: true, plan_code: planCode, support_mode: 'normal' }])
-      .select('id, name, slug, city, is_active, plan_code, support_mode')
+      .insert([{ name, slug, city: address || null, is_active: true }])
+      .select('id, name, slug, city, is_active')
       .single();
 
     if (error) throw error;
@@ -1075,22 +964,15 @@ async function createEstablishment() {
       address: data.city || '',
       city: data.city || '',
       type,
-      isActive: data.is_active,
-      planCode: data.plan_code || 'standard',
-      supportMode: data.support_mode || 'normal'
+      isActive: data.is_active
     };
 
     etabList.push(newEtab);
     etabList.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-
-    const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-    creds[newEtab.id] = { email: adminEmail, password: adminPassword };
-    localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
-
     closeAddEtabModal();
     renderEtabList();
     toast(`${name} créé !`, 'ok');
-    toast(`Compte admin local prêt · plan ${planCode.toUpperCase()}`, 'info');
+    toast("Établissement créé. Le compte admin sera branché à l'étape suivante.", "info");
   } catch (e) {
     console.error('Erreur création établissement Supabase', e);
     toast(e.message || 'Erreur de connexion', 'err');
@@ -1150,7 +1032,7 @@ function fmtTime(iso) { return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2
 // ═══════════════════════════════════════════
 // REPORT FORM
 // ═══════════════════════════════════════════
-function initReport() { rStep=1; rData={urgency:1,isAnonymous:true,consentAccepted:false,followupEmailOptIn:false}; renderRStep(); }
+function initReport() { rStep=1; rData={urgency:1,isAnonymous:true}; renderRStep(); }
 
 const rSteps = [
   {t:'Ton rôle',s:'Tu es…'},
@@ -1224,32 +1106,22 @@ function renderRStep() {
 
   if (rStep===5) h += `
     <div style="background:var(--gbg);border:1.5px solid rgba(5,150,105,.22);border-radius:var(--r12);padding:14px;margin-bottom:18px">
-      <p style="font-size:.84rem;color:#065f46;font-weight:500">🔒 <strong>Signalement anonyme recommandé.</strong> Personne ne saura qui tu es. Un code de suivi et un numéro de dossier te permettront de suivre la réponse.</p>
+      <p style="font-size:.84rem;color:#065f46;font-weight:500">🔒 <strong>Signalement anonyme recommandé.</strong> Personne ne saura qui tu es. Un code secret à 6 caractères te permettra de suivre la réponse.</p>
     </div>
     <div class="cg">
       <button class="cbtn ${rData.isAnonymous!==false?'sel':''}" onclick="setAnon(true)">
         <span class="ci">🎭</span>
-        <div class="ct"><h4>Anonyme <span style="background:var(--g);color:#fff;font-size:.68rem;padding:2px 8px;border-radius:10px;margin-left:5px;font-weight:600">RECOMMANDÉ</span></h4><p>Je reçois un code de suivi sans révéler mon identité</p></div>
+        <div class="ct"><h4>Anonyme <span style="background:var(--g);color:#fff;font-size:.68rem;padding:2px 8px;border-radius:10px;margin-left:5px;font-weight:600">RECOMMANDÉ</span></h4><p>Je reçois un code de suivi à 6 caractères</p></div>
       </button>
       <button class="cbtn ${rData.isAnonymous===false?'sel':''}" onclick="setAnon(false)">
         <span class="ci">👤</span>
-        <div class="ct"><h4>Identifié(e)</h4><p>Je donne mes coordonnées pour être recontacté(e)</p></div>
+        <div class="ct"><h4>Identifié(e)</h4><p>Je donne mon nom pour être contacté(e)</p></div>
       </button>
     </div>
     <div id="r-idfields" style="margin-top:14px;${rData.isAnonymous===false?'':'display:none'}">
       <div class="fg"><label class="fl">Prénom et Nom</label><input type="text" class="fi" id="r-name" value="${rData.reporterName||''}" placeholder="Prénom Nom"></div>
       <div class="fg"><label class="fl">Classe</label><input type="text" class="fi" id="r-class" value="${rData.reporterClass||''}" placeholder="Ex: Terminale B"></div>
       <div class="fg"><label class="fl">Email <span style="font-weight:400;color:var(--ts)">(optionnel)</span></label><input type="email" class="fi" id="r-email" value="${rData.reporterEmail||''}" placeholder="prenom@lycee.fr"></div>
-      <label style="display:flex;gap:10px;align-items:flex-start;margin-top:-4px;font-size:.82rem;color:var(--tm)">
-        <input type="checkbox" id="r-email-optin" ${rData.followupEmailOptIn?'checked':''} style="margin-top:3px">
-        <span>Je souhaite recevoir par email les mises à jour non sensibles de mon dossier.</span>
-      </label>
-    </div>
-    <div class="fg" style="margin-top:16px;margin-bottom:0">
-      <label style="display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--tm)">
-        <input type="checkbox" id="r-consent" ${rData.consentAccepted?'checked':''} style="margin-top:3px">
-        <span>J'accepte les conditions d'utilisation et la politique de confidentialité. Je comprends que le signalement peut être conservé pendant une durée limitée avant anonymisation pour le suivi et les statistiques.</span>
-      </label>
     </div>`;
 
   h += `</div>
@@ -1282,80 +1154,32 @@ function rNext(){
   rStep++;renderRStep();window.scrollTo(0,0);
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
-async function submitReport(){
-  try {
-    var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
-    if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
-
-    if(rData.isAnonymous===false){
-      rData.reporterName=document.getElementById('r-name')?.value.trim()||'';
-      rData.reporterClass=document.getElementById('r-class')?.value.trim()||'';
-      rData.reporterEmail=document.getElementById('r-email')?.value.trim()||'';
-      rData.followupEmailOptIn=!!document.getElementById('r-email-optin')?.checked;
-    } else {
-      rData.followupEmailOptIn=false;
-    }
-
-    rData.consentAccepted=!!document.getElementById('r-consent')?.checked;
-    if(!rData.consentAccepted){ toast("Tu dois accepter les conditions avant l\'envoi","err"); return; }
-
-    var typeMap={physical:'physique',verbal:'verbal',cyber:'cyber',exclusion:'exclusion',other:'autre'};
-    var roleMap={victim:'victime',witness:'temoin',parent:'parent',staff:'personnel'};
-    var urgencyMap={1:'faible',2:'moyenne',3:'haute'};
-
-    var payload={
-      school_id: schoolId,
-      reporter_role: roleMap[rData.reporterType] || 'autre',
-      type: typeMap[rData.harassmentType] || 'autre',
-      description: rData.description || '',
-      location: rData.location || null,
-      frequency: rData.frequency || null,
-      urgency: urgencyMap[String(rData.urgency)] || 'faible',
-      is_anonymous: rData.isAnonymous !== false,
-      reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
-      reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
-      reporter_email: rData.isAnonymous !== false ? null : (rData.reporterEmail || null),
-      followup_email_opt_in: !!rData.followupEmailOptIn,
-      consent_accepted: true,
-      consent_accepted_at: new Date().toISOString(),
-      status: 'nouveau',
-      source_channel: 'form'
-    };
-
-    const { data, error } = await ssSupabase
-      .from('reports')
-      .insert([payload])
-      .select('*')
-      .single();
-
-    if(error) throw error;
-
-    var report={
-      id:data.id,
-      caseNumber:data.case_number,
-      trackingCode:data.tracking_code,
-      status:data.status,
-      staffReply:data.staff_reply || '',
-      adminNote:data.admin_note || '',
-      assignedTo:data.assigned_staff_id || null,
-      createdAt:data.created_at,
-      type:data.type,
-      description:data.description,
-      location:data.location,
-      urgency:data.urgency,
-      reporterEmail:data.reporter_email
-    };
-
-    cachedReports.unshift(report);
-    await S.addLog(`Nouveau signalement ${data.case_number || data.id}`, data.id);
-    if(rData.reporterType==='witness'){
-      const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
-    }
-    showConfirmation(data.tracking_code, report);
-  } catch(err){
-    console.error(err);
-    toast(err.message || "Erreur lors de l\'envoi du signalement","err");
+function submitReport(){
+  if(rData.isAnonymous===false){
+    rData.reporterName=document.getElementById('r-name')?.value||'';
+    rData.reporterClass=document.getElementById('r-class')?.value||'';
+    rData.reporterEmail=document.getElementById('r-email')?.value||'';
   }
+  const code=rData.isAnonymous!==false?genCode():null;
+  const report={
+    id:Date.now().toString(36).toUpperCase().slice(-6),
+    code,...rData,
+    status:'new',staffReply:'',staffNotes:'',assignedTo:null,
+    createdAt:new Date().toISOString(),history:[{s:'new',t:new Date().toISOString(),by:'Système'}]
+  };
+  cachedReports.unshift(report);
+  // Save to API
+  if(currentEtab){
+    fetch(`/api/reports?etab=${currentEtab.id}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(report)
+    }).catch(()=>{});
+  }
+  S.addLog(`Nouveau signalement #${report.id} (${rData.harassmentType})`,report.id);
+  if(rData.reporterType==='witness'){
+    const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
+  }
+  showConfirmation(code,report);
 }
 function showConfirmation(code,report){
   document.getElementById('report-container').innerHTML=`
@@ -1372,8 +1196,7 @@ function showConfirmation(code,report){
     <button class="copybtn" id="cpbtn" onclick="copyCode('${code}')">📋 Copier le code</button>
   </div>
   <div style="margin:16px 20px;padding:14px 16px;background:var(--gbg);border-radius:var(--r12);border:1.5px solid rgba(5,150,105,.2)">
-    <p style="font-size:.84rem;color:#065f46;font-weight:500">✅ Code de suivi : <strong style="font-family:'Nunito',monospace;font-size:1.1rem;letter-spacing:.06em">${code}</strong></p>
-    <p style="font-size:.78rem;color:#065f46;margin-top:3px">🗂️ Numéro de dossier : <strong>${report.caseNumber || 'En cours de génération'}</strong></p>
+    <p style="font-size:.84rem;color:#065f46;font-weight:500">✅ Numéro de suivi : <strong style="font-family:'Nunito',monospace;font-size:1.1rem;letter-spacing:.1em">${code}</strong></p>
     <p style="font-size:.78rem;color:#065f46;margin-top:3px">Utilise ce code dans "Mon dossier" pour voir la réponse de l'équipe</p>
   </div>`:`
   <div style="margin:16px 20px;padding:14px 16px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.18)">
@@ -1398,69 +1221,94 @@ function copyCode(code){
 // MY REPORT LOOKUP
 // ═══════════════════════════════════════════
 async function lookupCode(){
-  const raw=document.getElementById('code-in').value.trim().toUpperCase();
-  const code=raw.startsWith('SS-') ? raw : ('SS-' + raw.replace(/^SS-?/,''));
-  if(code.replace(/[^A-Z0-9]/g,'').length<8){toast('Entre ton code de suivi','err');return}
-  const el=document.getElementById('lookup-result');
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">Recherche du dossier…</div>';
-  try {
-    const { data, error } = await ssSupabase
+  const raw = (document.getElementById('code-in').value || '').trim().toUpperCase();
+  const code = raw.replace(/\s+/g,'');
+  const el = document.getElementById('lookup-result');
+
+  if(code.length < 6){
+    toast('Entre un code de suivi ou un numéro de dossier valide', 'err');
+    return;
+  }
+
+  try{
+    let query = ssSupabase
       .from('reports')
-      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency')
-      .eq('tracking_code', code)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if(error) throw error;
+      .select('*')
+      .or(`tracking_code.eq.${code},case_number.eq.${code}`)
+      .limit(1);
+
+    if (currentEtab && currentEtab.id) {
+      query = query.eq('school_id', currentEtab.id);
+    }
+
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+
     if(!data){
-      el.innerHTML=`
+      el.innerHTML = `
       <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
         <div style="font-size:2.5rem;margin-bottom:11px">❌</div>
-        <h3 style="color:var(--r);margin-bottom:7px">Code introuvable</h3>
-        <p style="font-size:.87rem;max-width:250px;margin:0 auto">Vérifie le code de suivi reçu après la déclaration. Exemple : SS-ABC123.</p>
+        <h3 style="color:var(--r);margin-bottom:7px">Dossier introuvable</h3>
+        <p style="font-size:.87rem;max-width:280px;margin:0 auto">Tu peux rechercher avec le code de suivi <strong>ou</strong> le numéro de dossier.</p>
       </div>`;
       return;
     }
-    const sc={nouveau:{l:"Nouveau",i:"🔵",cls:"bn",desc:"Ton signalement a bien été reçu. L’équipe va l’examiner prochainement."},
-      en_cours:{l:"En cours",i:"🟡",cls:"bi",desc:"L’équipe éducative traite actuellement ton dossier."},
-      traite:{l:"Traité",i:"🟢",cls:"br",desc:"L’équipe a traité ton signalement."},
-      archive:{l:"Archivé",i:"⚫",cls:"ba",desc:"Dossier archivé."},
-      withdrawal_requested:{l:"Retrait demandé",i:"🟠",cls:"bi",desc:"Ta demande de retrait est en cours d’étude."},
-      anonymized:{l:"Anonymisé",i:"⚪",cls:"ba",desc:"Le dossier a été anonymisé selon la procédure prévue."},
-      closed:{l:"Clôturé",i:"⚫",cls:"ba",desc:"Le dossier est clôturé."}};
-    const s=sc[data.status]||sc.nouveau;
-    el.innerHTML=`
+
+    const rep = normalizeReportFromDb(data);
+    const caseRef = data.case_number || rep.caseNumber || rep.id || '—';
+    const sc = {
+      new:{l:'Nouveau',i:'🔵',cls:'bn',desc:'Ton signalement a bien été reçu. L’équipe va l’examiner prochainement.'},
+      in_progress:{l:'En cours',i:'🟡',cls:'bi',desc:'L’équipe éducative traite actuellement ton dossier.'},
+      resolved:{l:'Traité',i:'🟢',cls:'br',desc:'L’équipe a traité ton signalement.'},
+      archived:{l:'Archivé',i:'⚫',cls:'ba',desc:'Dossier archivé.'}
+    };
+    const s = sc[rep.status] || sc.new;
+
+    el.innerHTML = `
     <div class="status-card card">
       <div class="sc-header">
-        <div><p style="font-size:.78rem;color:var(--ts);margin-bottom:3px">Dossier</p><h3 style="font-size:1.05rem">${data.case_number || data.tracking_code}</h3></div>
+        <div>
+          <p style="font-size:.78rem;color:var(--ts);margin-bottom:3px">Numéro de dossier</p>
+          <h3 style="font-size:1.05rem">${caseRef}</h3>
+          <p style="font-size:.76rem;color:var(--ts);margin-top:4px">Code de suivi : ${rep.code || '—'}</p>
+        </div>
         <span class="badge ${s.cls}">${s.i} ${s.l}</span>
       </div>
       <div class="sc-body">
-        <div class="sc-status scs-${data.status==='nouveau'?'n':data.status==='en_cours'?'i':'r'}">
+        <div class="sc-status ${rep.status==='new'?'new':rep.status==='in_progress'?'in_progress':rep.status==='resolved'?'resolved':'archived'}">
           <div class="sc-dot">${s.i}</div>
           <div><h4>${s.l}</h4><p style="font-size:.79rem;margin-top:1px">${s.desc}</p></div>
         </div>
-        ${data.staff_reply?`
+
+        ${rep.staffReply ? `
         <div class="sc-reply">
-          <h5>💬 Réponse de l'équipe</h5>
-          <p>${data.staff_reply}</p>
-        </div>`:`
-        <div style="background:var(--bg);border-radius:var(--r12);padding:14px;text-align:center;margin-bottom:12px">
-          <p style="font-size:.86rem">⏳ L'équipe n'a pas encore publié de réponse visible.</p>
+          <h5>Réponse de l’équipe</h5>
+          <p>${String(rep.staffReply).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+        </div>` : `
+        <div style="background:var(--skybg);border-radius:var(--r12);padding:14px 16px;margin-top:14px">
+          <p style="font-size:.84rem;color:#0c4a6e">Aucune réponse visible pour le moment. Reviens plus tard avec ton code ou ton numéro de dossier.</p>
         </div>`}
+
         <div class="sc-meta">
-          <span>📌 Code de suivi : <strong>${data.tracking_code}</strong></span>
-          <span>🗂️ Numéro de dossier : <strong>${data.case_number || 'En cours de génération'}</strong></span>
-          <span>📅 Déposé le ${fmtDate(data.created_at)} à ${fmtTime(data.created_at)}</span>
-          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgency || 'faible'}</span>
+          <span>🗓️ Déclaré le ${fmtDate(rep.createdAt)} à ${fmtTime(rep.createdAt)}</span>
+          <span>📍 ${rep.location || 'Lieu non précisé'}</span>
+          <span>🏷️ ${rep.harassmentType || 'autre'}</span>
         </div>
       </div>
     </div>`;
   } catch(err){
-    console.error(err);
-    el.innerHTML=`<div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)"><div style="font-size:2rem;margin-bottom:10px">⚠️</div><h3 style="color:var(--r);margin-bottom:6px">Erreur de recherche</h3><p style="font-size:.87rem;max-width:260px;margin:0 auto">Impossible de charger le dossier pour le moment.</p></div>`;
+    console.error('lookupCode error', err);
+    el.innerHTML = `
+      <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
+        <div style="font-size:2.5rem;margin-bottom:11px">⚠️</div>
+        <h3 style="color:var(--r);margin-bottom:7px">Recherche impossible</h3>
+        <p style="font-size:.87rem;max-width:280px;margin:0 auto">Une erreur est survenue pendant la recherche du dossier.</p>
+      </div>`;
   }
 }
+function tlabel(t){return{physical:'Physique',verbal:'Verbal',cyber:'Cyber',exclusion:'Exclusion',other:'Autre'}[t]||t}
+function roleLabel(r){return{cpe:'CPE',dir:'Direction',inf:'Infirmière',ref:'Référent harcèlement',psy:'Psychologue scolaire'}[r]||r}
+function roleColor(r){return{cpe:'sr-cpe',dir:'sr-dir',inf:'sr-inf',ref:'sr-ref',psy:'sr-psy'}[r]||'sr-ref'}
 
 // ═══════════════════════════════════════════
 // EDUCATION / QUIZ
@@ -1671,14 +1519,16 @@ function renderProfile(){
 // ═══════════════════════════════════════════
 function showAdminLogin(){
   if(document.getElementById('admin-overlay'))return;
-  const etabEmail = currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr';
+  const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+  const schoolCreds = currentEtab ? creds[currentEtab.id] : null;
+  const etabEmail = schoolCreds?.email || (currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr');
   document.body.insertAdjacentHTML('beforeend',`
   <div id="admin-overlay" class="admin-wrap">
     <div class="admin-card">
       <div class="admin-logo">🔐</div>
       <h2 style="text-align:center;margin-bottom:5px">Administration</h2>
       <p style="text-align:center;margin-bottom:8px;font-size:.88rem">Réservé au personnel éducatif</p>
-      ${currentEtab?`<p style="text-align:center;margin-bottom:18px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}
+      ${currentEtab?`<p style="text-align:center;margin-bottom:8px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}${schoolCreds?`<p style="text-align:center;margin-bottom:18px;font-size:.78rem;color:var(--tm)">Email conseillé : <strong>${schoolCreds.email}</strong></p>`:''}
       <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="" placeholder="${etabEmail}"></div>
       <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="••••••••"></div>
       <button class="btn btn-p btn-full btn-lg" onclick="tryLogin()" style="margin-bottom:10px">Se connecter</button>
@@ -1688,41 +1538,32 @@ function showAdminLogin(){
   document.getElementById('al-pass').addEventListener('keydown',e=>e.key==='Enter'&&tryLogin());
 }
 async function tryLogin(){
-  const e=document.getElementById('al-email').value.trim().toLowerCase();
+  const e=document.getElementById('al-email').value;
   const p=document.getElementById('al-pass').value;
   if (!currentEtab) { toast('Aucun établissement sélectionné','err'); return; }
-
-  const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-  const schoolCreds = creds[currentEtab.id];
-
-  if (schoolCreds && e === (schoolCreds.email || '').toLowerCase() && p === schoolCreds.password) {
-    adminIn = true;
-    document.getElementById('admin-overlay')?.remove();
-    document.getElementById('pg-dashboard').style.display='flex';
-    await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-    go('dashboard');
-    toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
-    return;
-  }
-
   try {
     const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ etabId: currentEtab.id, email: e, password: p })
     });
     if (res.ok) {
-      adminIn = true;
-      document.getElementById('admin-overlay')?.remove();
+      adminIn=true;
+      document.getElementById('admin-overlay').remove();
       document.getElementById('pg-dashboard').style.display='flex';
+      // Refresh data from server
       await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-      go('dashboard');
-      toast('Connecté en tant qu\'administrateur','ok');
+      go('dashboard');toast('Connecté en tant qu\'administrateur','ok');
     } else {
       toast('Identifiants incorrects','err');
     }
   } catch(err) {
-    toast('Identifiants incorrects','err');
+    // Fallback to local check for offline
+    if(currentEtab && e===currentEtab.adminEmail && p===currentEtab.adminPassword){
+      adminIn=true;
+      document.getElementById('admin-overlay').remove();
+      document.getElementById('pg-dashboard').style.display='flex';
+      go('dashboard');toast('Connecté (mode hors-ligne)','ok');
+    } else toast('Identifiants incorrects','err');
   }
 }
 
@@ -2054,16 +1895,12 @@ async function installApp(){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-const SS_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+const SS_SUPABASE_PUBLISHABLE_KEY = "COLLE_ICI_TA_PUBLISHABLE_KEY_SUPABASE";
 
-window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
-window.ENV_SUPABASE_KEY = SS_SUPABASE_PUBLISHABLE_KEY;
-
-window.ssSupabase = window.supabase.createClient(
+const ssSupabase = window.supabase.createClient(
   SS_SUPABASE_URL,
   SS_SUPABASE_PUBLISHABLE_KEY
 );
-const ssSupabase = window.ssSupabase;
 </script>
 
 <script src="./dashboard-v3.js"></script></body>
