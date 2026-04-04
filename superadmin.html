@@ -122,11 +122,15 @@ tr:hover td{background:rgba(99,102,241,.03)}
     <button class="btn bfull" id="lbtn">Connexion Super Admin</button>
     <div class="err" id="lerr"></div>
     <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Fondateur</p>
+    <div style="margin-top:18px;padding:14px;background:#0f172a;border:1px solid #334155;border-radius:10px">
+      <p style="font-size:.72rem;color:#64748b;text-align:center;margin-bottom:6px">&#128161; Informations de test</p>
+      <p style="font-size:.72rem;color:#94a3b8;text-align:center;line-height:1.6">Utilisez les identifiants super-admin fournis par le fondateur. Acces securise via API token encode.</p>
+    </div>
   </div>
 </div>
 <div id="app">
   <nav class="sb">
-    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span></div>
+    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span><div style="margin-top:6px;font-size:.65rem;color:#475569;background:#0f172a;padding:3px 8px;border-radius:6px;display:inline-block">v5.0 Pro</div></div>
     <div class="ni on" id="n-db" onclick="showPage('db')"><span class="ni-icon">&#128200;</span> Tableau de bord</div>
     <div class="ni" id="n-sc" onclick="showPage('sc')"><span class="ni-icon">&#127979;</span> Etablissements</div>
     <div class="ni" id="n-cr" onclick="showPage('cr')"><span class="ni-icon">&#10133;</span> Nouvel etablissement</div>
@@ -134,11 +138,46 @@ tr:hover td{background:rgba(99,102,241,.03)}
     <div class="ni" id="n-dn" onclick="showPage('dn')"><span class="ni-icon">&#127760;</span> Sous-domaines</div>
     <div class="ni" id="n-bl" onclick="showPage('bl')"><span class="ni-icon">&#128176;</span> Abonnements</div>
     <div class="ni" id="n-baro" onclick="showPage('baro')"><span class="ni-icon">&#129504;</span> Barometre IA</div>
+    <div style="padding:12px 20px"><a href="/pricing" target="_blank" style="display:block;padding:10px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;text-align:center;transition:.2s">&#127760; Page vitrine / Pricing</a></div>
     <div class="sbf"><button class="btn bs bsm bfull" onclick="doLogout()">Deconnexion</button></div>
   </nav>
   <main class="mn">
     <div id="p-db">
       <div class="pt">Tableau de bord</div><div class="ps">Vue globale en temps reel - Toutes les donnees de la plateforme</div>
+      <div class="card" style="margin-bottom:20px;border:1px solid #6366f1;background:linear-gradient(135deg,#1e1b4b,#312e81)">
+        <div style="padding:20px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <span style="font-size:1.5rem">&#128640;</span>
+            <div>
+              <h3 style="color:#fff;font-size:1rem;margin-bottom:2px">Guide de demarrage rapide</h3>
+              <p style="color:#a5b4fc;font-size:.82rem">Etapes pour mettre SafeSchool en production</p>
+            </div>
+            <button class="btn bsm bs" style="margin-left:auto" onclick="this.closest('.card').style.display='none'">Masquer</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#10133;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">1. Creer un etablissement</div>
+              <div style="font-size:.76rem;color:#94a3b8">Menu "Nouvel etablissement" — renseignez nom, email admin, et plan</div>
+            </div>
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#128279;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">2. Configurer le DNS</div>
+              <div style="font-size:.76rem;color:#94a3b8">CNAME vers darling-muffin-21eb90.netlify.app pour le sous-domaine</div>
+            </div>
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#128101;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">3. Equipe admin</div>
+              <div style="font-size:.76rem;color:#94a3b8">Generez des codes membres et partagez les identifiants admin</div>
+            </div>
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#127919;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">4. Deployer</div>
+              <div style="font-size:.76rem;color:#94a3b8">Partagez l'URL aux eleves. Ils signalent, l'equipe traite via le dashboard.</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="sg" id="gst"></div>
       <div class="card"><div class="ch"><h3>Tous les etablissements</h3><button class="btn bsm" onclick="loadDashboard()">&#128260; Actualiser</button></div><div id="act" style="padding:20px"></div></div>
     </div>
@@ -571,7 +610,12 @@ async function loadSavData() {
   if (!school) return;
 
   // Show school info + load reports from Supabase
-  var html = '<div class="card"><div class="ch"><h3>Informations etablissement</h3></div><div style="padding:20px">'
+  var html = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">'
+    + '<a href="/?school='+school.slug+'" target="_blank" class="btn bsm bg" style="text-decoration:none">&#127760; Ouvrir l\'app eleve</a>'
+    + '<button class="btn bsm" onclick="cpTxt(\''+(school.admin_code||'')+'\')">&#128203; Copier code admin</button>'
+    + '<button class="btn bsm bw" onclick="regenAdmin(\''+id+'\');setTimeout(function(){loadSavData()},1500)">&#128260; Regenerer code</button>'
+    + '</div>'
+    + '<div class="card"><div class="ch"><h3>Informations etablissement</h3></div><div style="padding:20px">'
     + '<div class="sbox">'
     + '<div class="sr"><span class="slb">Nom</span><span class="sv">'+school.name+'</span></div>'
     + '<div class="sr"><span class="slb">Ville</span><span class="sv">'+(school.city||'-')+'</span></div>'

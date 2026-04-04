@@ -8,6 +8,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SafeSchool">
 <title>SafeSchool — Contre le harcèlement</title>
+<meta name="description" content="SafeSchool - Plateforme anti-harcèlement scolaire. Signale anonymement, apprends, et trouve de l'aide. Confidentiel et conforme RGPD.">
+<meta name="keywords" content="harcèlement scolaire, anti-bullying, signalement, école, lycée, collège, 3018, SafeSchool">
+<meta name="author" content="SafeSchool">
+<meta property="og:title" content="SafeSchool — Contre le harcèlement scolaire">
+<meta property="og:description" content="Signale anonymement, apprends, et trouve de l'aide. Plateforme confidentielle et conforme RGPD.">
+<meta property="og:type" content="website">
+<link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -573,6 +580,10 @@ a{text-decoration:none}
   </div>
   <div style="height:20px"></div>
   <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">Signalements confidentiels · RGPD</p></div>
+  <div style="padding:10px 20px 4px;text-align:center">
+    <a href="/pricing" style="font-size:.74rem;color:var(--p);font-weight:600;text-decoration:none">En savoir plus sur SafeSchool pour votre établissement →</a>
+  </div>
+  <div style="padding:4px 20px 8px;text-align:center"><span style="font-size:.65rem;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:6px;border:1px solid var(--border)">SafeSchool v5.0 Pro · RGPD</span></div>
   <div style="height:14px"></div>
 </div>
 
@@ -1506,6 +1517,12 @@ async function submitReport(){
     await S.addLog(`Nouveau signalement ${data.case_number || data.id}`, data.id);
     // Save to user's report history
     if (data.tracking_code) saveToReportHistory(data.tracking_code, data.case_number);
+    // Notify admin (best effort, non-blocking)
+    fetch('/api/notify/new-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId: schoolId, reportId: data.id, urgency: data.urgency, type: data.type })
+    }).catch(() => {});
     if(rData.reporterType==='witness'){
       const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
     }
@@ -2152,7 +2169,15 @@ function renderDashboardV3(){
   document.getElementById('dashboard-body').innerHTML=`
   <div class="dash-top">
     <div><h1>Dashboard${planBadge}</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
-    <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      ${urg>0?`<div style="background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.3);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
+      <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+    </div>
+  </div>
+  <div style="padding:8px 20px 0;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-xs btn-soft" onclick="exportCSV()">📥 Export CSV</button>
+    <button class="btn btn-xs btn-soft" onclick="printReport()">🖨️ Imprimer rapport</button>
+    <button class="btn btn-xs btn-soft" onclick="S.reloadReports().then(()=>{S.reloadStaff().then(()=>{S.reloadLogs().then(renderDashboardV3)})})" title="Actualiser les données">🔄 Actualiser</button>
   </div>
   <div class="kpi-row">
     <div class="kpi ku" onclick="setFilter('all')"><div class="kpi-n">${urg}</div><div class="kpi-l">⚡ Urgents</div></div>
@@ -2276,6 +2301,10 @@ function saveReply(idx){
   if(reps[idx].staffReply)reps[idx].history.push({s:'replied',t:new Date().toISOString(),by:'Admin',note:'Réponse envoyée à l\'élève'});
   S.updateReport({...reps[idx], logMsg:`Réponse sauvegardée pour #${reps[idx].id}`});
   S.addLog(`Réponse sauvegardée pour #${reps[idx].id}`,reps[idx].id);
+  // Notify reporter if email available (best effort)
+  if(reps[idx].staffReply && reps[idx].reporterEmail){
+    fetch('/api/notify/staff-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportId:reps[idx].id,trackingCode:reps[idx].code||reps[idx].trackingCode,email:reps[idx].reporterEmail})}).catch(()=>{});
+  }
   toast('Sauvegardé !','ok');
 }
 function setStatus(idx,status){
@@ -2503,6 +2532,88 @@ function saveToReportHistory(code, caseNumber) {
 }
 
 function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
+
+// ═══════════════════════════════════════════
+// CSV EXPORT
+// ═══════════════════════════════════════════
+function exportCSV(){
+  const reps=S.reports();
+  if(!reps.length){toast('Aucun signalement à exporter','err');return}
+  const headers=['Date','Heure','Type','Urgence','Statut','Lieu','Classe','Description','Anonyme','Code suivi','Réponse staff','Notes internes'];
+  const rows=reps.map(r=>[
+    r.createdAt?new Date(r.createdAt).toLocaleDateString('fr-FR'):'',
+    r.createdAt?new Date(r.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'',
+    tlabel(r.harassmentType||r.type),
+    {1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'Faible',
+    {new:'Nouveau',in_progress:'En cours',resolved:'Résolu',archived:'Archivé'}[r.status]||r.status,
+    (r.location||'').replace(/"/g,'""'),
+    (r.reporterClass||'').replace(/"/g,'""'),
+    (r.description||'').replace(/"/g,'""').replace(/\n/g,' '),
+    r.isAnonymous!==false?'Oui':'Non',
+    r.code||r.trackingCode||'',
+    (r.staffReply||'').replace(/"/g,'""').replace(/\n/g,' '),
+    (r.staffNotes||'').replace(/"/g,'""').replace(/\n/g,' ')
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(c=>'"'+c+'"').join(';')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`safeschool_${currentEtab?.name||'export'}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  toast('Export CSV téléchargé !','ok');
+  S.addLog('Export CSV effectué');
+}
+
+// ═══════════════════════════════════════════
+// PRINT REPORT
+// ═══════════════════════════════════════════
+function printReport(){
+  const reps=S.reports();
+  const etabName=currentEtab?.name||'SafeSchool';
+  const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const byType={},byStatus={new:0,in_progress:0,resolved:0,archived:0};
+  reps.forEach(r=>{
+    const t=r.harassmentType||r.type||'other';byType[t]=(byType[t]||0)+1;
+    if(byStatus[r.status]!==undefined)byStatus[r.status]++;
+  });
+  const urg=reps.filter(r=>r.urgency===3).length;
+  const resRate=reps.length>0?Math.round(byStatus.resolved/reps.length*100):0;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Rapport SafeSchool — ${etabName}</title>
+  <style>body{font-family:'Segoe UI',sans-serif;max-width:800px;margin:40px auto;color:#1e293b;padding:20px}
+  h1{color:#4f46e5;font-size:1.8rem;border-bottom:3px solid #4f46e5;padding-bottom:10px}
+  h2{color:#312e81;margin-top:28px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+  .kpi{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center}
+  .kpi-n{font-size:2rem;font-weight:900;color:#4f46e5}.kpi-l{font-size:.82rem;color:#64748b}
+  table{width:100%;border-collapse:collapse;margin:14px 0}
+  th{background:#4f46e5;color:#fff;padding:10px;text-align:left;font-size:.85rem}
+  td{padding:9px 10px;border-bottom:1px solid #e2e8f0;font-size:.85rem}
+  tr:nth-child(even){background:#f8fafc}
+  .footer{margin-top:40px;border-top:1px solid #e2e8f0;padding-top:14px;color:#94a3b8;font-size:.78rem;text-align:center}
+  @media print{body{margin:0;padding:10px}.kpi{break-inside:avoid}}</style></head><body>
+  <h1>Rapport SafeSchool — ${etabName}</h1>
+  <p style="color:#64748b">Généré le ${now} · Document confidentiel</p>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-n">${reps.length}</div><div class="kpi-l">Total signalements</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#dc2626">${urg}</div><div class="kpi-l">Urgents</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#16a34a">${resRate}%</div><div class="kpi-l">Taux résolution</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#f59e0b">${byStatus.in_progress}</div><div class="kpi-l">En cours</div></div>
+  </div>
+  <h2>Répartition par type</h2>
+  <table><thead><tr><th>Type</th><th>Nombre</th><th>%</th></tr></thead><tbody>
+  ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`<tr><td>${tlabel(t)}</td><td>${n}</td><td>${Math.round(n/reps.length*100)}%</td></tr>`).join('')}
+  </tbody></table>
+  <h2>Derniers signalements</h2>
+  <table><thead><tr><th>Date</th><th>Type</th><th>Urgence</th><th>Statut</th><th>Description</th></tr></thead><tbody>
+  ${reps.slice(0,20).map(r=>`<tr><td>${fmtDate(r.createdAt,true)}</td><td>${tlabel(r.harassmentType||r.type)}</td><td>${{1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'—'}</td><td>${{new:'Nouveau',in_progress:'En cours',resolved:'Résolu',archived:'Archivé'}[r.status]||'—'}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.description||'').slice(0,80)}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="footer">SafeSchool — Plateforme anti-harcèlement scolaire · Confidentiel · RGPD (UE 2016/679)<br>Ce rapport est réservé à l'usage interne de l'équipe éducative.</div>
+  </body></html>`);
+  w.document.close();
+  w.print();
+  S.addLog('Rapport imprimé');
+}
 
 // ═══════════════════════════════════════════
 // INIT

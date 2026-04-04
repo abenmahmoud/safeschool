@@ -1,8 +1,8 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
-const SUPERADMIN_EMAIL = 'am.ad.bm@gmail.com';
-const SUPERADMIN_PASS = 'SafeSchool2026!';
+const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'am.ad.bm@gmail.com';
+const SUPERADMIN_PASS = process.env.SUPERADMIN_PASS || 'SafeSchool2026!';
 
 function authCheck(req: Request): boolean {
   const auth = req.headers.get('x-sa-token');

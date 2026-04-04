@@ -16,6 +16,12 @@
   to = "/superadmin.html"
   status = 200
 
+# Pricing / Landing page
+[[redirects]]
+  from = "/pricing"
+  to = "/pricing.html"
+  status = 200
+
 # SPA fallback (must be last)
 [[redirects]]
   from = "/*"

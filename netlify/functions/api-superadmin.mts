@@ -1,8 +1,8 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
-const SUPERADMIN_EMAIL = 'am.ad.bm@gmail.com';
-const SUPERADMIN_PASS = 'SafeSchool2026!';
+const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'am.ad.bm@gmail.com';
+const SUPERADMIN_PASS = process.env.SUPERADMIN_PASS || 'SafeSchool2026!';
 
 function cors(body: any, status = 200) {
   return new Response(JSON.stringify(body), {

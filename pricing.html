@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeSchool — Plateforme SaaS Anti-Harcèlement Scolaire</title>
+<meta name="description" content="SafeSchool — La solution SaaS pour lutter contre le harcèlement scolaire. Signalements anonymes, tableau de bord admin, assistant IA, conformité RGPD.">
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--p:#4f46e5;--p2:#6366f1;--p3:#818cf8;--g:#059669;--r:#dc2626}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;color:#1e1b4b;background:#fff;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Nunito',sans-serif;font-weight:800;line-height:1.2}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(79,70,229,.08);padding:0 24px}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.2rem;color:var(--p)}
+.logo span{font-size:1.5rem}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{font-size:.88rem;font-weight:600;color:#64748b;text-decoration:none;transition:.2s}
+.nav-links a:hover{color:var(--p)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:10px;font-size:.9rem;font-weight:700;border:none;cursor:pointer;transition:.2s;text-decoration:none;font-family:'DM Sans',sans-serif}
+.btn-p{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;box-shadow:0 4px 14px rgba(79,70,229,.3)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,70,229,.4)}
+.btn-ghost{background:transparent;border:2px solid #e2e8f0;color:#64748b}
+.btn-ghost:hover{border-color:var(--p);color:var(--p)}
+.btn-lg{padding:16px 32px;font-size:1rem;border-radius:14px}
+
+/* HERO */
+.hero{padding:120px 24px 80px;text-align:center;background:linear-gradient(150deg,#eef2ff 0%,#f5f3ff 40%,#fdf4ff 80%,#fff 100%);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;right:-100px;top:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(79,70,229,.06) 0%,transparent 70%);border-radius:50%}
+.hero::after{content:'';position:absolute;left:-100px;bottom:-100px;width:350px;height:350px;background:radial-gradient(circle,rgba(99,102,241,.05) 0%,transparent 70%);border-radius:50%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(79,70,229,.08);color:var(--p);font-size:.82rem;font-weight:700;padding:6px 16px;border-radius:20px;margin-bottom:20px;border:1px solid rgba(79,70,229,.12)}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);max-width:700px;margin:0 auto 18px;position:relative;z-index:1}
+.hero h1 span{color:var(--p);background:linear-gradient(135deg,var(--p),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:clamp(1rem,2.5vw,1.2rem);color:#64748b;max-width:560px;margin:0 auto 30px;line-height:1.6;position:relative;z-index:1}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+.hero-stats{display:flex;gap:40px;justify-content:center;margin-top:48px;position:relative;z-index:1}
+.hero-stat{text-align:center}
+.hero-stat-n{font-family:'Nunito',sans-serif;font-weight:900;font-size:1.8rem;color:var(--p)}
+.hero-stat-l{font-size:.82rem;color:#94a3b8;font-weight:600}
+
+/* SECTION */
+.section{padding:80px 24px;max-width:1100px;margin:0 auto}
+.section-label{display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.08);color:var(--p);font-size:.78rem;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.04em}
+.section h2{font-size:clamp(1.6rem,4vw,2.4rem);margin-bottom:14px}
+.section p.sub{font-size:1.05rem;color:#64748b;max-width:560px;line-height:1.6;margin-bottom:40px}
+.section.center{text-align:center}
+.section.center p.sub{margin-left:auto;margin-right:auto}
+
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feat-card{background:#fff;border:1.5px solid #e8eaed;border-radius:18px;padding:28px 24px;transition:.3s}
+.feat-card:hover{border-color:rgba(79,70,229,.2);box-shadow:0 8px 32px rgba(79,70,229,.1);transform:translateY(-4px)}
+.feat-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:16px}
+.feat-card h3{font-size:1.05rem;margin-bottom:6px}
+.feat-card p{font-size:.88rem;color:#64748b;line-height:1.6}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px;counter-reset:step}
+.step{text-align:center;position:relative}
+.step::before{counter-increment:step;content:counter(step);display:flex;align-items:center;justify-content:center;width:48px;height:48px;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.3rem;border-radius:50%;margin:0 auto 16px;box-shadow:0 4px 14px rgba(79,70,229,.3)}
+.step h4{font-size:1rem;margin-bottom:6px}
+.step p{font-size:.86rem;color:#64748b;line-height:1.5}
+
+/* PRICING */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:10px}
+.price-card{background:#fff;border:2px solid #e8eaed;border-radius:20px;padding:32px 28px;position:relative;transition:.3s}
+.price-card:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(79,70,229,.12)}
+.price-card.popular{border-color:var(--p);box-shadow:0 4px 24px rgba(79,70,229,.15)}
+.price-card.popular::before{content:'RECOMMANDÉ';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-size:.68rem;font-weight:800;padding:4px 16px;border-radius:20px;letter-spacing:.06em}
+.price-name{font-family:'Nunito',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:4px}
+.price-amount{font-family:'Nunito',sans-serif;font-weight:900;font-size:2.4rem;color:var(--p);margin-bottom:4px}
+.price-amount span{font-size:.9rem;color:#94a3b8;font-weight:400}
+.price-desc{font-size:.85rem;color:#64748b;margin-bottom:20px}
+.price-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.price-features li{font-size:.88rem;color:#475569;display:flex;align-items:center;gap:8px}
+.price-features li::before{content:'✓';color:var(--g);font-weight:800;font-size:.9rem}
+
+/* TRUST */
+.trust-bar{background:#f8fafc;padding:48px 24px;text-align:center}
+.trust-items{display:flex;gap:40px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.trust-item{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:600;color:#64748b}
+.trust-item span{font-size:1.4rem}
+
+/* CTA */
+.cta{background:linear-gradient(135deg,#1e1b4b,#312e81,#4338ca);padding:80px 24px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.cta::before{content:'';position:absolute;right:-100px;top:-100px;width:300px;height:300px;background:rgba(255,255,255,.04);border-radius:50%}
+.cta h2{font-size:clamp(1.6rem,4vw,2.2rem);color:#fff;margin-bottom:14px}
+.cta p{color:rgba(255,255,255,.7);font-size:1.05rem;margin-bottom:28px;max-width:500px;margin-left:auto;margin-right:auto}
+
+/* FOOTER */
+.footer{background:#0f172a;color:#94a3b8;padding:48px 24px 32px;text-align:center}
+.footer-inner{max-width:1100px;margin:0 auto}
+.footer-links{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+.footer-links a{color:#94a3b8;text-decoration:none;font-size:.85rem;font-weight:500;transition:.2s}
+.footer-links a:hover{color:#fff}
+.footer-copy{font-size:.78rem;color:#475569;margin-top:12px}
+
+/* DEMO BADGE */
+.demo-badge{position:fixed;bottom:20px;right:20px;z-index:200;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;padding:12px 20px;border-radius:14px;font-size:.88rem;font-weight:700;box-shadow:0 8px 32px rgba(79,70,229,.35);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.2s;text-decoration:none}
+.demo-badge:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(79,70,229,.45)}
+
+@media(max-width:768px){
+  .nav-links a:not(.btn){display:none}
+  .hero-stats{flex-direction:column;gap:16px}
+  .trust-items{flex-direction:column;gap:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo"><span>🛡️</span> SafeSchool</div>
+    <div class="nav-links">
+      <a href="#features">Fonctionnalités</a>
+      <a href="#pricing">Tarifs</a>
+      <a href="#how">Comment ça marche</a>
+      <a href="/superadmin" class="btn btn-ghost" style="padding:8px 16px;font-size:.82rem">Admin</a>
+      <a href="/" class="btn btn-p" style="padding:8px 18px;font-size:.82rem">Ouvrir l'app</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🛡️ Plateforme SaaS · Conforme RGPD</div>
+  <h1>Luttez contre le <span>harcèlement scolaire</span> dans vos établissements</h1>
+  <p>SafeSchool permet aux élèves de signaler anonymement, aux équipes de traiter efficacement, et aux établissements de prévenir — le tout sur une seule plateforme.</p>
+  <div class="hero-btns">
+    <a href="/" class="btn btn-p btn-lg">🚀 Lancer la démo gratuite</a>
+    <a href="#pricing" class="btn btn-ghost btn-lg">📋 Voir les tarifs</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hero-stat-n">100%</div><div class="hero-stat-l">Anonyme & RGPD</div></div>
+    <div class="hero-stat"><div class="hero-stat-n">&lt; 2 min</div><div class="hero-stat-l">Pour signaler</div></div>
+    <div class="hero-stat"><div class="hero-stat-n">24/7</div><div class="hero-stat-l">Assistant IA Léa</div></div>
+    <div class="hero-stat"><div class="hero-stat-n">Multi</div><div class="hero-stat-l">Établissements</div></div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust-bar">
+  <div class="trust-items">
+    <div class="trust-item"><span>🇫🇷</span> Conforme loi 2022-299</div>
+    <div class="trust-item"><span>🔒</span> RGPD & chiffrement TLS</div>
+    <div class="trust-item"><span>🇪🇺</span> Hébergé en UE</div>
+    <div class="trust-item"><span>📱</span> Mobile-first & PWA</div>
+    <div class="trust-item"><span>🤖</span> IA de détection</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section center" id="features">
+  <div class="section-label">Fonctionnalités</div>
+  <h2>Tout ce qu'il faut pour agir</h2>
+  <p class="sub">Une plateforme complète conçue pour les établissements scolaires, les élèves, et les équipes éducatives.</p>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon" style="background:#fef2f2">🚨</div>
+      <h3>Signalement anonyme</h3>
+      <p>Les élèves signalent en 5 étapes simples. 100% anonyme avec code de suivi pour voir la réponse de l'équipe.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:#eef2ff">📊</div>
+      <h3>Dashboard admin</h3>
+      <p>Tableau de bord complet : KPI, tendances, filtres par type/statut/urgence. Export CSV et impression de rapports.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:#f0fdf4">🤖</div>
+      <h3>Assistante IA Léa</h3>
+      <p>Chat intelligent qui écoute, détecte les urgences, oriente vers les bons numéros (3018, 3114), et encourage le signalement.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:#fffbeb">📚</div>
+      <h3>Module éducatif</h3>
+      <p>Fiches pédagogiques interactives et quiz gamifié sur le harcèlement. Système de points et badges.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:#f5f3ff">🏫</div>
+      <h3>Multi-établissements</h3>
+      <p>Chaque établissement dispose de son propre espace sécurisé avec sous-domaine dédié et équipe admin.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:#f0f9ff">🧠</div>
+      <h3>Baromètre IA</h3>
+      <p>Analyse des conversations Léa pour détecter les tendances de bien-être et les alertes par établissement.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section center" id="how" style="background:#f8fafc;padding-left:24px;padding-right:24px;max-width:100%">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label">Comment ça marche</div>
+    <h2>En place en 5 minutes</h2>
+    <p class="sub">Pas d'installation complexe, pas de serveur à gérer. SafeSchool est prêt à l'emploi.</p>
+    <div class="steps">
+      <div class="step">
+        <h4>Créez votre établissement</h4>
+        <p>Le super-admin crée l'espace dédié avec sous-domaine et plan d'abonnement.</p>
+      </div>
+      <div class="step">
+        <h4>Configurez l'équipe</h4>
+        <p>Ajoutez CPE, direction, infirmier(e), psychologue — chaque membre reçoit un accès.</p>
+      </div>
+      <div class="step">
+        <h4>Partagez l'URL aux élèves</h4>
+        <p>Les élèves accèdent via le lien de l'établissement. Aucune inscription requise.</p>
+      </div>
+      <div class="step">
+        <h4>Traitez les signalements</h4>
+        <p>L'équipe éducative reçoit, qualifie, répond et résout les dossiers depuis le dashboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section center" id="pricing">
+  <div class="section-label">Tarifs</div>
+  <h2>Transparent, sans surprise</h2>
+  <p class="sub">Choisissez le plan adapté à la taille et aux besoins de votre établissement.</p>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-name">Starter</div>
+      <div class="price-amount">Gratuit</div>
+      <div class="price-desc">Pour tester la plateforme pendant 3 mois</div>
+      <ul class="price-features">
+        <li>Jusqu'à 200 élèves</li>
+        <li>50 signalements / mois</li>
+        <li>1 compte admin</li>
+        <li>Signalements anonymes</li>
+        <li>Chat avec Léa (IA)</li>
+        <li>Module éducatif</li>
+        <li>Code de suivi élève</li>
+      </ul>
+      <a href="/" class="btn btn-ghost" style="width:100%">Commencer gratuitement</a>
+    </div>
+    <div class="price-card popular">
+      <div class="price-name">Pro</div>
+      <div class="price-amount">49€ <span>/mois</span></div>
+      <div class="price-desc">Pour un établissement complet</div>
+      <ul class="price-features">
+        <li>Élèves illimités</li>
+        <li>Signalements illimités</li>
+        <li>3 comptes admin</li>
+        <li>Statistiques avancées</li>
+        <li>Attribution des incidents</li>
+        <li>Export CSV & rapports</li>
+        <li>Sous-domaine dédié</li>
+        <li>Baromètre IA bien-être</li>
+        <li>Support prioritaire</li>
+      </ul>
+      <a href="/" class="btn btn-p" style="width:100%">Choisir le plan Pro</a>
+    </div>
+    <div class="price-card">
+      <div class="price-name">Enterprise</div>
+      <div class="price-amount">Sur devis</div>
+      <div class="price-desc">Pour les réseaux multi-établissements</div>
+      <ul class="price-features">
+        <li>Multi-sites illimités</li>
+        <li>API dédiée</li>
+        <li>99 comptes admin</li>
+        <li>SLA 99.9%</li>
+        <li>Onboarding dédié</li>
+        <li>Rapport personnalisé</li>
+        <li>Formations équipe</li>
+        <li>Support 24/7</li>
+      </ul>
+      <a href="mailto:contact@safeschool.fr" class="btn btn-ghost" style="width:100%">Nous contacter</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>Prêt à protéger vos élèves ?</h2>
+  <p>Rejoignez les établissements qui agissent concrètement contre le harcèlement scolaire.</p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+    <a href="/" class="btn btn-p btn-lg" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3)">🚀 Démarrer gratuitement</a>
+    <a href="mailto:contact@safeschool.fr" class="btn btn-ghost btn-lg" style="border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.9)">📧 Demander une démo</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:1.2rem;color:#fff;margin-bottom:14px">🛡️ SafeSchool</div>
+    <div class="footer-links">
+      <a href="/">Application</a>
+      <a href="/superadmin">Super Admin</a>
+      <a href="#features">Fonctionnalités</a>
+      <a href="#pricing">Tarifs</a>
+      <a href="mailto:contact@safeschool.fr">Contact</a>
+    </div>
+    <div class="footer-copy">
+      © 2026 SafeSchool — Plateforme anti-harcèlement scolaire · RGPD (UE 2016/679) · Loi n°2022-299<br>
+      Hébergé dans l'Union Européenne · Données chiffrées · Confidentiel
+    </div>
+  </div>
+</footer>
+
+<!-- DEMO BADGE -->
+<a href="/" class="demo-badge">🎯 Tester l'application</a>
+
+</body>
+</html>
