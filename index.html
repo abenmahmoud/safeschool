@@ -7,7 +7,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SafeSchool">
+<link rel="apple-touch-icon" href="/icons/icon-192.svg">
 <title>SafeSchool — Contre le harcèlement</title>
+<meta name="description" content="SafeSchool - Plateforme anti-harcèlement scolaire. Signale anonymement, apprends, et trouve de l'aide. Confidentiel et conforme RGPD.">
+<meta name="keywords" content="harcèlement scolaire, anti-bullying, signalement, école, lycée, collège, 3018, SafeSchool">
+<meta name="author" content="SafeSchool">
+<meta property="og:title" content="SafeSchool — Contre le harcèlement scolaire">
+<meta property="og:description" content="Signale anonymement, apprends, et trouve de l'aide. Plateforme confidentielle et conforme RGPD.">
+<meta property="og:type" content="website">
+<link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -292,6 +300,66 @@ a{text-decoration:none}
 .ci-info p{font-size:.77rem;color:var(--tm)}
 .ci-num{font-family:'Nunito',sans-serif;font-weight:900;font-size:1.25rem;color:var(--p);margin-left:auto}
 
+/* ── V7 PRO — DARK MODE ── */
+html.dark {
+  --bg: #0f172a; --surface: #1e293b; --border: #334155;
+  --t: #f1f5f9; --tm: #94a3b8; --ts: #64748b;
+  --pbg: rgba(99,102,241,.15); --gbg: rgba(16,185,129,.15);
+  --rbg: rgba(220,38,38,.15); --abg: rgba(217,119,6,.15);
+  --skybg: rgba(14,165,233,.15);
+}
+html.dark body { background: var(--bg); color: var(--t); }
+html.dark .bnav { background: rgba(15,23,42,.97); border-top-color: #334155; }
+html.dark .card, html.dark .cbtn, html.dark .fi, html.dark .fta, html.dark .fsel,
+html.dark .acc-item, html.dark .ri, html.dark .staff-card, html.dark .msg.b .mb,
+html.dark .ci-item, html.dark .qo, html.dark .rpt-item, html.dark .kpi,
+html.dark .etab-card, html.dark .chat-in, html.dark .search-in,
+html.dark .ac, html.dark .kpi-card {
+  background: var(--surface); color: var(--t); border-color: var(--border);
+}
+html.dark .fi, html.dark .fta, html.dark .fsel { color: var(--t); background: #0f172a; }
+html.dark .welcome { background: linear-gradient(150deg,#1e1b4b 0%,#1e293b 100%); }
+html.dark .chat-in-wrap { background: #1e293b; border-top-color: #334155; }
+html.dark .chat-head { background: #1e293b; border-bottom-color: #334155; }
+html.dark .chat-disc { background: rgba(217,119,6,.15); border-bottom-color: rgba(217,119,6,.2); color: #fbbf24; }
+html.dark .tabs { background: var(--bg); }
+html.dark .toast.info { background: #312e81; }
+html.dark .modal { background: #1e293b; }
+html.dark .modal-overlay { background: rgba(15,23,42,.7); }
+html.dark .admin-wrap { background: linear-gradient(135deg,#0f172a,#1e1b4b,#312e81); }
+html.dark .admin-card { background: #1e293b; }
+html.dark .emcard { background: linear-gradient(135deg,#7f1d1d,#991b1b); }
+html.dark .flink { background: var(--surface); border-color: rgba(99,102,241,.2); }
+html.dark .kpi-num, html.dark .donut-n { color: var(--t); }
+html.dark img { opacity: .9; }
+
+/* ── V7 PRO — SMOOTH TRANSITIONS ── */
+html { transition: background-color .3s ease, color .3s ease; }
+.page { transition: opacity .2s ease; }
+
+/* ── V7 PRO — ENHANCED ANIMATIONS ── */
+@keyframes slideInRight { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+@keyframes scaleIn { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:scale(1); } }
+@keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+.skeleton { background:linear-gradient(90deg,var(--border) 25%,var(--bg) 50%,var(--border) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite; border-radius:8px; }
+
+/* ── V7 PRO — GLASSMORPHISM CARDS ── */
+.glass { background:rgba(255,255,255,.7); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.3); }
+html.dark .glass { background:rgba(30,41,59,.7); border-color:rgba(99,102,241,.15); }
+
+/* ── V7 PRO — MICRO-INTERACTIONS ── */
+.ac:active { transform:scale(.95); transition:.1s; }
+.btn:active { transform:scale(.96); transition:.08s; }
+.ni:active { transform:scale(.9); transition:.08s; }
+
+/* ── V7 PRO — DARK MODE TOGGLE IN PROFILE ── */
+.dm-toggle { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--r12); margin:0 20px 10px; cursor:pointer; transition:.2s; }
+.dm-toggle:hover { border-color:var(--p); }
+.dm-switch { width:48px; height:26px; background:var(--border); border-radius:13px; position:relative; transition:.3s; }
+.dm-switch::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.3s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+html.dark .dm-switch { background:var(--p); }
+html.dark .dm-switch::after { left:25px; }
+
 /* ── PROFILE ── */
 .prof-head{padding:22px 20px 18px;background:linear-gradient(135deg,#1e1b4b,#312e81,#4f46e5);color:#fff;position:relative;overflow:hidden}
 .prof-av{width:68px;height:68px;border-radius:20px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-size:1.9rem;font-weight:900;margin-bottom:11px;border:2px solid rgba(255,255,255,.25)}
@@ -573,6 +641,10 @@ a{text-decoration:none}
   </div>
   <div style="height:20px"></div>
   <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">Signalements confidentiels · RGPD</p></div>
+  <div style="padding:10px 20px 4px;text-align:center">
+    <a href="/pricing" style="font-size:.74rem;color:var(--p);font-weight:600;text-decoration:none">En savoir plus sur SafeSchool pour votre établissement →</a>
+  </div>
+  <div style="padding:4px 20px 8px;text-align:center"><span style="font-size:.65rem;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:6px;border:1px solid var(--border)">SafeSchool v8.0 Pro · PWA · RGPD</span></div>
   <div style="height:14px"></div>
 </div>
 
@@ -1149,6 +1221,7 @@ async function createEstablishment() {
 function go(page) {
   if (!currentEtab && page !== 'select-etab') { showEtabSelector(); return; }
   if (page === 'dashboard' && !adminIn) { showAdminLogin(); return; }
+  ssHaptic('light'); // V7 Pro haptic nav
   document.getElementById('pg-select-etab').style.display = 'none';
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); if (p.id !== 'pg-dashboard') p.style.display = ''; });
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
@@ -1506,10 +1579,19 @@ async function submitReport(){
     await S.addLog(`Nouveau signalement ${data.case_number || data.id}`, data.id);
     // Save to user's report history
     if (data.tracking_code) saveToReportHistory(data.tracking_code, data.case_number);
+    // Notify admin (best effort, non-blocking)
+    fetch('/api/notify/new-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolId: schoolId, reportId: data.id, urgency: data.urgency, type: data.type })
+    }).catch(() => {});
     if(rData.reporterType==='witness'){
       const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
     }
     showConfirmation(data.tracking_code, report);
+    // V7 Pro: trigger notification opt-in after successful report
+    setTimeout(() => maybeShowNotifOptIn(), 3000);
+    ssHaptic('success');
   } catch(err){
     console.error(err);
     toast(err.message || "Erreur lors de l\'envoi du signalement","err");
@@ -1996,7 +2078,28 @@ function renderProfile(){
   <div style="padding:18px 20px">
     <button class="btn btn-soft btn-full" onclick="go('education')">🎯 Gagner des points</button>
   </div>
-  <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);margin-top:4px">
+  <div class="stitle">Paramètres</div>
+  <div class="dm-toggle" onclick="toggleDarkMode()">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.2rem">${document.documentElement.classList.contains('dark')?'🌙':'☀️'}</span>
+      <div>
+        <div style="font-size:.88rem;font-weight:700;color:var(--t)">Mode sombre</div>
+        <div style="font-size:.74rem;color:var(--tm)">Adapte l'affichage</div>
+      </div>
+    </div>
+    <div class="dm-switch"></div>
+  </div>
+  <div class="dm-toggle" onclick="subscribeToPush()" style="cursor:pointer">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.2rem">🔔</span>
+      <div>
+        <div style="font-size:.88rem;font-weight:700;color:var(--t)">Notifications push</div>
+        <div style="font-size:.74rem;color:var(--tm)">${localStorage.getItem('ss_push_subscribed')?'Activées':'Recevoir des mises à jour'}</div>
+      </div>
+    </div>
+    <span style="font-size:.8rem;color:${localStorage.getItem('ss_push_subscribed')?'var(--g)':'var(--tm)'};font-weight:700">${localStorage.getItem('ss_push_subscribed')?'Activé':'Activer'}</span>
+  </div>
+  <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);margin-top:14px">
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
     <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
@@ -2152,7 +2255,15 @@ function renderDashboardV3(){
   document.getElementById('dashboard-body').innerHTML=`
   <div class="dash-top">
     <div><h1>Dashboard${planBadge}</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
-    <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      ${urg>0?`<div style="background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.3);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
+      <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+    </div>
+  </div>
+  <div style="padding:8px 20px 0;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-xs btn-soft" onclick="exportCSV()">📥 Export CSV</button>
+    <button class="btn btn-xs btn-soft" onclick="printReport()">🖨️ Imprimer rapport</button>
+    <button class="btn btn-xs btn-soft" onclick="S.reloadReports().then(()=>{S.reloadStaff().then(()=>{S.reloadLogs().then(renderDashboardV3)})})" title="Actualiser les données">🔄 Actualiser</button>
   </div>
   <div class="kpi-row">
     <div class="kpi ku" onclick="setFilter('all')"><div class="kpi-n">${urg}</div><div class="kpi-l">⚡ Urgents</div></div>
@@ -2276,6 +2387,10 @@ function saveReply(idx){
   if(reps[idx].staffReply)reps[idx].history.push({s:'replied',t:new Date().toISOString(),by:'Admin',note:'Réponse envoyée à l\'élève'});
   S.updateReport({...reps[idx], logMsg:`Réponse sauvegardée pour #${reps[idx].id}`});
   S.addLog(`Réponse sauvegardée pour #${reps[idx].id}`,reps[idx].id);
+  // Notify reporter if email available (best effort)
+  if(reps[idx].staffReply && reps[idx].reporterEmail){
+    fetch('/api/notify/staff-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportId:reps[idx].id,trackingCode:reps[idx].code||reps[idx].trackingCode,email:reps[idx].reporterEmail})}).catch(()=>{});
+  }
   toast('Sauvegardé !','ok');
 }
 function setStatus(idx,status){
@@ -2505,6 +2620,88 @@ function saveToReportHistory(code, caseNumber) {
 function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
 
 // ═══════════════════════════════════════════
+// CSV EXPORT
+// ═══════════════════════════════════════════
+function exportCSV(){
+  const reps=S.reports();
+  if(!reps.length){toast('Aucun signalement à exporter','err');return}
+  const headers=['Date','Heure','Type','Urgence','Statut','Lieu','Classe','Description','Anonyme','Code suivi','Réponse staff','Notes internes'];
+  const rows=reps.map(r=>[
+    r.createdAt?new Date(r.createdAt).toLocaleDateString('fr-FR'):'',
+    r.createdAt?new Date(r.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'',
+    tlabel(r.harassmentType||r.type),
+    {1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'Faible',
+    {new:'Nouveau',in_progress:'En cours',resolved:'Résolu',archived:'Archivé'}[r.status]||r.status,
+    (r.location||'').replace(/"/g,'""'),
+    (r.reporterClass||'').replace(/"/g,'""'),
+    (r.description||'').replace(/"/g,'""').replace(/\n/g,' '),
+    r.isAnonymous!==false?'Oui':'Non',
+    r.code||r.trackingCode||'',
+    (r.staffReply||'').replace(/"/g,'""').replace(/\n/g,' '),
+    (r.staffNotes||'').replace(/"/g,'""').replace(/\n/g,' ')
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(c=>'"'+c+'"').join(';')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`safeschool_${currentEtab?.name||'export'}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  toast('Export CSV téléchargé !','ok');
+  S.addLog('Export CSV effectué');
+}
+
+// ═══════════════════════════════════════════
+// PRINT REPORT
+// ═══════════════════════════════════════════
+function printReport(){
+  const reps=S.reports();
+  const etabName=currentEtab?.name||'SafeSchool';
+  const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const byType={},byStatus={new:0,in_progress:0,resolved:0,archived:0};
+  reps.forEach(r=>{
+    const t=r.harassmentType||r.type||'other';byType[t]=(byType[t]||0)+1;
+    if(byStatus[r.status]!==undefined)byStatus[r.status]++;
+  });
+  const urg=reps.filter(r=>r.urgency===3).length;
+  const resRate=reps.length>0?Math.round(byStatus.resolved/reps.length*100):0;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Rapport SafeSchool — ${etabName}</title>
+  <style>body{font-family:'Segoe UI',sans-serif;max-width:800px;margin:40px auto;color:#1e293b;padding:20px}
+  h1{color:#4f46e5;font-size:1.8rem;border-bottom:3px solid #4f46e5;padding-bottom:10px}
+  h2{color:#312e81;margin-top:28px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+  .kpi{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center}
+  .kpi-n{font-size:2rem;font-weight:900;color:#4f46e5}.kpi-l{font-size:.82rem;color:#64748b}
+  table{width:100%;border-collapse:collapse;margin:14px 0}
+  th{background:#4f46e5;color:#fff;padding:10px;text-align:left;font-size:.85rem}
+  td{padding:9px 10px;border-bottom:1px solid #e2e8f0;font-size:.85rem}
+  tr:nth-child(even){background:#f8fafc}
+  .footer{margin-top:40px;border-top:1px solid #e2e8f0;padding-top:14px;color:#94a3b8;font-size:.78rem;text-align:center}
+  @media print{body{margin:0;padding:10px}.kpi{break-inside:avoid}}</style></head><body>
+  <h1>Rapport SafeSchool — ${etabName}</h1>
+  <p style="color:#64748b">Généré le ${now} · Document confidentiel</p>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-n">${reps.length}</div><div class="kpi-l">Total signalements</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#dc2626">${urg}</div><div class="kpi-l">Urgents</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#16a34a">${resRate}%</div><div class="kpi-l">Taux résolution</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#f59e0b">${byStatus.in_progress}</div><div class="kpi-l">En cours</div></div>
+  </div>
+  <h2>Répartition par type</h2>
+  <table><thead><tr><th>Type</th><th>Nombre</th><th>%</th></tr></thead><tbody>
+  ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`<tr><td>${tlabel(t)}</td><td>${n}</td><td>${Math.round(n/reps.length*100)}%</td></tr>`).join('')}
+  </tbody></table>
+  <h2>Derniers signalements</h2>
+  <table><thead><tr><th>Date</th><th>Type</th><th>Urgence</th><th>Statut</th><th>Description</th></tr></thead><tbody>
+  ${reps.slice(0,20).map(r=>`<tr><td>${fmtDate(r.createdAt,true)}</td><td>${tlabel(r.harassmentType||r.type)}</td><td>${{1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'—'}</td><td>${{new:'Nouveau',in_progress:'En cours',resolved:'Résolu',archived:'Archivé'}[r.status]||'—'}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.description||'').slice(0,80)}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="footer">SafeSchool — Plateforme anti-harcèlement scolaire · Confidentiel · RGPD (UE 2016/679)<br>Ce rapport est réservé à l'usage interne de l'équipe éducative.</div>
+  </body></html>`);
+  w.document.close();
+  w.print();
+  S.addLog('Rapport imprimé');
+}
+
+// ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
@@ -2537,12 +2734,56 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// PWA
-if('serviceWorker' in navigator){
-  const sw=`const C='ss-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['/']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/')))))`;
-  const blob=new Blob([sw],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+// ═══════════════════════════════════════════
+// V7 PRO — SERVICE WORKER & PWA
+// ═══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then(reg => {
+      console.log('SW registered:', reg.scope);
+      // Listen for updates
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+      // V8 Pro: check for updates every 5 minutes (was hourly)
+      setInterval(() => reg.update(), 5 * 60 * 1000);
+    })
+    .catch(err => console.warn('SW registration failed:', err));
+
+  // Auto-reload when a new SW takes control (ensures latest version)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      location.reload();
+    }
+  });
+
+  // Listen for messages from SW
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'NAVIGATE') {
+      const page = new URLSearchParams(event.data.url.split('?')[1] || '').get('page');
+      if (page) go(page);
+    }
+  });
 }
+
+function showUpdateBanner() {
+  if (document.getElementById('update-banner')) return;
+  document.body.insertAdjacentHTML('beforeend', `
+  <div id="update-banner" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:9999;font-size:.88rem;font-weight:600;animation:fadeUp .3s ease">
+    <span>Nouvelle version disponible</span>
+    <button onclick="location.reload()" style="margin-left:auto;background:#fff;color:#059669;border:none;padding:6px 16px;border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer">Mettre à jour</button>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;opacity:.7">×</button>
+  </div>`);
+}
+
 // Push Léa stats on page unload (best effort)
 window.addEventListener('beforeunload', () => {
   if (leaStats._session.messages > 0) {
@@ -2552,27 +2793,265 @@ window.addEventListener('beforeunload', () => {
     leaStats.pushSchoolStats(currentEtab.id);
   }
 });
-let deferredInstall=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;
-  setTimeout(()=>{
-    if(!deferredInstall)return;
-    document.body.insertAdjacentHTML('beforeend',`
-    <div id="install-banner" style="position:fixed;bottom:calc(${getComputedStyle(document.documentElement).getPropertyValue('--nav')} + 12px);left:16px;right:16px;max-width:568px;margin:0 auto;background:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(79,70,229,.2);display:flex;align-items:center;gap:12px;z-index:80;border:1.5px solid rgba(79,70,229,.12);animation:fadeUp .4s ease">
-      <span style="font-size:2rem">📲</span>
-      <div style="flex:1"><p style="font-size:.86rem;font-weight:700;color:var(--t);margin:0">Installer SafeSchool</p><p style="font-size:.76rem;margin:0">Accès rapide depuis ton écran</p></div>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('install-banner').remove()">Non</button>
-      <button class="btn btn-p btn-sm" onclick="installApp()">Installer</button>
+
+// ═══════════════════════════════════════════
+// V7 PRO — SMART INSTALL BANNER
+// ═══════════════════════════════════════════
+let deferredInstall = null;
+let isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  // Show smart install banner after 3s on first visit, 8s on return
+  const visits = parseInt(localStorage.getItem('ss_visits') || '0');
+  localStorage.setItem('ss_visits', visits + 1);
+  const delay = visits === 0 ? 3000 : 8000;
+
+  if (isStandalone) return; // Already installed
+
+  setTimeout(() => {
+    if (!deferredInstall || document.getElementById('install-banner')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+    <div id="install-banner" style="position:fixed;bottom:calc(var(--nav) + var(--safe) + 16px);left:12px;right:12px;max-width:560px;margin:0 auto;background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:20px;padding:18px 20px;box-shadow:0 10px 40px rgba(79,70,229,.35);display:flex;align-items:center;gap:14px;z-index:300;animation:fadeUp .4s cubic-bezier(.34,1.56,.64,1);border:1.5px solid rgba(99,102,241,.3)">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#4f46e5,#6366f1);border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;box-shadow:0 4px 12px rgba(79,70,229,.4)">📲</div>
+      <div style="flex:1">
+        <p style="font-size:.92rem;font-weight:700;color:#fff;margin:0">Installe SafeSchool</p>
+        <p style="font-size:.76rem;color:#a5b4fc;margin:2px 0 0">Accès instantané + notifications + hors ligne</p>
+      </div>
+      <button onclick="document.getElementById('install-banner').remove();localStorage.setItem('ss_install_dismissed','1')" style="background:none;border:none;color:#a5b4fc;font-size:1.3rem;cursor:pointer;padding:4px;opacity:.7">×</button>
+      <button onclick="installApp()" style="background:#fff;color:#4f46e5;border:none;padding:10px 20px;border-radius:12px;font-weight:800;font-size:.88rem;cursor:pointer;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,.15)">Installer</button>
     </div>`);
-  },4000);
+  }, delay);
 });
-async function installApp(){
-  if(!deferredInstall)return;
+
+async function installApp() {
+  if (!deferredInstall) return;
   deferredInstall.prompt();
-  const{outcome}=await deferredInstall.userChoice;
-  deferredInstall=null;
+  const { outcome } = await deferredInstall.userChoice;
+  deferredInstall = null;
   document.getElementById('install-banner')?.remove();
-  if(outcome==='accepted')toast('SafeSchool installé ! 🎉','ok');
+  if (outcome === 'accepted') {
+    toast('SafeSchool installé avec succès !', 'ok');
+    ssHaptic('success');
+  }
 }
+
+// iOS Safari install instructions
+if (/iPhone|iPad/.test(navigator.userAgent) && !window.navigator.standalone) {
+  setTimeout(() => {
+    if (localStorage.getItem('ss_ios_install_shown')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+    <div id="ios-install" style="position:fixed;bottom:calc(var(--nav) + var(--safe) + 16px);left:12px;right:12px;max-width:560px;margin:0 auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:300;animation:fadeUp .4s ease;text-align:center">
+      <p style="font-size:.95rem;font-weight:700;color:var(--t);margin:0 0 8px">Installer SafeSchool sur iPhone</p>
+      <p style="font-size:.82rem;color:var(--tm);margin:0 0 12px">Appuie sur <span style="background:var(--pbg);padding:2px 8px;border-radius:6px;font-weight:700;color:var(--p)">Partager</span> puis <span style="background:var(--pbg);padding:2px 8px;border-radius:6px;font-weight:700;color:var(--p)">Sur l'écran d'accueil</span></p>
+      <div style="display:flex;justify-content:center;gap:8px;font-size:2rem;margin-bottom:12px">
+        <span>1. Clique ↗️</span>
+      </div>
+      <button onclick="document.getElementById('ios-install').remove();localStorage.setItem('ss_ios_install_shown','1')" class="btn btn-p btn-sm">Compris !</button>
+    </div>`);
+  }, 6000);
+}
+
+// ═══════════════════════════════════════════
+// V7 PRO — PUSH NOTIFICATIONS
+// ═══════════════════════════════════════════
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    toast('Les notifications ne sont pas supportées sur ce navigateur', 'err');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    toast('Les notifications sont bloquées. Active-les dans les paramètres.', 'err');
+    return false;
+  }
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+}
+
+async function subscribeToPush(role = 'student') {
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+
+    // Try to get VAPID key from server
+    let vapidKey = null;
+    try {
+      const res = await fetch('/api/push/vapid-key');
+      const data = await res.json();
+      vapidKey = data.vapidKey;
+    } catch (e) {
+      console.warn('Could not fetch VAPID key, using demo mode');
+    }
+
+    if (vapidKey) {
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+      });
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          schoolId: currentEtab?.id || 'global',
+          role: role
+        })
+      });
+
+      toast('Notifications activées !', 'ok');
+      ssHaptic('success');
+    } else {
+      // Demo mode — show local notification
+      toast('Notifications activées (mode démo)', 'ok');
+      localStorage.setItem('ss_notif_enabled', '1');
+    }
+
+    localStorage.setItem('ss_push_subscribed', '1');
+  } catch (e) {
+    console.error('Push subscription failed:', e);
+    toast('Impossible d\'activer les notifications', 'err');
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+// Show notification opt-in after first report or 2nd visit
+function maybeShowNotifOptIn() {
+  if (localStorage.getItem('ss_push_subscribed') || localStorage.getItem('ss_notif_dismissed')) return;
+  if (Notification.permission === 'denied') return;
+  if (isStandalone || parseInt(localStorage.getItem('ss_visits') || '0') >= 2) {
+    setTimeout(() => {
+      if (document.getElementById('notif-optin')) return;
+      document.body.insertAdjacentHTML('beforeend', `
+      <div id="notif-optin" style="position:fixed;bottom:calc(var(--nav) + var(--safe) + 16px);left:12px;right:12px;max-width:560px;margin:0 auto;background:#fff;border-radius:20px;padding:18px 20px;box-shadow:0 10px 40px rgba(79,70,229,.2);z-index:250;animation:fadeUp .4s ease;display:flex;align-items:center;gap:14px;border:1.5px solid rgba(79,70,229,.1)">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#059669,#10b981);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">🔔</div>
+        <div style="flex:1">
+          <p style="font-size:.88rem;font-weight:700;color:var(--t);margin:0">Activer les notifications ?</p>
+          <p style="font-size:.76rem;color:var(--tm);margin:2px 0 0">Sois informé(e) quand ton dossier est traité</p>
+        </div>
+        <button onclick="document.getElementById('notif-optin').remove();localStorage.setItem('ss_notif_dismissed','1')" style="background:none;border:none;color:var(--ts);font-size:1.2rem;cursor:pointer;padding:4px">×</button>
+        <button onclick="document.getElementById('notif-optin').remove();subscribeToPush()" class="btn btn-g btn-sm">Activer</button>
+      </div>`);
+    }, 2000);
+  }
+}
+
+// ═══════════════════════════════════════════
+// V7 PRO — DARK MODE
+// ═══════════════════════════════════════════
+function initDarkMode() {
+  const saved = localStorage.getItem('ss_dark_mode');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = saved ? saved === '1' : prefersDark;
+  if (isDark) document.documentElement.classList.add('dark');
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!localStorage.getItem('ss_dark_mode')) {
+      document.documentElement.classList.toggle('dark', e.matches);
+    }
+  });
+}
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('ss_dark_mode', isDark ? '1' : '0');
+  ssHaptic('light');
+  toast(isDark ? 'Mode sombre activé' : 'Mode clair activé', 'info');
+}
+initDarkMode();
+
+// ═══════════════════════════════════════════
+// V7 PRO — HAPTIC FEEDBACK
+// ═══════════════════════════════════════════
+function ssHaptic(type = 'light') {
+  if (!navigator.vibrate) return;
+  const patterns = {
+    light: [10],
+    medium: [20],
+    heavy: [30],
+    success: [10, 50, 10],
+    error: [50, 30, 50, 30, 50],
+    warning: [30, 50, 30]
+  };
+  navigator.vibrate(patterns[type] || patterns.light);
+}
+
+// ═══════════════════════════════════════════
+// V7 PRO — OFFLINE INDICATOR
+// ═══════════════════════════════════════════
+function updateOnlineStatus() {
+  const el = document.getElementById('offline-indicator');
+  if (!navigator.onLine) {
+    if (!el) {
+      document.body.insertAdjacentHTML('afterbegin', `
+      <div id="offline-indicator" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:6px 16px;text-align:center;font-size:.8rem;font-weight:700;z-index:9999;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span>📡</span> Mode hors ligne — Les signalements seront envoyés à la reconnexion
+      </div>`);
+    }
+  } else {
+    el?.remove();
+  }
+}
+window.addEventListener('online', () => { updateOnlineStatus(); toast('Connexion rétablie', 'ok'); });
+window.addEventListener('offline', () => { updateOnlineStatus(); toast('Tu es hors connexion', 'err'); });
+updateOnlineStatus();
+
+// ═══════════════════════════════════════════
+// V7 PRO — GESTURE NAVIGATION & PULL TO REFRESH
+// ═══════════════════════════════════════════
+let touchStartY = 0;
+let pullRefreshActive = false;
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (touchStartY === 0) return;
+  const diff = e.touches[0].clientY - touchStartY;
+  if (diff > 80 && window.scrollY === 0 && !pullRefreshActive) {
+    pullRefreshActive = true;
+  }
+}, { passive: true });
+document.addEventListener('touchend', () => {
+  if (pullRefreshActive) {
+    pullRefreshActive = false;
+    touchStartY = 0;
+    if (adminIn && currentPage === 'dashboard') {
+      S.reloadReports().then(() => { renderDashboard(); toast('Données actualisées', 'ok'); ssHaptic('light'); });
+    } else if (currentPage === 'home') {
+      ssHaptic('light');
+    }
+  }
+  touchStartY = 0;
+});
+
+// ═══════════════════════════════════════════
+// V7 PRO — SHORTCUT LAUNCH HANDLER
+// ═══════════════════════════════════════════
+(function handleShortcuts() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  if (page && ['report', 'assistant', 'myreport', 'education', 'help'].includes(page)) {
+    // Wait for establishment to load, then navigate
+    const waitAndGo = setInterval(() => {
+      if (currentEtab || document.getElementById('pg-select-etab')?.style.display === 'flex') {
+        clearInterval(waitAndGo);
+        if (currentEtab) go(page);
+      }
+    }, 200);
+    setTimeout(() => clearInterval(waitAndGo), 5000);
+  }
+})();
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Maskable icon: full bleed background, content in 60% safe zone (20% padding each side) -->
+  <rect width="512" height="512" fill="#4f46e5"/>
+  <!-- Safe zone: 102.4 to 409.6 (center 307.2px) -->
+  <path d="M256 138 L332 170 L332 240 Q332 300 256 326 Q180 300 180 240 L180 170 Z" fill="none" stroke="white" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M256 148 L328 178 L328 238 Q328 294 256 319 Q184 294 184 238 L184 178 Z" fill="rgba(255,255,255,0.15)"/>
+  <text x="256" y="262" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="74" fill="white">SS</text>
+</svg>

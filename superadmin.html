@@ -122,11 +122,15 @@ tr:hover td{background:rgba(99,102,241,.03)}
     <button class="btn bfull" id="lbtn">Connexion Super Admin</button>
     <div class="err" id="lerr"></div>
     <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Fondateur</p>
+    <div style="margin-top:18px;padding:14px;background:#0f172a;border:1px solid #334155;border-radius:10px">
+      <p style="font-size:.72rem;color:#64748b;text-align:center;margin-bottom:6px">&#128161; Informations de test</p>
+      <p style="font-size:.72rem;color:#94a3b8;text-align:center;line-height:1.6">Utilisez les identifiants super-admin fournis par le fondateur. Acces securise via API token encode.</p>
+    </div>
   </div>
 </div>
 <div id="app">
   <nav class="sb">
-    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span></div>
+    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span><div style="margin-top:6px;font-size:.65rem;color:#475569;background:#0f172a;padding:3px 8px;border-radius:6px;display:inline-block">v8.0 Pro PWA</div></div>
     <div class="ni on" id="n-db" onclick="showPage('db')"><span class="ni-icon">&#128200;</span> Tableau de bord</div>
     <div class="ni" id="n-sc" onclick="showPage('sc')"><span class="ni-icon">&#127979;</span> Etablissements</div>
     <div class="ni" id="n-cr" onclick="showPage('cr')"><span class="ni-icon">&#10133;</span> Nouvel etablissement</div>
@@ -134,11 +138,50 @@ tr:hover td{background:rgba(99,102,241,.03)}
     <div class="ni" id="n-dn" onclick="showPage('dn')"><span class="ni-icon">&#127760;</span> Sous-domaines</div>
     <div class="ni" id="n-bl" onclick="showPage('bl')"><span class="ni-icon">&#128176;</span> Abonnements</div>
     <div class="ni" id="n-baro" onclick="showPage('baro')"><span class="ni-icon">&#129504;</span> Barometre IA</div>
+    <div class="ni" id="n-analytics" onclick="showPage('analytics')"><span class="ni-icon">&#128202;</span> Analytics IA</div>
+    <div class="ni" id="n-notif" onclick="showPage('notif')"><span class="ni-icon">&#128276;</span> Notifications</div>
+    <div class="ni" id="n-push" onclick="showPage('push')"><span class="ni-icon">&#128241;</span> Push / PWA</div>
+    <div class="ni" id="n-health" onclick="showPage('health')"><span class="ni-icon">&#128994;</span> Monitoring</div>
+    <div style="padding:12px 20px"><a href="/pricing" target="_blank" style="display:block;padding:10px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;text-align:center;transition:.2s">&#127760; Page vitrine / Pricing</a></div>
     <div class="sbf"><button class="btn bs bsm bfull" onclick="doLogout()">Deconnexion</button></div>
   </nav>
   <main class="mn">
     <div id="p-db">
       <div class="pt">Tableau de bord</div><div class="ps">Vue globale en temps reel - Toutes les donnees de la plateforme</div>
+      <div class="card" style="margin-bottom:20px;border:1px solid #6366f1;background:linear-gradient(135deg,#1e1b4b,#312e81)">
+        <div style="padding:20px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <span style="font-size:1.5rem">&#128640;</span>
+            <div>
+              <h3 style="color:#fff;font-size:1rem;margin-bottom:2px">Guide de demarrage rapide</h3>
+              <p style="color:#a5b4fc;font-size:.82rem">Etapes pour mettre SafeSchool en production</p>
+            </div>
+            <button class="btn bsm bs" style="margin-left:auto" onclick="this.closest('.card').style.display='none'">Masquer</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#10133;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">1. Creer un etablissement</div>
+              <div style="font-size:.76rem;color:#94a3b8">Menu "Nouvel etablissement" — renseignez nom, email admin, et plan</div>
+            </div>
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#128279;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">2. Configurer le DNS</div>
+              <div style="font-size:.76rem;color:#94a3b8">CNAME vers darling-muffin-21eb90.netlify.app pour le sous-domaine</div>
+            </div>
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#128101;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">3. Equipe admin</div>
+              <div style="font-size:.76rem;color:#94a3b8">Generez des codes membres et partagez les identifiants admin</div>
+            </div>
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:1.3rem;margin-bottom:6px">&#127919;</div>
+              <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">4. Deployer</div>
+              <div style="font-size:.76rem;color:#94a3b8">Partagez l'URL aux eleves. Ils signalent, l'equipe traite via le dashboard.</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="sg" id="gst"></div>
       <div class="card"><div class="ch"><h3>Tous les etablissements</h3><button class="btn bsm" onclick="loadDashboard()">&#128260; Actualiser</button></div><div id="act" style="padding:20px"></div></div>
     </div>
@@ -233,6 +276,146 @@ tr:hover td{background:rgba(99,102,241,.03)}
         </div>
       </div>
     </div>
+    <!-- ═══════════ ANALYTICS IA ═══════════ -->
+    <div id="p-analytics" style="display:none">
+      <div class="pt">Analytics IA — Intelligence Predictive</div><div class="ps">Tendances, predictions, analyse sectorielle et recommandations de prevention</div>
+      <div class="tab-row">
+        <div class="tab-btn on" onclick="showAnalyticsTab('trends')">Tendances</div>
+        <div class="tab-btn" onclick="showAnalyticsTab('sectors')">Secteurs</div>
+        <div class="tab-btn" onclick="showAnalyticsTab('prevention')">Prevention IA</div>
+        <div class="tab-btn" onclick="showAnalyticsTab('export')">Export donnees</div>
+      </div>
+      <div id="analytics-trends">
+        <div class="sg" id="trends-kpi"></div>
+        <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Evolution temporelle</h3><button class="btn bsm" onclick="loadAnalyticsTrends()">&#128260; Actualiser</button></div>
+          <div id="trends-chart" style="padding:20px"></div>
+        </div>
+        <div class="card"><div class="ch"><h3>Predictions & Ecoles a risque</h3></div>
+          <div id="trends-predictions" style="padding:20px"></div>
+        </div>
+      </div>
+      <div id="analytics-sectors" style="display:none">
+        <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Analyse par ville / zone geographique</h3><button class="btn bsm" onclick="loadAnalyticsSectors()">&#128260; Actualiser</button></div>
+          <div id="sectors-city" style="padding:20px"></div>
+        </div>
+        <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Analyse par type d'etablissement</h3></div>
+          <div id="sectors-type" style="padding:20px"></div>
+        </div>
+        <div class="card"><div class="ch"><h3>Points chauds identifies</h3></div>
+          <div id="sectors-hotspots" style="padding:20px"></div>
+        </div>
+      </div>
+      <div id="analytics-prevention" style="display:none">
+        <div class="sg" id="prevention-kpi"></div>
+        <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Recommandations de prevention automatiques</h3><button class="btn bsm" onclick="loadAnalyticsPrevention()">&#128260; Actualiser</button></div>
+          <div id="prevention-recs" style="padding:20px"></div>
+        </div>
+        <div class="card"><div class="ch"><h3>Score de risque par etablissement</h3></div>
+          <div id="prevention-risks" style="padding:20px"></div>
+        </div>
+      </div>
+      <div id="analytics-export" style="display:none">
+        <div class="card"><div class="ch"><h3>Export de donnees pour pipeline IA / Machine Learning</h3></div>
+          <div style="padding:20px">
+            <p style="color:#94a3b8;font-size:.85rem;margin-bottom:16px">Exportez les donnees anonymisees de la plateforme dans un format structure JSON compatible avec les outils d'analyse IA/ML (Python, R, TensorFlow, etc.).</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+              <button class="btn bsm bg" onclick="exportAnalyticsData()">&#128190; Telecharger le dataset JSON</button>
+              <button class="btn bsm" onclick="previewExportData()">&#128065; Apercu du dataset</button>
+            </div>
+            <div id="export-preview" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ═══════════ NOTIFICATIONS ═══════════ -->
+    <div id="p-notif" style="display:none">
+      <div class="pt">Centre de notifications</div><div class="ps">Historique, statistiques et gestion des notifications</div>
+      <div class="sg" id="notif-kpi"></div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Statistiques des notifications</h3><button class="btn bsm" onclick="loadNotifStats()">&#128260; Actualiser</button></div>
+        <div id="notif-stats" style="padding:20px"></div>
+      </div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Historique recent</h3></div>
+        <div id="notif-history" style="padding:20px"></div>
+      </div>
+      <div class="card"><div class="ch"><h3>Actions rapides</h3></div>
+        <div style="padding:20px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn bsm" onclick="sendTestNotif()">&#128231; Envoyer notification test</button>
+          <button class="btn bsm bg" onclick="generateDigest()">&#128196; Generer digest quotidien</button>
+        </div>
+      </div>
+    </div>
+    <!-- ═══════════ PUSH / PWA MANAGEMENT ═══════════ -->
+    <div id="p-push" style="display:none">
+      <div class="pt">Push Notifications & PWA</div><div class="ps">Gestion des abonnements push et de l'experience mobile</div>
+      <div class="sg" id="push-kpi"></div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><h3>Envoyer une notification push</h3></div>
+        <div style="padding:20px">
+          <div class="f"><label>Titre</label><input type="text" id="push-title" placeholder="Titre de la notification"></div>
+          <div class="f"><label>Message</label><textarea id="push-msg" placeholder="Contenu de la notification..."></textarea></div>
+          <div class="f"><label>Type</label><select id="push-type"><option value="general">General</option><option value="new-report">Nouveau signalement</option><option value="status-update">Mise a jour statut</option><option value="urgent">Urgent</option></select></div>
+          <div class="f"><label>Etablissement (vide = tous)</label><input type="text" id="push-school" placeholder="ID etablissement (optionnel)"></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn" onclick="sendPushNotif()">Envoyer la notification</button>
+            <button class="btn bs" onclick="sendTestPush()">Envoyer un test</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><h3>Configuration VAPID</h3></div>
+        <div style="padding:20px" id="push-config"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h3>Guide d'installation PWA</h3></div>
+        <div style="padding:20px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+            <div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #334155">
+              <div style="font-size:2rem;margin-bottom:8px">&#128241;</div>
+              <h4 style="color:#f1f5f9;font-size:.88rem;margin-bottom:4px">Android</h4>
+              <p style="color:#94a3b8;font-size:.78rem;line-height:1.6">Chrome > Menu (3 points) > "Ajouter a l'ecran d'accueil". L'app s'installe automatiquement avec icone et notifications.</p>
+            </div>
+            <div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #334155">
+              <div style="font-size:2rem;margin-bottom:8px">&#127822;</div>
+              <h4 style="color:#f1f5f9;font-size:.88rem;margin-bottom:4px">iPhone / iPad</h4>
+              <p style="color:#94a3b8;font-size:.78rem;line-height:1.6">Safari > Icone Partager > "Sur l'ecran d'accueil". Les notifications push fonctionnent sur iOS 16.4+.</p>
+            </div>
+            <div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #334155">
+              <div style="font-size:2rem;margin-bottom:8px">&#128187;</div>
+              <h4 style="color:#f1f5f9;font-size:.88rem;margin-bottom:4px">Desktop</h4>
+              <p style="color:#94a3b8;font-size:.78rem;line-height:1.6">Chrome/Edge > Icone d'installation dans la barre d'adresse. Fonctionne comme une app native.</p>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding:14px;background:#1e3a5f;border:1px solid #1e40af;border-radius:10px">
+            <h4 style="color:#60a5fa;font-size:.82rem;margin-bottom:6px">Fonctionnalites PWA activees</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="badge b-active">Service Worker</span>
+              <span class="badge b-active">Cache offline</span>
+              <span class="badge b-active">Push notifications</span>
+              <span class="badge b-active">Raccourcis</span>
+              <span class="badge b-active">Mode sombre</span>
+              <span class="badge b-active">Share Target</span>
+              <span class="badge b-active">Install banner</span>
+              <span class="badge b-active">Background sync</span>
+              <span class="badge b-active">Haptic feedback</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ═══════════ MONITORING / HEALTH ═══════════ -->
+    <div id="p-health" style="display:none">
+      <div class="pt">Monitoring & Sante plateforme</div><div class="ps">Surveillance en temps reel de l'infrastructure SafeSchool</div>
+      <div class="sg" id="health-kpi"></div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Verifications systeme</h3><button class="btn bsm" onclick="loadHealth()">&#128260; Actualiser</button></div>
+        <div id="health-checks" style="padding:20px"></div>
+      </div>
+      <div class="card" style="margin-bottom:20px"><div class="ch"><h3>Metriques de qualite des donnees</h3></div>
+        <div id="health-quality" style="padding:20px"></div>
+      </div>
+      <div class="card"><div class="ch"><h3>Status des services</h3></div>
+        <div id="health-services" style="padding:20px"></div>
+      </div>
+    </div>
   </main>
 </div>
 <div class="mb" id="emod" style="display:none" onclick="if(event.target===this)clMod()">
@@ -316,14 +499,14 @@ document.getElementById('lpw').addEventListener('keydown', function(e) { if (e.k
 })();
 
 // ═══════════ NAVIGATION ═══════════
-var PGS = ['db','sc','cr','sav','dn','bl','baro'];
+var PGS = ['db','sc','cr','sav','dn','bl','baro','analytics','notif','push','health'];
 function showPage(p) {
   PGS.forEach(function(x) {
     var el = document.getElementById('p-'+x), nav = document.getElementById('n-'+x);
     if (el) el.style.display = (x===p) ? 'block' : 'none';
     if (nav) nav.classList.toggle('on', x===p);
   });
-  var loaders = { db: loadDashboard, sc: loadSchools, dn: loadDomains, bl: loadBilling, cr: rstCr, sav: loadSavSelector, baro: loadBarometre };
+  var loaders = { db: loadDashboard, sc: loadSchools, dn: loadDomains, bl: loadBilling, cr: rstCr, sav: loadSavSelector, baro: loadBarometre, analytics: loadAnalyticsTrends, notif: loadNotifStats, push: loadPushStats, health: loadHealth };
   if (loaders[p]) loaders[p]();
 }
 
@@ -571,7 +754,12 @@ async function loadSavData() {
   if (!school) return;
 
   // Show school info + load reports from Supabase
-  var html = '<div class="card"><div class="ch"><h3>Informations etablissement</h3></div><div style="padding:20px">'
+  var html = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">'
+    + '<a href="/?school='+school.slug+'" target="_blank" class="btn bsm bg" style="text-decoration:none">&#127760; Ouvrir l\'app eleve</a>'
+    + '<button class="btn bsm" onclick="cpTxt(\''+(school.admin_code||'')+'\')">&#128203; Copier code admin</button>'
+    + '<button class="btn bsm bw" onclick="regenAdmin(\''+id+'\');setTimeout(function(){loadSavData()},1500)">&#128260; Regenerer code</button>'
+    + '</div>'
+    + '<div class="card"><div class="ch"><h3>Informations etablissement</h3></div><div style="padding:20px">'
     + '<div class="sbox">'
     + '<div class="sr"><span class="slb">Nom</span><span class="sv">'+school.name+'</span></div>'
     + '<div class="sr"><span class="slb">Ville</span><span class="sv">'+(school.city||'-')+'</span></div>'
@@ -907,6 +1095,383 @@ async function generateSchoolReport() {
   } catch(e) {
     el.innerHTML = '<p style="color:#fca5a5">Erreur: '+e.message+'</p>';
   }
+}
+
+// ═══════════ ANALYTICS IA ═══════════
+var ANALYTICS_TABS = ['trends','sectors','prevention','export'];
+function showAnalyticsTab(tab) {
+  ANALYTICS_TABS.forEach(function(t) {
+    var el = document.getElementById('analytics-'+t);
+    if (el) el.style.display = (t===tab) ? 'block' : 'none';
+  });
+  document.querySelectorAll('#p-analytics .tab-btn').forEach(function(b,i) {
+    b.classList.toggle('on', ANALYTICS_TABS[i]===tab);
+  });
+  var loaders = { trends: loadAnalyticsTrends, sectors: loadAnalyticsSectors, prevention: loadAnalyticsPrevention };
+  if (loaders[tab]) loaders[tab]();
+}
+
+async function loadAnalyticsTrends() {
+  var kpi = document.getElementById('trends-kpi');
+  var chart = document.getElementById('trends-chart');
+  var pred = document.getElementById('trends-predictions');
+  kpi.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var data = await api('GET', '/analytics/trends');
+    var t = data.trends || {};
+    kpi.innerHTML =
+      stc('Var. hebdo', (t.weekly_change_pct>=0?'+':'')+Math.round(t.weekly_change_pct||0)+'%', 'Semaine en cours vs precedente', t.weekly_change_pct>0?'#dc2626':'#16a34a') +
+      stc('Var. mensuelle', (t.monthly_change_pct>=0?'+':'')+Math.round(t.monthly_change_pct||0)+'%', 'Mois en cours vs precedent', t.monthly_change_pct>0?'#dc2626':'#16a34a') +
+      stc('Heure de pointe', (t.peak_hours||[])[0] !== undefined ? t.peak_hours[0]+'h' : '-', 'Pic d\'activite', '#6366f1') +
+      stc('Jour de pointe', ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][(t.peak_days||[])[0]] || '-', 'Jour le plus actif', '#8b5cf6');
+
+    var hours = t.hourly_distribution || {};
+    var maxH = Math.max.apply(null, Object.values(hours).concat([1]));
+    var chartHtml = '<h4 style="color:#a5b4fc;font-size:.88rem;margin-bottom:12px">Distribution horaire des alertes</h4><div style="display:flex;align-items:flex-end;gap:2px;height:120px;padding-bottom:20px;position:relative">';
+    for (var h=0; h<24; h++) {
+      var v = hours[h] || 0;
+      var pct = Math.round(v / maxH * 100);
+      chartHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'
+        + '<div style="width:100%;background:linear-gradient(to top,#6366f1,#818cf8);border-radius:3px 3px 0 0;min-height:2px;height:'+pct+'%;transition:.3s" title="'+h+'h: '+v+' alertes"></div>'
+        + '<div style="font-size:.55rem;color:#64748b;margin-top:4px">'+(h%3===0?h+'h':'')+'</div></div>';
+    }
+    chartHtml += '</div>';
+    chart.innerHTML = chartHtml;
+
+    var p = data.predictions || {};
+    var riskSchools = p.risk_schools || [];
+    var predHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
+      + '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;text-align:center">'
+      + '<div style="font-size:2rem;font-weight:800;color:#a5b4fc">'+(p.next_month_estimate||0)+'</div>'
+      + '<div style="font-size:.78rem;color:#64748b">Alertes estimees mois prochain</div></div>'
+      + '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;text-align:center">'
+      + '<div style="font-size:2rem;font-weight:800;color:'+(riskSchools.length>0?'#dc2626':'#16a34a')+'">'+riskSchools.length+'</div>'
+      + '<div style="font-size:.78rem;color:#64748b">Ecoles a risque identifiees</div></div></div>';
+    if (riskSchools.length) {
+      predHtml += '<h4 style="color:#fca5a5;font-size:.88rem;margin-bottom:8px">Ecoles a surveiller</h4>';
+      riskSchools.forEach(function(s) {
+        predHtml += '<div style="background:#1c1917;border:1px solid #dc2626;border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'
+          + '<span style="color:#dc2626;font-weight:800;font-size:1.1rem">&#9888;</span>'
+          + '<div><div style="color:#fca5a5;font-weight:600;font-size:.85rem">'+s.schoolId+'</div>'
+          + '<div style="color:#64748b;font-size:.78rem">'+s.total_alerts+' alertes | '+s.high_severity+' sev. elevees | Raison: '+s.reason+'</div></div></div>';
+      });
+    } else {
+      predHtml += '<p style="color:#16a34a;font-size:.85rem">Aucune ecole a risque identifiee. Tous les indicateurs sont normaux.</p>';
+    }
+    pred.innerHTML = predHtml;
+  } catch(e) {
+    kpi.innerHTML = stc('Erreur', '!', e.message, '#dc2626');
+    chart.innerHTML = ''; pred.innerHTML = '';
+  }
+}
+
+async function loadAnalyticsSectors() {
+  var city = document.getElementById('sectors-city');
+  var type = document.getElementById('sectors-type');
+  var hot = document.getElementById('sectors-hotspots');
+  city.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var data = await api('GET', '/analytics/sectors');
+    var cities = data.sectors_by_city || [];
+    if (cities.length) {
+      var cityHtml = '<div style="overflow-x:auto"><table><thead><tr><th>Ville</th><th>Nb ecoles</th><th>Signalements</th><th>Sev. moyenne</th><th>Top categorie</th></tr></thead><tbody>';
+      cities.forEach(function(c) {
+        var col = c.avg_severity >= 2 ? '#dc2626' : c.avg_severity >= 1 ? '#f59e0b' : '#16a34a';
+        cityHtml += '<tr><td style="color:#f1f5f9;font-weight:600">'+(c.city||'Non renseigne')+'</td>'
+          + '<td>'+c.school_count+'</td><td>'+c.total_reports+'</td>'
+          + '<td style="color:'+col+';font-weight:700">'+c.avg_severity.toFixed(1)+'</td>'
+          + '<td style="font-size:.82rem">'+(c.top_categories[0]?CAT_LABELS[c.top_categories[0]]||c.top_categories[0]:'-')+'</td></tr>';
+      });
+      cityHtml += '</tbody></table></div>';
+      city.innerHTML = cityHtml;
+    } else { city.innerHTML = '<p style="color:#64748b">Aucune donnee sectorielle disponible.</p>'; }
+
+    var types = data.sectors_by_type || [];
+    if (types.length) {
+      var typeHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">';
+      types.forEach(function(t) {
+        typeHtml += '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;text-align:center">'
+          + '<div style="font-size:1.4rem;font-weight:800;color:#a5b4fc">'+t.school_count+'</div>'
+          + '<div style="font-size:.88rem;font-weight:700;color:#f1f5f9;margin:4px 0">'+t.type+'</div>'
+          + '<div style="font-size:.75rem;color:#64748b">'+t.total_reports+' signalements | Sev. moy. '+t.avg_severity.toFixed(1)+'</div></div>';
+      });
+      typeHtml += '</div>';
+      type.innerHTML = typeHtml;
+    } else { type.innerHTML = '<p style="color:#64748b">Aucune donnee par type.</p>'; }
+
+    var hotspots = data.hotspots || [];
+    if (hotspots.length) {
+      var hotHtml = '';
+      hotspots.forEach(function(h) {
+        hotHtml += '<div style="background:#1c1917;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px">'
+          + '<span style="font-size:1.2rem">&#128293;</span>'
+          + '<div><div style="color:#fcd34d;font-weight:600;font-size:.85rem">'+(h.city||'Zone')+' — '+h.school_count+' ecoles</div>'
+          + '<div style="color:#64748b;font-size:.78rem">Sev. moyenne: '+h.avg_severity.toFixed(1)+' | '+h.total_reports+' signalements | Raison: '+h.reason+'</div></div></div>';
+      });
+      hot.innerHTML = hotHtml;
+    } else { hot.innerHTML = '<p style="color:#16a34a;font-size:.85rem">Aucun point chaud detecte. Bonne nouvelle !</p>'; }
+  } catch(e) { city.innerHTML = '<p style="color:#fca5a5">Erreur: '+e.message+'</p>'; }
+}
+
+async function loadAnalyticsPrevention() {
+  var kpi = document.getElementById('prevention-kpi');
+  var recs = document.getElementById('prevention-recs');
+  var risks = document.getElementById('prevention-risks');
+  kpi.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var data = await api('GET', '/analytics/prevention');
+    kpi.innerHTML =
+      stc('Score global', Math.round(data.risk_score_global||0)+'/100', data.risk_score_global>50?'Attention requise':'Situation maitrisee', data.risk_score_global>50?'#dc2626':'#16a34a');
+
+    var recommendations = data.recommendations || [];
+    if (recommendations.length) {
+      var recHtml = '';
+      recommendations.forEach(function(r) {
+        var priColors = { critical: '#dc2626', high: '#f59e0b', medium: '#3b82f6', low: '#16a34a' };
+        var priLabels = { critical: 'Critique', high: 'Haute', medium: 'Moyenne', low: 'Basse' };
+        var col = priColors[r.priority] || '#64748b';
+        recHtml += '<div style="background:#0f172a;border:1px solid '+col+';border-radius:10px;padding:16px;margin-bottom:10px">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+          + '<span style="background:'+col+';color:#fff;padding:2px 10px;border-radius:12px;font-size:.72rem;font-weight:800">'+(priLabels[r.priority]||r.priority)+'</span>'
+          + '<span style="color:#f1f5f9;font-weight:700;font-size:.9rem">'+r.category+'</span></div>'
+          + '<p style="color:#cbd5e1;font-size:.85rem;margin-bottom:8px">'+r.message+'</p>';
+        if (r.action_items && r.action_items.length) {
+          recHtml += '<div style="margin-top:6px"><div style="color:#a5b4fc;font-size:.78rem;font-weight:600;margin-bottom:4px">Actions recommandees :</div><ul style="padding-left:14px;margin:0">';
+          r.action_items.forEach(function(a) { recHtml += '<li style="color:#94a3b8;font-size:.82rem;margin-bottom:2px">'+a+'</li>'; });
+          recHtml += '</ul></div>';
+        }
+        if (r.target_schools && r.target_schools.length) {
+          recHtml += '<div style="margin-top:6px;font-size:.78rem;color:#64748b">Ecoles concernees: '+r.target_schools.join(', ')+'</div>';
+        }
+        recHtml += '</div>';
+      });
+      recs.innerHTML = recHtml;
+    } else { recs.innerHTML = '<p style="color:#16a34a;font-size:.85rem">Aucune recommandation urgente. La plateforme fonctionne normalement.</p>'; }
+
+    var riskBySchool = data.risk_by_school || [];
+    if (riskBySchool.length) {
+      var riskHtml = '<div style="overflow-x:auto"><table><thead><tr><th>Ecole</th><th>Score risque</th><th>Niveau</th></tr></thead><tbody>';
+      riskBySchool.forEach(function(s) {
+        var lv = s.risk_score > 70 ? 'Critique' : s.risk_score > 40 ? 'Modere' : 'Faible';
+        var col = s.risk_score > 70 ? '#dc2626' : s.risk_score > 40 ? '#f59e0b' : '#16a34a';
+        riskHtml += '<tr><td style="color:#f1f5f9;font-weight:600">'+s.schoolId+'</td>'
+          + '<td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:8px;background:#1e293b;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+s.risk_score+'%;background:'+col+';border-radius:4px"></div></div><span style="color:'+col+';font-weight:700;font-size:.82rem">'+s.risk_score+'</span></div></td>'
+          + '<td style="color:'+col+';font-weight:700;font-size:.82rem">'+lv+'</td></tr>';
+      });
+      riskHtml += '</tbody></table></div>';
+      risks.innerHTML = riskHtml;
+    } else { risks.innerHTML = '<p style="color:#64748b">Aucune donnee de risque.</p>'; }
+  } catch(e) { kpi.innerHTML = stc('Erreur', '!', e.message, '#dc2626'); }
+}
+
+async function exportAnalyticsData() {
+  try {
+    var data = await api('GET', '/analytics/export');
+    var blob = new Blob([JSON.stringify(data.dataset || data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'safeschool-dataset-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click(); URL.revokeObjectURL(url);
+    shTst('Dataset exporte !');
+  } catch(e) { shTst('Erreur export: '+e.message, true); }
+}
+
+async function previewExportData() {
+  var el = document.getElementById('export-preview');
+  el.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var data = await api('GET', '/analytics/export');
+    var ds = data.dataset || data;
+    el.innerHTML = '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;max-height:400px;overflow-y:auto">'
+      + '<pre style="color:#a5b4fc;font-size:.75rem;line-height:1.5;white-space:pre-wrap;word-break:break-all">'+JSON.stringify(ds, null, 2).replace(/</g,'&lt;')+'</pre></div>';
+  } catch(e) { el.innerHTML = '<p style="color:#fca5a5">'+e.message+'</p>'; }
+}
+
+// ═══════════ NOTIFICATIONS CENTER ═══════════
+async function loadNotifStats() {
+  var kpi = document.getElementById('notif-kpi');
+  var stats = document.getElementById('notif-stats');
+  var hist = document.getElementById('notif-history');
+  kpi.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var data = await api('GET', '/notify/stats');
+    kpi.innerHTML =
+      stc('Total', data.total||0, 'Notifications envoyees', '#6366f1') +
+      stc('Aujourd\'hui', data.today||0, 'Notifications du jour', '#3b82f6') +
+      stc('Echouees', data.failed||0, 'A surveiller', (data.failed||0)>0?'#dc2626':'#16a34a') +
+      stc('Types', Object.keys(data.by_type||{}).length, 'Canaux actifs', '#8b5cf6');
+
+    if (data.by_type) {
+      var typeHtml = '<h4 style="color:#a5b4fc;font-size:.88rem;margin-bottom:10px">Par type de notification</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">';
+      Object.entries(data.by_type).forEach(function(e) {
+        typeHtml += '<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;text-align:center">'
+          + '<div style="font-size:1.2rem;font-weight:800;color:#a5b4fc">'+e[1]+'</div>'
+          + '<div style="font-size:.78rem;color:#64748b">'+e[0].replace(/_/g,' ')+'</div></div>';
+      });
+      typeHtml += '</div>';
+      stats.innerHTML = typeHtml;
+    } else { stats.innerHTML = '<p style="color:#64748b">Aucune statistique disponible.</p>'; }
+
+    var histData = await api('GET', '/notify/history');
+    var notifs = histData.notifications || histData || [];
+    if (notifs.length) {
+      var hHtml = '<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Type</th><th>Destinataire</th><th>Statut</th><th>Date</th></tr></thead><tbody>';
+      (Array.isArray(notifs) ? notifs : []).slice(0, 50).forEach(function(n) {
+        var sc = n.status==='sent'?'#16a34a':n.status==='queued'?'#f59e0b':'#64748b';
+        hHtml += '<tr><td style="font-family:monospace;font-size:.75rem;color:#a5b4fc">'+(n.id||'-').slice(0,12)+'</td>'
+          + '<td>'+(n.type||'-')+'</td>'
+          + '<td style="font-size:.82rem">'+(n.recipient||n.email||'-')+'</td>'
+          + '<td style="color:'+sc+';font-weight:600">'+(n.status||'-')+'</td>'
+          + '<td style="font-size:.78rem;color:#64748b">'+fmtD(n.created_at||n.ts)+'</td></tr>';
+      });
+      hHtml += '</tbody></table></div>';
+      hist.innerHTML = hHtml;
+    } else { hist.innerHTML = '<p style="color:#64748b;font-size:.85rem">Aucune notification recente.</p>'; }
+  } catch(e) { kpi.innerHTML = stc('Erreur', '!', e.message, '#dc2626'); }
+}
+
+async function sendTestNotif() {
+  try {
+    await api('POST', '/notify/test', { email: 'test@safeschool.fr', schoolId: 'test', schoolName: 'Test' });
+    shTst('Notification test envoyee !');
+    loadNotifStats();
+  } catch(e) { shTst(e.message, true); }
+}
+
+async function generateDigest() {
+  if (!SCHOOLS.length) SCHOOLS = await api('GET', '/establishments/');
+  if (!SCHOOLS.length) { shTst('Aucun etablissement', true); return; }
+  try {
+    await api('POST', '/notify/digest', { schoolId: SCHOOLS[0].id, schoolName: SCHOOLS[0].name });
+    shTst('Digest genere !');
+  } catch(e) { shTst(e.message, true); }
+}
+
+// ═══════════ PUSH / PWA MANAGEMENT ═══════════
+async function loadPushStats() {
+  var kpiEl = document.getElementById('push-kpi');
+  var configEl = document.getElementById('push-config');
+  kpiEl.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var res = await api('GET', '/../api/push/stats');
+    kpiEl.innerHTML =
+      stc('Abonnes push', res.total || 0, 'Total enregistres', '#6366f1') +
+      stc('Actifs', res.active || 0, 'Abonnements actifs', '#16a34a') +
+      stc('Etudiants', (res.byRole || {}).student || 0, 'Abonnes eleves', '#0ea5e9') +
+      stc('Admins', ((res.byRole || {}).admin || 0) + ((res.byRole || {}).superadmin || 0), 'Abonnes admins', '#d97706');
+
+    var vapidOk = res.vapidConfigured;
+    var pushOk = res.pushReady;
+    configEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${vapidOk?'#14532d':'#450a0a'};border-radius:10px;border:1px solid ${vapidOk?'#166534':'#7f1d1d'}">
+          <span style="font-size:1.3rem">${vapidOk?'&#9989;':'&#10060;'}</span>
+          <div>
+            <div style="color:${vapidOk?'#86efac':'#fca5a5'};font-weight:700;font-size:.88rem">VAPID_PUBLIC_KEY</div>
+            <div style="color:#94a3b8;font-size:.78rem">${vapidOk?'Configure — les navigateurs peuvent s\'abonner':'Non configure — les notifications fonctionnent en mode demo'}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:${pushOk?'#14532d':'#450a0a'};border-radius:10px;border:1px solid ${pushOk?'#166534':'#7f1d1d'}">
+          <span style="font-size:1.3rem">${pushOk?'&#9989;':'&#10060;'}</span>
+          <div>
+            <div style="color:${pushOk?'#86efac':'#fca5a5'};font-weight:700;font-size:.88rem">VAPID_PRIVATE_KEY</div>
+            <div style="color:#94a3b8;font-size:.78rem">${pushOk?'Configure — l\'envoi push est actif':'Non configure — les notifications sont stockees sans envoi'}</div>
+          </div>
+        </div>
+        ${!vapidOk ? '<div style="padding:14px;background:#1e3a5f;border:1px solid #1e40af;border-radius:10px"><p style="color:#60a5fa;font-size:.82rem;line-height:1.6">Pour activer les push notifications reelles :<br>1. Generez des cles VAPID (npx web-push generate-vapid-keys)<br>2. Ajoutez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY dans les variables d\'environnement Netlify<br>3. Redéployez l\'application</p></div>' : ''}
+        <div style="padding:10px;background:#0f172a;border-radius:8px;border:1px solid #334155">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:#64748b;font-size:.78rem">Repartition par ecole</span>
+          </div>
+          ${Object.entries(res.bySchool || {}).map(function(e) {
+            return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b;font-size:.82rem"><span style="color:#cbd5e1">'+e[0]+'</span><span style="color:#a5b4fc;font-weight:700">'+e[1]+' abonnes</span></div>';
+          }).join('') || '<div style="color:#64748b;font-size:.82rem;text-align:center;padding:10px">Aucun abonne pour le moment</div>'}
+        </div>
+      </div>`;
+  } catch(e) {
+    kpiEl.innerHTML = stc('Push', 'N/A', 'Service indisponible', '#dc2626');
+    configEl.innerHTML = '<p style="color:#fca5a5;font-size:.85rem">Impossible de charger les stats push : ' + (e.message || e) + '</p>';
+  }
+}
+
+async function sendPushNotif() {
+  var title = document.getElementById('push-title').value.trim();
+  var msg = document.getElementById('push-msg').value.trim();
+  var type = document.getElementById('push-type').value;
+  var school = document.getElementById('push-school').value.trim();
+  if (!title || !msg) { shTst('Titre et message requis', true); return; }
+  try {
+    var res = await api('POST', '/../api/push/send', { title: title, message: msg, type: type, schoolId: school || undefined, urgent: type === 'urgent' });
+    shTst(res.message || ('Envoye a ' + (res.sent || 0) + ' abonne(s)'));
+    document.getElementById('push-title').value = '';
+    document.getElementById('push-msg').value = '';
+  } catch(e) { shTst('Erreur: ' + (e.message || e), true); }
+}
+
+async function sendTestPush() {
+  try {
+    var res = await api('POST', '/../api/push/send', { title: 'Test SafeSchool', message: 'Ceci est une notification de test envoyee depuis le panneau superadmin.', type: 'general' });
+    shTst(res.message || 'Test envoye');
+  } catch(e) { shTst('Erreur test: ' + (e.message || e), true); }
+}
+
+// ═══════════ MONITORING / HEALTH ═══════════
+async function loadHealth() {
+  var kpi = document.getElementById('health-kpi');
+  var checks = document.getElementById('health-checks');
+  var quality = document.getElementById('health-quality');
+  var services = document.getElementById('health-services');
+  kpi.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    var data = await api('GET', '/analytics/health');
+    var statusCol = data.status==='healthy'?'#16a34a':data.status==='warning'?'#f59e0b':'#dc2626';
+    var statusLabel = data.status==='healthy'?'Sain':data.status==='warning'?'Attention':'Degrade';
+    kpi.innerHTML =
+      stc('Statut', statusLabel, 'Etat de la plateforme', statusCol) +
+      stc('Uptime', Math.round(data.uptime_score||0)+'%', 'Score de disponibilite', (data.uptime_score||0)>80?'#16a34a':'#f59e0b') +
+      stc('Qualite', Math.round(data.data_quality_score||0)+'%', 'Score qualite donnees', (data.data_quality_score||0)>70?'#16a34a':'#f59e0b');
+
+    var ch = data.checks || [];
+    if (ch.length) {
+      var chHtml = '';
+      ch.forEach(function(c) {
+        var icon = c.status==='pass'?'&#9989;':c.status==='warn'?'&#9888;':'&#10060;';
+        var col = c.status==='pass'?'#16a34a':c.status==='warn'?'#f59e0b':'#dc2626';
+        chHtml += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#0f172a;border:1px solid '+col+';border-radius:8px;margin-bottom:6px">'
+          + '<span style="font-size:1.2rem">'+icon+'</span>'
+          + '<div style="flex:1"><div style="color:#f1f5f9;font-weight:600;font-size:.88rem">'+c.name+'</div>'
+          + '<div style="color:#64748b;font-size:.78rem">'+(c.message||c.detail||'')+'</div></div>'
+          + '<span style="color:'+col+';font-weight:700;font-size:.82rem;text-transform:uppercase">'+c.status+'</span></div>';
+      });
+      checks.innerHTML = chHtml;
+    } else { checks.innerHTML = '<p style="color:#64748b">Aucune verification disponible.</p>'; }
+
+    quality.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'
+      + '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;text-align:center">'
+      + '<div style="font-size:1.8rem;font-weight:800;color:#a5b4fc">'+Math.round(data.data_quality_score||0)+'%</div>'
+      + '<div style="font-size:.78rem;color:#64748b">Score qualite donnees</div>'
+      + '<div style="margin-top:8px;height:8px;background:#1e293b;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+Math.round(data.data_quality_score||0)+'%;background:'+((data.data_quality_score||0)>70?'#16a34a':'#f59e0b')+';border-radius:4px"></div></div></div>'
+      + '<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;text-align:center">'
+      + '<div style="font-size:1.8rem;font-weight:800;color:#a5b4fc">'+Math.round(data.uptime_score||0)+'%</div>'
+      + '<div style="font-size:.78rem;color:#64748b">Score uptime</div>'
+      + '<div style="margin-top:8px;height:8px;background:#1e293b;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+Math.round(data.uptime_score||0)+'%;background:'+((data.uptime_score||0)>80?'#16a34a':'#f59e0b')+';border-radius:4px"></div></div></div></div>';
+
+    services.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'
+      + svcCard('API Superadmin', true) + svcCard('API Etablissements', true) + svcCard('API Billing', true)
+      + svcCard('API Notifications', true) + svcCard('API Lea Stats', true) + svcCard('API Analytics', true)
+      + svcCard('Edge Functions', true) + svcCard('Supabase', true) + svcCard('Netlify Blobs', true)
+      + svcCard('Stripe', false, 'En attente config') + svcCard('SendGrid/Email', false, 'En attente config')
+      + '</div>';
+  } catch(e) { kpi.innerHTML = stc('Erreur', '!', e.message, '#dc2626'); }
+}
+
+function svcCard(name, ok, msg) {
+  var col = ok ? '#16a34a' : '#f59e0b';
+  var label = ok ? 'Operationnel' : (msg || 'A configurer');
+  return '<div style="background:#0f172a;border:1px solid '+col+';border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px">'
+    + '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0">&nbsp;</div>'
+    + '<div><div style="color:#f1f5f9;font-size:.82rem;font-weight:600">'+name+'</div>'
+    + '<div style="color:'+col+';font-size:.72rem;font-weight:600">'+label+'</div></div></div>';
 }
 
 rdQu();
