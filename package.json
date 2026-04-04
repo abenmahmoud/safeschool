@@ -1,6 +1,6 @@
 {
   "name": "safeschool-saas",
-  "version": "2.0.0",
+  "version": "6.0.0",
   "private": true,
   "description": "SafeSchool - Plateforme SaaS anti-harcèlement scolaire",
   "dependencies": {
