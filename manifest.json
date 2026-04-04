@@ -1,0 +1,140 @@
+{
+  "name": "SafeSchool — Contre le harcèlement scolaire",
+  "short_name": "SafeSchool",
+  "description": "Plateforme anti-harcèlement scolaire. Signale anonymement, apprends, et trouve de l'aide. Confidentiel et conforme RGPD.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#f5f4ff",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "categories": ["education", "social", "health"],
+  "lang": "fr",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "id": "safeschool-pwa",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/icons/icon-72.svg",
+      "sizes": "72x72",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96.svg",
+      "sizes": "96x96",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144.svg",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152.svg",
+      "sizes": "152x152",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-384.svg",
+      "sizes": "384x384",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234f46e5'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.35em' font-size='300' fill='white'%3E🛡️%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Signaler maintenant",
+      "short_name": "Signaler",
+      "description": "Faire un signalement rapidement",
+      "url": "/?page=report&source=shortcut",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%23dc2626'/%3E%3Ctext x='48' y='54' text-anchor='middle' font-size='52'%3E🚨%3C/text%3E%3C/svg%3E", "sizes": "96x96", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Parler à Léa",
+      "short_name": "Léa",
+      "description": "Discuter avec l'assistante IA",
+      "url": "/?page=assistant&source=shortcut",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%234f46e5'/%3E%3Ctext x='48' y='54' text-anchor='middle' font-size='52'%3E🤖%3C/text%3E%3C/svg%3E", "sizes": "96x96", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Urgence — 3018",
+      "short_name": "3018",
+      "description": "Appeler le 3018 immédiatement",
+      "url": "tel:3018",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%23059669'/%3E%3Ctext x='48' y='54' text-anchor='middle' font-size='52'%3E📞%3C/text%3E%3C/svg%3E", "sizes": "96x96", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Suivre mon dossier",
+      "short_name": "Mon dossier",
+      "description": "Vérifier l'état de mon signalement",
+      "url": "/?page=myreport&source=shortcut",
+      "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='20' fill='%23d97706'/%3E%3Ctext x='48' y='54' text-anchor='middle' font-size='52'%3E🔎%3C/text%3E%3C/svg%3E", "sizes": "96x96", "type": "image/svg+xml"}]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 844'%3E%3Crect width='390' height='844' fill='%23f5f4ff'/%3E%3Crect x='20' y='60' width='350' height='120' rx='16' fill='%234f46e5'/%3E%3Ctext x='195' y='125' text-anchor='middle' fill='white' font-size='24' font-weight='bold'%3ESafeSchool%3C/text%3E%3Crect x='20' y='200' width='165' height='130' rx='16' fill='white' stroke='%23e2e8f0'/%3E%3Crect x='205' y='200' width='165' height='130' rx='16' fill='white' stroke='%23e2e8f0'/%3E%3C/svg%3E",
+      "sizes": "390x844",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Accueil SafeSchool"
+    }
+  ],
+  "share_target": {
+    "action": "/?page=report&source=share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "description",
+      "url": "url"
+    }
+  },
+  "handle_links": "preferred",
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}

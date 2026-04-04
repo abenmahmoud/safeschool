@@ -1,8 +1,9 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
-const SUPERADMIN_EMAIL = 'am.ad.bm@gmail.com';
-const SUPERADMIN_PASS = 'SafeSchool2026!';
+// ── V8 Pro — Environment-driven auth ──
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
+const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
 
 function cors(body: any, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -31,19 +32,26 @@ export default async (req: Request, context: Context) => {
   const path = url.pathname.replace('/api/lea-stats', '');
   const store = getStore({ name: 'lea-stats', consistency: 'strong' });
 
-  // POST /api/lea-stats — Push stats or alerts from client (no auth needed, data is anonymous)
+  // POST /api/lea-stats — Push stats or alerts from client (anonymous but rate-limited)
   if (req.method === 'POST' && (path === '' || path === '/')) {
     try {
       const body = await req.json() as any;
 
+      if (!body.schoolId || typeof body.schoolId !== 'string') {
+        return cors({ error: 'schoolId is required' }, 400);
+      }
+
       if (body.type === 'alert' && body.schoolId) {
+        if (!body.cat || typeof body.cat !== 'string') {
+          return cors({ error: 'alert requires cat field' }, 400);
+        }
         // Store alert
         const alertsKey = `alerts/${body.schoolId}`;
-        const existing = await store.get(alertsKey, { type: 'json' }) as any[] || [];
+        const existing = await store.get(alertsKey, { type: 'json' }).catch(() => []) as any[] || [];
         existing.push({
-          cat: body.cat,
-          severity: body.severity,
-          schoolName: body.schoolName,
+          cat: String(body.cat).slice(0, 100),
+          severity: Math.min(Math.max(Number(body.severity) || 0, 0), 5),
+          schoolName: String(body.schoolName || '').slice(0, 200),
           ts: body.ts || new Date().toISOString()
         });
         // Keep last 200 alerts per school

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#4f46e5">
+<title>SafeSchool — Hors connexion</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(150deg,#eef2ff 0%,#f5f3ff 60%,#fdf4ff 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.wrap{text-align:center;max-width:380px}
+.icon{font-size:4rem;margin-bottom:20px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+h1{font-size:1.5rem;font-weight:800;color:#1e1b4b;margin-bottom:10px}
+p{color:#64748b;font-size:.95rem;line-height:1.6;margin-bottom:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.3)}
+.emergency{margin-top:30px;background:#fff;border-radius:16px;padding:20px;border:2px solid #fecaca}
+.emergency h3{color:#dc2626;font-size:.95rem;margin-bottom:10px}
+.emergency a{display:inline-block;background:#dc2626;color:#fff;padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:700;font-size:1.1rem;margin:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="icon">📡</div>
+  <h1>Tu es hors connexion</h1>
+  <p>Pas de souci ! SafeSchool fonctionne aussi sans internet pour les fonctions essentielles. Reconnecte-toi pour envoyer un signalement.</p>
+  <button class="btn" onclick="location.reload()">Réessayer la connexion</button>
+  <div class="emergency">
+    <h3>En cas d'urgence, appelle directement :</h3>
+    <a href="tel:3018">3018</a>
+    <a href="tel:15">15 SAMU</a>
+    <a href="tel:17">17 Police</a>
+  </div>
+</div>
+</body>
+</html>
