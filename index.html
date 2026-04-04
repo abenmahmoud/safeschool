@@ -566,6 +566,15 @@ a{text-decoration:none}
     J'ai un code — voir ma réponse
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
+  <div style="height:16px"></div>
+  <div class="stitle" style="padding-top:6px">Accès rapide démo</div>
+  <div style="padding:0 20px 8px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ Dashboard admin</button>
+    <button class="btn btn-ghost btn-full" onclick="openSuperAdminPage()">🌐 Superadmin</button>
+  </div>
+  <div style="padding:0 20px 4px">
+    <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 Tester le suivi dossier</button>
+  </div>
   <div style="height:20px"></div>
   <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">Signalements confidentiels · RGPD</p></div>
   <div style="height:14px"></div>
@@ -1100,6 +1109,18 @@ function go(page) {
   if (page==='education') initQuiz();
   if (page==='dashboard') renderDashboardV3();
   if (page==='help') renderSchoolContacts();
+}
+
+// ═══════════════════════════════════════════
+// TEST / DEMO SHORTCUTS
+// ═══════════════════════════════════════════
+function openAdminTestFlow(){
+  if (!currentEtab) { showEtabSelector(); return; }
+  if (adminIn) { go('dashboard'); return; }
+  showAdminLogin();
+}
+function openSuperAdminPage(){
+  window.location.href = 'superadmin.html';
 }
 
 // ═══════════════════════════════════════════
@@ -1643,7 +1664,8 @@ function renderProfile(){
   <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);margin-top:4px">
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
-    <button class="btn btn-ghost btn-full btn-sm" onclick="showAdminLogin()">⚙️ Accès administration</button>
+    <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
+    <button class="btn btn-ghost btn-full btn-sm" onclick="openSuperAdminPage()">🌐 Ouvrir le superadmin</button>
   </div>
   <div style="height:10px"></div>`;
 }
@@ -1653,15 +1675,18 @@ function renderProfile(){
 // ═══════════════════════════════════════════
 function showAdminLogin(){
   if(document.getElementById('admin-overlay'))return;
-  const etabEmail = currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr';
+  const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+  const schoolCreds = currentEtab ? creds[currentEtab.id] : null;
+  const etabEmail = schoolCreds?.email || (currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr');
   document.body.insertAdjacentHTML('beforeend',`
   <div id="admin-overlay" class="admin-wrap">
     <div class="admin-card">
       <div class="admin-logo">🔐</div>
       <h2 style="text-align:center;margin-bottom:5px">Administration</h2>
       <p style="text-align:center;margin-bottom:8px;font-size:.88rem">Réservé au personnel éducatif</p>
-      ${currentEtab?`<p style="text-align:center;margin-bottom:18px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}
-      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="" placeholder="${etabEmail}"></div>
+      ${currentEtab?`<p style="text-align:center;margin-bottom:8px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}
+      ${schoolCreds?`<p style="text-align:center;margin-bottom:14px;font-size:.76rem;color:var(--tm)">Email conseillé : <strong>${schoolCreds.email}</strong></p>`:''}
+      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="${schoolCreds?.email || ''}" placeholder="${etabEmail}"></div>
       <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="••••••••"></div>
       <button class="btn btn-p btn-full btn-lg" onclick="tryLogin()" style="margin-bottom:10px">Se connecter</button>
       <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>

@@ -241,24 +241,4 @@ window.renderDashboardV3 = async function(el) {
     + "</div></div>";
 };
 
-
-// V5-A PATCH: saveStaffReply
-window.saveStaffReply = async function(id, reply, sid){
-  try{
-    if (DB._ok()){
-      await fetch(SUPABASE_URL + "/rest/v1/reports?id=eq." + id, {
-        method:"PATCH",
-        headers: DB._h(),
-        body: JSON.stringify({ staff_reply: reply })
-      });
-    }
-  }catch(e){console.warn(e);}
-
-  var key = "ss_rpt_" + sid;
-  var list = JSON.parse(localStorage.getItem(key)||"[]");
-  var idx = list.findIndex(r=>r.id===id);
-  if(idx>-1){ list[idx].staff_reply = reply; }
-  localStorage.setItem(key, JSON.stringify(list));
-};
-
 console.log("[SafeSchool V3] dashboard-v3.js charge OK");
