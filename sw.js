@@ -3,7 +3,7 @@
 // Offline-first, Push Notifications, Background Sync, Smart Cache
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'ss-v8-pro-1';
+const CACHE_VERSION = 'ss-v8-pro-2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -62,11 +62,27 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets — cache-first with network fallback
+  // HTML / navigation requests — network-first (always show latest version)
+  const isNavigation = event.request.mode === 'navigate' ||
+    event.request.headers.get('accept')?.includes('text/html');
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request).then(cached => cached || caches.match('/offline.html')))
+    );
+    return;
+  }
+
+  // Other static assets — cache-first with background revalidation
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) {
-        // Stale-while-revalidate: return cached, refresh in background
         fetch(event.request).then(fresh => {
           if (fresh.ok) {
             caches.open(STATIC_CACHE).then(cache => cache.put(event.request, fresh));
@@ -80,11 +96,7 @@ self.addEventListener('fetch', event => {
           caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => {
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/offline.html');
-        }
-      });
+      }).catch(() => {});
     })
   );
 });

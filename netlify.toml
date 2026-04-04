@@ -58,17 +58,17 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
-# JS — immutable cache (versioned)
+# JS — short cache (filenames not hashed)
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
-# CSS — immutable cache
+# CSS — short cache (filenames not hashed)
 [[headers]]
   for = "/*.css"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 # Service Worker — always fresh
 [[headers]]

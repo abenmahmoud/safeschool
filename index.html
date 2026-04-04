@@ -2751,10 +2751,19 @@ if ('serviceWorker' in navigator) {
           }
         });
       });
-      // V8 Pro: check for updates periodically
-      setInterval(() => reg.update(), 60 * 60 * 1000);
+      // V8 Pro: check for updates every 5 minutes (was hourly)
+      setInterval(() => reg.update(), 5 * 60 * 1000);
     })
     .catch(err => console.warn('SW registration failed:', err));
+
+  // Auto-reload when a new SW takes control (ensures latest version)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      location.reload();
+    }
+  });
 
   // Listen for messages from SW
   navigator.serviceWorker.addEventListener('message', event => {
