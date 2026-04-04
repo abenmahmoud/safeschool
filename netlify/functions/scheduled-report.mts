@@ -4,11 +4,12 @@ import type { Config } from '@netlify/functions';
 const MAX_REPORTS = 90;
 
 export default async (req: Request) => {
-  const { next_run } = await req.json();
-  console.log('Generating daily report. Next run:', next_run);
+  try {
+    const body = await req.json().catch(() => ({}));
+    console.log('Generating daily report. Next run:', body.next_run || 'unknown');
 
-  const statsStore = getStore({ name: 'lea-stats', consistency: 'strong' });
-  const reportsStore = getStore({ name: 'reports-generated', consistency: 'strong' });
+    const statsStore = getStore({ name: 'lea-stats', consistency: 'strong' });
+    const reportsStore = getStore({ name: 'reports-generated', consistency: 'strong' });
 
   // --- Gather all school stats ---
   const { blobs: statBlobs } = await statsStore.list({ prefix: 'stats/' });
@@ -156,9 +157,10 @@ export default async (req: Request) => {
     recommendations
   };
 
-  // --- Store the report ---
+  // --- Store the report and set as latest ---
   const reportKey = `report-${reportDate}`;
   await reportsStore.setJSON(reportKey, report);
+  await reportsStore.setJSON('_latest', report);
   console.log(`Report stored: ${reportKey}`);
 
   // --- Prune old reports (keep last 90) ---
@@ -177,6 +179,9 @@ export default async (req: Request) => {
   }
 
   console.log(`Daily report complete. ${sortedKeys.length} reports in store.`);
+  } catch (error: any) {
+    console.error('[SCHEDULED-REPORT] Error:', error?.message || error);
+  }
 };
 
 export const config: Config = {

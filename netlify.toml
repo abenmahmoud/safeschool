@@ -22,6 +22,12 @@
   to = "/pricing.html"
   status = 200
 
+# FAQ redirect
+[[redirects]]
+  from = "/faq"
+  to = "/pricing.html#faq"
+  status = 301
+
 # Offline fallback
 [[redirects]]
   from = "/offline"

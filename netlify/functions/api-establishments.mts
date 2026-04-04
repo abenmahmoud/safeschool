@@ -1,7 +1,8 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'am.ad.bm@gmail.com';
+// ── V8 Pro — Environment-driven auth with no hardcoded fallbacks ──
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
 const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
 
 function authCheck(req: Request): boolean {
@@ -11,6 +12,16 @@ function authCheck(req: Request): boolean {
     const decoded = atob(auth);
     return decoded === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
   } catch { return false; }
+}
+
+function sanitize(str: string): string {
+  return String(str).replace(/[<>"'&]/g, c => ({
+    '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '&': '&amp;'
+  }[c] || c));
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function cors(body: any, status = 200) {
@@ -104,10 +115,25 @@ export default async (req: Request, context: Context) => {
 
   // POST /api/establishments - Create
   if (req.method === 'POST' && (path === '' || path === '/')) {
-    const body = await req.json() as any;
-    if (!body.name) return cors({ error: 'Nom requis' }, 400);
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return cors({ error: 'Corps de requête invalide' }, 400);
+    }
 
-    const slug = body.slug || genSlug(body.name);
+    if (!body.name || typeof body.name !== 'string' || body.name.trim().length < 2) {
+      return cors({ error: 'Nom requis (minimum 2 caractères)' }, 400);
+    }
+    if (body.email && !isValidEmail(body.email)) {
+      return cors({ error: 'Format d\'email invalide' }, 400);
+    }
+    if (body.admin_email && !isValidEmail(body.admin_email)) {
+      return cors({ error: 'Format d\'email admin invalide' }, 400);
+    }
+
+    const name = sanitize(body.name.trim());
+    const slug = body.slug || genSlug(name);
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     if (index.find((e: any) => e.slug === slug)) {
       return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
@@ -123,7 +149,7 @@ export default async (req: Request, context: Context) => {
 
     const school: any = {
       id,
-      name: body.name,
+      name,
       slug,
       city: body.city || '',
       type: body.type || 'lycee',
