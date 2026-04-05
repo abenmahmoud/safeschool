@@ -14,7 +14,7 @@ var TYPES = {
   verbal:    { label: "Verbal",    color: "#dc2626" },
   physique:  { label: "Physique",  color: "#ea580c" },
   cyber:     { label: "Cyber",     color: "#7c3aed" },
-  exclusion: { label: "Exclusion", color: "#0891b2" },
+  exclusion: { label: "Mise à l'écart", color: "#0891b2" },
   autre:     { label: "Autre",     color: "#64748b" }
 };
 var URGENCES = {
@@ -149,7 +149,7 @@ window.renderRptList = function(list) {
   if (!list || !list.length) return "<div style=\"text-align:center;padding:32px;color:#64748b;font-size:.85rem\">Aucun signalement</div>";
   return list.map(function(r) {
     var dt = r.created_at ? new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "";
-    return "<div class=\"rpt-item\" onclick=\"openRpt(\"" + r.id + "\")\">" + "<div class=\"rpt-row1\">" + bdgT(r.type) + bdgS(r.status) + "</div>" + "<div class=\"rpt-desc\">" + (r.description || "Aucun detail") + "</div>" + "<div class=\"rpt-row3\">" + "<span style=\"font-size:.72rem;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:10px;font-weight:600\">" + (r.classe || "NC") + "</span>" + bdgU(r.urgence) + "<span class=\"rpt-date\">" + dt + "</span>" + (r.tracking_code ? "<span style=\"font-size:.65rem;color:#94a3b8;font-family:monospace\">" + r.tracking_code + "</span>" : "") + "</div></div>";
+    return "<div class=\"rpt-item\" onclick=\"openRpt('" + r.id + "')\">" + "<div class=\"rpt-row1\">" + bdgT(r.type) + bdgS(r.status) + "</div>" + "<div class=\"rpt-desc\">" + (r.description || "Aucun detail") + "</div>" + "<div class=\"rpt-row3\">" + "<span style=\"font-size:.72rem;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:10px;font-weight:600\">" + (r.classe || "NC") + "</span>" + bdgU(r.urgence) + "<span class=\"rpt-date\">" + dt + "</span>" + (r.tracking_code ? "<span style=\"font-size:.65rem;color:#94a3b8;font-family:monospace\">" + r.tracking_code + "</span>" : "") + "</div></div>";
   }).join("");
 };
 
@@ -179,6 +179,7 @@ window.openRpt = function(id) {
     + "</div><button class=\"rpt-modal-close\" onclick=\"document.getElementById('rpt-modal').remove()\">x</button></div>"
     + "<div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase\">Description</div>"
     + "<div class=\"rpt-modal-desc\">" + (r.description || "Aucun detail") + "</div>"
+    + "<div id=\"rpt-photos-" + r.id + "\" style=\"margin-bottom:14px\"></div>"
     + "<div style=\"display:flex;gap:12px;margin-bottom:14px\">" + bdgU(r.urgence) + bdgS(r.status) + "</div>"
     + (r.staff_reply ? "<div style=\"background:#eef2ff;border:1px solid #818cf8;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#4f46e5;font-weight:700;margin-bottom:4px\">REPONSE VISIBLE AU DECLARANT</div><div style=\"font-size:.85rem;color:#312e81\">" + r.staff_reply + "</div></div>" : "")
     + (r.admin_note ? "<div style=\"background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#166534;font-weight:700;margin-bottom:4px\">NOTE INTERNE CPE</div><div style=\"font-size:.85rem;color:#15803d\">" + r.admin_note + "</div></div>" : "")
@@ -199,6 +200,27 @@ window.openRpt = function(id) {
     + "</div></div>";
   m.addEventListener("click", function(e) { if (e.target === m) m.remove(); });
   document.body.appendChild(m);
+  // Load photos for this report
+  (async function() {
+    try {
+      var photoContainer = document.getElementById("rpt-photos-" + r.id);
+      if (!photoContainer) return;
+      var res = await fetch("/api/photos/list/" + r.id);
+      if (!res.ok) return;
+      var data = await res.json();
+      if (!data.photos || data.photos.length === 0) return;
+      var html = "<div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase\">📎 Pieces jointes (" + data.photos.length + ")</div>";
+      html += "<div style=\"display:flex;gap:8px;flex-wrap:wrap\">";
+      data.photos.forEach(function(p) {
+        var url = "/api/photos/get/" + encodeURIComponent(p.key);
+        html += "<a href=\"" + url + "\" target=\"_blank\" style=\"display:block;width:80px;height:80px;border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;cursor:pointer\">"
+          + "<img src=\"" + url + "\" style=\"width:100%;height:100%;object-fit:cover\" alt=\"" + (p.name || "photo") + "\">"
+          + "</a>";
+      });
+      html += "</div>";
+      photoContainer.innerHTML = html;
+    } catch(e) { console.warn("Photos load failed:", e); }
+  })();
 };
 
 window.saveNote = async function(id, sid) {
@@ -228,10 +250,10 @@ window.chgSt = async function(id, status, sid) {
   document.getElementById("rpt-modal").remove();
   if (typeof toast === "function") toast("Statut mis a jour");
   var el = document.querySelector("[data-dash-content]");
-  if (el) window.renderDashboardV3(el);
+  if (el) window.renderDashboardV3External(el);
 };
 
-window.renderDashboardV3 = async function(el) {
+window.renderDashboardV3External = async function(el) {
   if (!el) { el = document.querySelector("[data-dash-content]") || document.querySelector(".admin-content-area") || document.querySelector("#dash-content"); if (!el) return; }
   var sid = localStorage.getItem("ss_current_etab") || "demo";
   var etabs = JSON.parse(localStorage.getItem("ss_etabs") || "[]");
