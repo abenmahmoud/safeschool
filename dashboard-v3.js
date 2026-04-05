@@ -179,6 +179,7 @@ window.openRpt = function(id) {
     + "</div><button class=\"rpt-modal-close\" onclick=\"document.getElementById('rpt-modal').remove()\">x</button></div>"
     + "<div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:5px;text-transform:uppercase\">Description</div>"
     + "<div class=\"rpt-modal-desc\">" + (r.description || "Aucun detail") + "</div>"
+    + "<div id=\"rpt-photos-" + r.id + "\" style=\"margin-bottom:14px\"></div>"
     + "<div style=\"display:flex;gap:12px;margin-bottom:14px\">" + bdgU(r.urgence) + bdgS(r.status) + "</div>"
     + (r.staff_reply ? "<div style=\"background:#eef2ff;border:1px solid #818cf8;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#4f46e5;font-weight:700;margin-bottom:4px\">REPONSE VISIBLE AU DECLARANT</div><div style=\"font-size:.85rem;color:#312e81\">" + r.staff_reply + "</div></div>" : "")
     + (r.admin_note ? "<div style=\"background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:12px\"><div style=\"font-size:.72rem;color:#166534;font-weight:700;margin-bottom:4px\">NOTE INTERNE CPE</div><div style=\"font-size:.85rem;color:#15803d\">" + r.admin_note + "</div></div>" : "")
@@ -199,6 +200,27 @@ window.openRpt = function(id) {
     + "</div></div>";
   m.addEventListener("click", function(e) { if (e.target === m) m.remove(); });
   document.body.appendChild(m);
+  // Load photos for this report
+  (async function() {
+    try {
+      var photoContainer = document.getElementById("rpt-photos-" + r.id);
+      if (!photoContainer) return;
+      var res = await fetch("/api/photos/list/" + r.id);
+      if (!res.ok) return;
+      var data = await res.json();
+      if (!data.photos || data.photos.length === 0) return;
+      var html = "<div style=\"font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase\">📎 Pieces jointes (" + data.photos.length + ")</div>";
+      html += "<div style=\"display:flex;gap:8px;flex-wrap:wrap\">";
+      data.photos.forEach(function(p) {
+        var url = "/api/photos/get/" + encodeURIComponent(p.key);
+        html += "<a href=\"" + url + "\" target=\"_blank\" style=\"display:block;width:80px;height:80px;border-radius:8px;overflow:hidden;border:2px solid #e2e8f0;cursor:pointer\">"
+          + "<img src=\"" + url + "\" style=\"width:100%;height:100%;object-fit:cover\" alt=\"" + (p.name || "photo") + "\">"
+          + "</a>";
+      });
+      html += "</div>";
+      photoContainer.innerHTML = html;
+    } catch(e) { console.warn("Photos load failed:", e); }
+  })();
 };
 
 window.saveNote = async function(id, sid) {

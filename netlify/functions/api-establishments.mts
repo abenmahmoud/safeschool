@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { randomUUID } from 'crypto';
 
 // ── V8 Extra Pro — Environment-driven auth with no hardcoded fallbacks ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
@@ -64,6 +65,7 @@ async function syncToSupabase(school: any, store: any): Promise<void> {
         'Prefer': 'resolution=merge-duplicates,return=representation'
       },
       body: JSON.stringify({
+        id: school.id,
         name: school.name,
         slug: school.slug,
         ville: school.city || null,
@@ -133,9 +135,15 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'GET' && path === '/public') {
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const active = index.filter((e: any) => e.is_active);
-    return cors(active.map((e: any) => ({
-      id: e.id, name: e.name, slug: e.slug, city: e.city, type: e.type, plan: e.plan
-    })));
+    const results = [];
+    for (const e of active) {
+      const data = await store.get(`school_${e.id}`, { type: 'json' }) as any;
+      results.push({
+        id: e.id, name: e.name, slug: e.slug, city: e.city, type: e.type, plan: e.plan,
+        supabase_id: data?.supabase_id || null
+      });
+    }
+    return cors(results);
   }
 
   // Public endpoint: admin login for a school (verifies credentials without exposing them)
@@ -223,7 +231,7 @@ export default async (req: Request, context: Context) => {
       return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
     }
 
-    const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    const id = randomUUID();
     const adminCode = genAdminCode();
     const now = new Date().toISOString();
     const plan = body.plan || 'starter';

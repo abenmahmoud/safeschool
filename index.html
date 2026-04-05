@@ -1183,7 +1183,7 @@ function normalizeReportFromDb(r){
     frequency: r.frequency || '',
     harassmentType: dbTypeToUi(r.type),
     type: r.type || null,
-    urgency: dbUrgencyToUi(r.urgency),
+    urgency: dbUrgencyToUi(r.urgence || r.urgency),
     reporterType: r.reporter_role || '',
     isAnonymous: r.is_anonymous !== false,
     reporterName: r.reporter_name || '',
@@ -1362,7 +1362,7 @@ async function loadEstablishments() {
     }
 
     etabList = apiSchools.map(s => ({
-      id: supaSchoolMap[s.slug] || s.id,
+      id: supaSchoolMap[s.slug] || s.supabase_id || s.id,
       blobId: s.id,
       name: s.name,
       slug: s.slug,
@@ -1465,9 +1465,9 @@ async function selectEstablishment(etabId) {
   const etab = etabList.find(e => e.id === etabId);
   if (!etab) return;
   currentEtab = etab;
-  localStorage.setItem('ss_current_etab', etabId);
+  localStorage.setItem('ss_current_etab', etab.id);
   // Store the plan from API data
-  if (etab.plan) localStorage.setItem('ss_plan_' + etabId, etab.plan);
+  if (etab.plan) localStorage.setItem('ss_plan_' + etab.id, etab.plan);
 
   // Load data for this establishment
   await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
@@ -1899,7 +1899,7 @@ async function submitReport(){
       description: rData.description || '',
       location: rData.location || null,
       frequency: rData.frequency || null,
-      urgency: urgencyMap[String(rData.urgency)] || 'faible',
+      urgence: urgencyMap[String(rData.urgency)] || 'faible',
       is_anonymous: rData.isAnonymous !== false,
       reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
       reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
@@ -1924,6 +1924,31 @@ async function submitReport(){
 
     if(error) throw error;
 
+    // Upload photos if any
+    if (rData.files && rData.files.length > 0 && data.id) {
+      try {
+        const photoPromises = rData.files.map(file => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = reader.result.split(',')[1];
+              resolve({ name: file.name, data: base64, type: file.type });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        });
+        const photos = await Promise.all(photoPromises);
+        await fetch('/api/photos/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_id: data.id, photos })
+        });
+      } catch(photoErr) {
+        console.warn('Photo upload failed:', photoErr);
+      }
+    }
+
     var report={
       id:data.id,
       caseNumber:data.case_number,
@@ -1936,7 +1961,7 @@ async function submitReport(){
       type:data.type,
       description:data.description,
       location:data.location,
-      urgency:data.urgency,
+      urgency:data.urgence || data.urgency,
       reporterEmail:data.reporter_email
     };
 
@@ -2762,6 +2787,7 @@ function renderReportsList(){
         <div class="ri-expand" id="re-${idx}">
           <h5>Description</h5>
           <p>${r.description||'Non renseignée'}</p>
+          <div id="inline-photos-${r.id}" class="rpt-photos-container"></div>
           ${r.location?`<h5>Lieu</h5><p>${r.location}</p>`:''}
           ${r.frequency?`<h5>Fréquence</h5><p>${{once:'Une fois',several:'Plusieurs fois',weekly:'Chaque semaine',daily:'Chaque jour'}[r.frequency]||r.frequency}</p>`:''}
           ${r.isAnonymous===false&&r.reporterName?`<h5>Déclarant</h5><p>${r.reporterName}${r.reporterClass?' · '+r.reporterClass:''}${r.reporterEmail?' · '+r.reporterEmail:''}</p>`:`<h5>Code de suivi</h5><p style="font-family:'Nunito',monospace;font-weight:900;letter-spacing:.1em;font-size:1.1rem;color:var(--p)">${r.code||'—'}</p>`}
@@ -2800,7 +2826,37 @@ function renderReportsList(){
 
 function refreshReports(){document.getElementById('dt-reports').innerHTML=renderReportsList()}
 function setFilter(s){filterStatus=s;refreshReports()}
-function toggleRI(idx){document.getElementById('ri-'+idx)?.classList.toggle('open')}
+function toggleRI(idx){
+  const el = document.getElementById('ri-'+idx);
+  if (!el) return;
+  el.classList.toggle('open');
+  // Load photos when expanding
+  if (el.classList.contains('open')) {
+    const reps = S.reports();
+    const r = reps[idx];
+    if (r && r.id) loadReportPhotos(r.id);
+  }
+}
+async function loadReportPhotos(reportId) {
+  const container = document.getElementById('inline-photos-' + reportId);
+  if (!container || container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+  try {
+    const res = await fetch('/api/photos/list/' + reportId);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.photos || data.photos.length === 0) return;
+    let html = '<h5 style="margin-top:10px">📎 Pièces jointes (' + data.photos.length + ')</h5><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">';
+    data.photos.forEach(function(p) {
+      const url = '/api/photos/get/' + encodeURIComponent(p.key);
+      html += '<a href="' + url + '" target="_blank" style="display:block;width:72px;height:72px;border-radius:8px;overflow:hidden;border:2px solid var(--border)">'
+        + '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover" alt="' + (p.name || 'photo') + '">'
+        + '</a>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch(e) { console.warn('Photos load failed:', e); }
+}
 function assignReport(idx,staffId){
   const reps=S.reports();
   const prev=reps[idx].assignedTo;
