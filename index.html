@@ -1935,14 +1935,37 @@ async function submitReport(){
     var roleMap={victim:'victime',witness:'temoin',parent:'parent',staff:'personnel'};
     var urgencyMap={1:'faible',2:'moyenne',3:'haute'};
 
-    var payload={
+    // Build description with extra context embedded
+    var fullDesc = rData.description || '';
+    var extraInfo = [];
+    if (rData.location) extraInfo.push('Lieu: ' + rData.location);
+    if (rData.frequency) extraInfo.push('Fréquence: ' + rData.frequency);
+    if (roleMap[rData.reporterType]) extraInfo.push('Rôle: ' + roleMap[rData.reporterType]);
+    if (rData.niveau) extraInfo.push('Niveau: ' + rData.niveau);
+    if (rData.ageRange) extraInfo.push('Tranche âge: ' + rData.ageRange);
+    if (rData.genre) extraInfo.push('Genre: ' + rData.genre);
+    if (rData.duree) extraInfo.push('Durée: ' + rData.duree);
+
+    // Generate a tracking code client-side as fallback if DB trigger doesn't exist
+    var genCode = 'SS-' + Array.from({length:6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*31)]).join('');
+
+    // Base payload with only guaranteed schema columns
+    var basePayload = {
       school_id: schoolId,
-      reporter_role: roleMap[rData.reporterType] || 'autre',
+      tracking_code: genCode,
       type: typeMap[rData.harassmentType] || 'autre',
-      description: rData.description || '',
+      urgence: urgencyMap[String(rData.urgency)] || 'faible',
+      description: fullDesc,
+      classe: rData.classe || null,
+      anonymous: rData.isAnonymous !== false,
+      status: 'nouveau'
+    };
+
+    // Extended payload with migration columns (v5+v6)
+    var extendedPayload = Object.assign({}, basePayload, {
+      reporter_role: roleMap[rData.reporterType] || 'autre',
       location: rData.location || null,
       frequency: rData.frequency || null,
-      urgence: urgencyMap[String(rData.urgency)] || 'faible',
       is_anonymous: rData.isAnonymous !== false,
       reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
       reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
@@ -1950,20 +1973,29 @@ async function submitReport(){
       followup_email_opt_in: !!rData.followupEmailOptIn,
       consent_accepted: true,
       consent_accepted_at: new Date().toISOString(),
-      status: 'nouveau',
       source_channel: 'form',
       niveau: rData.niveau || null,
-      classe: rData.classe || null,
       age_range: rData.ageRange || null,
       genre: rData.genre || null,
       duree: rData.duree || null
-    };
+    });
 
-    const { data, error } = await ssSupabase
-      .from('reports')
-      .insert([payload])
-      .select('*')
-      .single();
+    // Try extended insert first, fall back to base columns if schema mismatch
+    var data = null, error = null;
+    var result = await ssSupabase.from('reports').insert([extendedPayload]).select('*').single();
+    data = result.data;
+    error = result.error;
+
+    if (error && error.message && (error.message.includes('column') || error.message.includes('schema') || error.code === 'PGRST204' || error.code === '42703')) {
+      console.warn('Extended insert failed, retrying with base columns:', error.message);
+      // Embed extra context into description for base-only insert
+      if (extraInfo.length > 0) {
+        basePayload.description = fullDesc + '\n\n--- Infos complémentaires ---\n' + extraInfo.join('\n');
+      }
+      var retryResult = await ssSupabase.from('reports').insert([basePayload]).select('*').single();
+      data = retryResult.data;
+      error = retryResult.error;
+    }
 
     if(error) {
       console.error('Supabase insert error:', JSON.stringify(error));
@@ -1972,8 +2004,13 @@ async function submitReport(){
       } else if (error.message && error.message.includes('foreign key')) {
         toast("L'établissement n'est pas encore synchronisé. Rechargez la page et réessayez.", 'err');
       } else {
-        throw error;
+        toast("Erreur: " + (error.message || "Impossible d'enregistrer le signalement"), 'err');
       }
+      return;
+    }
+
+    if (!data) {
+      toast("Erreur: aucune donnée retournée par le serveur", 'err');
       return;
     }
 
@@ -2004,7 +2041,7 @@ async function submitReport(){
 
     var report={
       id:data.id,
-      caseNumber:data.case_number,
+      caseNumber:data.case_number || null,
       trackingCode:data.tracking_code,
       status:data.status,
       staffReply:data.staff_reply || '',
@@ -2013,20 +2050,20 @@ async function submitReport(){
       createdAt:data.created_at,
       type:data.type,
       description:data.description,
-      location:data.location,
-      urgency:data.urgence || data.urgency,
-      reporterEmail:data.reporter_email
+      location:data.location || null,
+      urgency:data.urgence || 'faible',
+      reporterEmail:data.reporter_email || null
     };
 
     cachedReports.unshift(report);
-    await S.addLog(`Nouveau signalement ${data.case_number || data.id}`, data.id);
+    try { await S.addLog(`Nouveau signalement ${data.case_number || data.tracking_code || data.id}`, data.id); } catch(e) { console.warn('Log failed:', e); }
     // Save to user's report history
     if (data.tracking_code) saveToReportHistory(data.tracking_code, data.case_number);
     // Notify admin (best effort, non-blocking)
     fetch('/api/notify/new-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schoolId: schoolId, reportId: data.id, urgency: data.urgency, type: data.type })
+      body: JSON.stringify({ schoolId: schoolId, reportId: data.id, urgency: data.urgence || 'faible', type: data.type })
     }).catch(() => {});
     if(rData.reporterType==='witness'){
       const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
@@ -2090,14 +2127,36 @@ async function lookupCode(){
     const code = raw.startsWith('SS-') ? raw : (raw.match(/^[A-Z]/) ? 'SS-' + raw.replace(/^SS-?/,'') : raw);
     let schoolFilter = currentEtab ? `&school_id=eq.${currentEtab.id}` : '';
 
-    // Search by tracking_code
-    let { data, error } = await ssSupabase
-      .from('reports')
-      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgence, description')
-      .or(`tracking_code.eq.${code},case_number.eq.${raw}`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Search by tracking_code - use select('*') to avoid column-not-found errors
+    let data = null, error = null;
+    try {
+      let result = await ssSupabase
+        .from('reports')
+        .select('*')
+        .or(`tracking_code.eq.${code},case_number.eq.${raw}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = result.data;
+      error = result.error;
+    } catch(e) { error = e; }
+
+    // If select('*') fails (unlikely), try with minimal columns
+    if (error) {
+      console.warn('Full select failed, trying minimal:', error.message);
+      try {
+        let result2 = await ssSupabase
+          .from('reports')
+          .select('id, tracking_code, status, created_at, type, urgence, description, admin_note')
+          .or(`tracking_code.eq.${code}`)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = result2.data;
+        error = result2.error;
+      } catch(e2) { error = e2; }
+    }
+
     if(error) throw error;
     if(!data){
       el.innerHTML=`
@@ -2131,6 +2190,10 @@ async function lookupCode(){
         <div class="sc-reply">
           <h5>💬 Réponse de l'équipe</h5>
           <p>${data.staff_reply}</p>
+        </div>`:data.admin_note?`
+        <div class="sc-reply">
+          <h5>💬 Note de l'équipe</h5>
+          <p>${data.admin_note}</p>
         </div>`:`
         <div style="background:var(--bg);border-radius:var(--r12);padding:14px;text-align:center;margin-bottom:12px">
           <p style="font-size:.86rem">⏳ L'équipe n'a pas encore publié de réponse visible.</p>

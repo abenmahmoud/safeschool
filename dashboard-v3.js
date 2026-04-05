@@ -149,7 +149,7 @@ window.renderRptList = function(list) {
   if (!list || !list.length) return "<div style=\"text-align:center;padding:32px;color:#64748b;font-size:.85rem\">Aucun signalement</div>";
   return list.map(function(r) {
     var dt = r.created_at ? new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "";
-    return "<div class=\"rpt-item\" onclick=\"openRpt(\"" + r.id + "\")\">" + "<div class=\"rpt-row1\">" + bdgT(r.type) + bdgS(r.status) + "</div>" + "<div class=\"rpt-desc\">" + (r.description || "Aucun detail") + "</div>" + "<div class=\"rpt-row3\">" + "<span style=\"font-size:.72rem;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:10px;font-weight:600\">" + (r.classe || "NC") + "</span>" + bdgU(r.urgence) + "<span class=\"rpt-date\">" + dt + "</span>" + (r.tracking_code ? "<span style=\"font-size:.65rem;color:#94a3b8;font-family:monospace\">" + r.tracking_code + "</span>" : "") + "</div></div>";
+    return "<div class=\"rpt-item\" onclick=\"openRpt('" + r.id + "')\">" + "<div class=\"rpt-row1\">" + bdgT(r.type) + bdgS(r.status) + "</div>" + "<div class=\"rpt-desc\">" + (r.description || "Aucun detail") + "</div>" + "<div class=\"rpt-row3\">" + "<span style=\"font-size:.72rem;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:10px;font-weight:600\">" + (r.classe || "NC") + "</span>" + bdgU(r.urgence) + "<span class=\"rpt-date\">" + dt + "</span>" + (r.tracking_code ? "<span style=\"font-size:.65rem;color:#94a3b8;font-family:monospace\">" + r.tracking_code + "</span>" : "") + "</div></div>";
   }).join("");
 };
 
