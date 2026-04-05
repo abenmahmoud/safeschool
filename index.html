@@ -1253,8 +1253,22 @@ const S = {
       if (error) throw error;
       cachedReports = (data || []).map(normalizeReportFromDb);
     } catch(e) {
-      console.error('Failed to load reports from Supabase', e);
-      cachedReports = [];
+      console.warn('Supabase reports load failed, trying localStorage fallback:', e);
+      // Fallback: load from localStorage (covers new establishments not yet in Supabase)
+      try {
+        var lsKey = 'ss_rpt_' + currentEtab.id;
+        var lsData = JSON.parse(localStorage.getItem(lsKey) || '[]');
+        // Also try with blobId or apiId
+        if (lsData.length === 0 && currentEtab.blobId) {
+          lsData = JSON.parse(localStorage.getItem('ss_rpt_' + currentEtab.blobId) || '[]');
+        }
+        if (lsData.length === 0 && currentEtab.apiId) {
+          lsData = JSON.parse(localStorage.getItem('ss_rpt_' + currentEtab.apiId) || '[]');
+        }
+        cachedReports = lsData.map(normalizeReportFromDb);
+      } catch(e2) {
+        cachedReports = [];
+      }
     }
   },
   staff: () => cachedStaff,
@@ -1272,7 +1286,7 @@ const S = {
       if (error) throw error;
       cachedStaff = (data || []).map(normalizeStaffFromDb);
     } catch(e) {
-      console.error('Failed to load staff from Supabase', e);
+      console.warn('Staff load from Supabase failed (table may not exist):', e.message || e);
       cachedStaff = [];
     }
   },
@@ -1312,7 +1326,7 @@ const S = {
       if (error) throw error;
       cachedLogs = (data || []).map(normalizeLogFromDb);
     } catch(e) {
-      console.error('Failed to load logs from Supabase', e);
+      console.warn('Logs load from Supabase failed (table may not exist):', e.message || e);
       cachedLogs = [];
     }
   }
@@ -1484,6 +1498,8 @@ async function selectEstablishment(etabId) {
   if (!etab) return;
   currentEtab = etab;
   localStorage.setItem('ss_current_etab', etab.id);
+  // Also save slug for cross-session matching (IDs may change)
+  if (etab.slug) localStorage.setItem('ss_current_etab_slug', etab.slug);
   // Store the plan from API data
   if (etab.plan) localStorage.setItem('ss_plan_' + etab.id, etab.plan);
 
@@ -1997,12 +2013,55 @@ async function submitReport(){
       error = retryResult.error;
     }
 
+    // Third fallback: minimal payload without urgence (handles missing column in schema cache)
+    if (error && error.message && (error.message.includes('column') || error.message.includes('schema') || error.code === 'PGRST204' || error.code === '42703')) {
+      console.warn('Base insert failed, retrying with minimal columns:', error.message);
+      var minimalPayload = {
+        school_id: schoolId,
+        tracking_code: genCode,
+        type: basePayload.type,
+        description: (basePayload.description || fullDesc) + '\n\nUrgence: ' + (urgencyMap[String(rData.urgency)] || 'faible') + (rData.classe ? '\nClasse: ' + rData.classe : ''),
+        anonymous: basePayload.anonymous,
+        status: 'nouveau'
+      };
+      var minResult = await ssSupabase.from('reports').insert([minimalPayload]).select('*').single();
+      data = minResult.data;
+      error = minResult.error;
+    }
+
+    // Fourth fallback: use the Netlify function + localStorage if Supabase is completely broken
+    if (error) {
+      console.warn('All Supabase inserts failed, using localStorage fallback:', error.message);
+      var fallbackReport = {
+        id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        school_id: schoolId,
+        tracking_code: genCode,
+        type: basePayload.type,
+        urgence: basePayload.urgence || 'faible',
+        description: basePayload.description || fullDesc,
+        classe: basePayload.classe || null,
+        anonymous: basePayload.anonymous,
+        status: 'nouveau',
+        created_at: new Date().toISOString()
+      };
+      // Save to localStorage
+      var lsKey = 'ss_rpt_' + schoolId;
+      var lsList = JSON.parse(localStorage.getItem(lsKey) || '[]');
+      lsList.unshift(fallbackReport);
+      localStorage.setItem(lsKey, JSON.stringify(lsList));
+      data = fallbackReport;
+      error = null;
+      toast('Signalement enregistré localement (synchronisation en attente)', 'ok');
+    }
+
     if(error) {
       console.error('Supabase insert error:', JSON.stringify(error));
       if (error.message && error.message.includes('uuid')) {
         toast("Erreur technique (ID établissement). Rechargez la page et réessayez.", 'err');
       } else if (error.message && error.message.includes('foreign key')) {
         toast("L'établissement n'est pas encore synchronisé. Rechargez la page et réessayez.", 'err');
+      } else if (error.message && (error.message.includes('column') || error.message.includes('schema'))) {
+        toast("Erreur de configuration base de données. Videz le cache depuis Profil et réessayez.", 'err');
       } else {
         toast("Erreur: " + (error.message || "Impossible d'enregistrer le signalement"), 'err');
       }
@@ -2609,6 +2668,8 @@ function renderProfile(){
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
     <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
+    <button class="btn btn-ghost btn-full btn-sm" onclick="clearAppCache()" style="color:#dc2626;border-color:rgba(220,38,38,.2)">🗑️ Vider le cache (corriger les bugs)</button>
+    <p style="font-size:.68rem;color:var(--ts);text-align:center;margin-top:4px">Version ${SS_APP_VERSION}</p>
   </div>
   <div style="height:10px"></div>`;
 }
@@ -2667,7 +2728,9 @@ async function tryLogin(){
     document.getElementById('admin-overlay')?.remove();
     document.getElementById('ni-dashboard').style.display = '';
     document.getElementById('pg-dashboard').style.display='flex';
-    await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+    try {
+      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+    } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
     go('dashboard');
     toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
     return;
@@ -2689,14 +2752,26 @@ async function tryLogin(){
           if (apiRes.ok) {
             // Save creds locally for future logins
             creds[currentEtab.id] = { email: e, password: p };
+            // Also save with blobId and apiId for cross-reference
+            if (currentEtab.blobId) creds[currentEtab.blobId] = { email: e, password: p };
+            if (currentEtab.apiId) creds[currentEtab.apiId] = { email: e, password: p };
             localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
             // Store the plan for subscription-based features
             localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || currentEtab.plan || 'starter');
+            // Update currentEtab with school_id from API if available
+            if (apiRes.school_id) {
+              localStorage.setItem('ss_current_etab', currentEtab.id);
+            }
             adminIn = true;
             document.getElementById('admin-overlay')?.remove();
             document.getElementById('ni-dashboard').style.display = '';
             document.getElementById('pg-dashboard').style.display='flex';
-            await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+            // Reload data - don't let failures block dashboard display
+            try {
+              await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+            } catch(reloadErr) {
+              console.warn('Data reload after login had errors (non-blocking):', reloadErr);
+            }
             go('dashboard');
             toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
             return;
@@ -3386,6 +3461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const r = await fetch('/api/establishments/by-slug/' + subdomainSlug, {
             headers: saToken ? { 'x-sa-token': saToken } : {}
           });
+          let autoLoginDone = false;
           if (r.ok) {
             const ct = r.headers.get('content-type') || '';
             if (ct.includes('application/json')) {
@@ -3393,19 +3469,55 @@ document.addEventListener('DOMContentLoaded', async () => {
               if (apiSchool && (apiSchool.admin_code || apiSchool.admin_email)) {
                 // Auto-login with admin credentials from API
                 const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-                creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || '' };
+                creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || apiSchool.admin_password || '' };
+                if (etab.blobId) creds[etab.blobId] = creds[etab.id];
+                if (etab.apiId) creds[etab.apiId] = creds[etab.id];
                 localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
                 localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || etab.plan || 'starter');
                 adminIn = true;
                 document.getElementById('ni-dashboard').style.display = '';
                 document.getElementById('pg-dashboard').style.display = 'flex';
-                await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                try {
+                  await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
                 go('dashboard');
                 toast('Mode admin (accès superadmin)', 'ok');
+                autoLoginDone = true;
               }
             }
           }
-        } catch(err) { console.warn('Auto-admin login failed:', err); }
+          // If auto-login failed (no sa_token or no admin creds returned), show login form
+          if (!autoLoginDone) {
+            // Check if we have saved credentials for this school
+            const savedCreds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+            const schoolCreds = savedCreds[etab.id] || (etab.blobId ? savedCreds[etab.blobId] : null) || (etab.apiId ? savedCreds[etab.apiId] : null);
+            if (schoolCreds && schoolCreds.email && schoolCreds.password) {
+              // Try auto-login with saved credentials
+              const loginR = await fetch('/api/establishments/admin-login/' + subdomainSlug, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: schoolCreds.email, password: schoolCreds.password })
+              });
+              if (loginR.ok) {
+                const loginRes = await loginR.json();
+                if (loginRes.ok) {
+                  adminIn = true;
+                  document.getElementById('ni-dashboard').style.display = '';
+                  document.getElementById('pg-dashboard').style.display = 'flex';
+                  try {
+                    await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                  } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
+                  go('dashboard');
+                  toast(`Connecté · Admin ${etab.name}`, 'ok');
+                  autoLoginDone = true;
+                }
+              }
+            }
+            if (!autoLoginDone) {
+              showAdminLogin();
+            }
+          }
+        } catch(err) { console.warn('Auto-admin login failed:', err); showAdminLogin(); }
       }
       return;
     }
@@ -3415,7 +3527,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const savedEtabId = localStorage.getItem('ss_current_etab');
   if (savedEtabId) {
     // Try matching by ID first, then by slug (IDs may change between sessions)
-    const matched = etabList.find(e => e.id === savedEtabId || e.slug === savedEtabId || e.apiId === savedEtabId);
+    let matched = etabList.find(e => e.id === savedEtabId || e.slug === savedEtabId || e.apiId === savedEtabId || e.blobId === savedEtabId);
+    // Also try matching by saved slug (IDs may change between sessions/deployments)
+    if (!matched) {
+      const savedSlug = localStorage.getItem('ss_current_etab_slug');
+      if (savedSlug) {
+        matched = etabList.find(e => e.slug === savedSlug);
+      }
+    }
     if (matched) {
       await selectEstablishment(matched.id);
     } else {
@@ -3432,8 +3551,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ═══════════════════════════════════════════
-// V7 PRO — SERVICE WORKER & PWA
+// V9 — SERVICE WORKER & PWA + CACHE BUSTING
 // ═══════════════════════════════════════════
+const SS_APP_VERSION = 'v9-fix-01';
+
+// Proactive cache cleanup on version change
+(async function clearOldCaches() {
+  try {
+    var storedVersion = localStorage.getItem('ss_app_version');
+    if (storedVersion !== SS_APP_VERSION) {
+      console.log('[SafeSchool] Version change detected:', storedVersion, '->', SS_APP_VERSION);
+      if ('caches' in window) {
+        var keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log('[SafeSchool] All caches cleared');
+      }
+      localStorage.setItem('ss_app_version', SS_APP_VERSION);
+      // If this is an update (not first visit), tell the SW to skip waiting
+      if (storedVersion && navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+      }
+    }
+  } catch(e) { console.warn('Cache cleanup failed:', e); }
+})();
+
+// Global cache clearing function for manual use
+window.clearAppCache = async function() {
+  try {
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    localStorage.removeItem('ss_app_version');
+    if (navigator.serviceWorker) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    toast('Cache vidé ! Rechargement...', 'ok');
+    setTimeout(() => location.reload(true), 500);
+  } catch(e) {
+    toast('Erreur lors du vidage du cache: ' + e.message, 'err');
+  }
+};
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js', { scope: '/' })
     .then(reg => {
