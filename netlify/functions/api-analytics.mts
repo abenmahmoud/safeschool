@@ -194,18 +194,17 @@ async function handleTrends(): Promise<Response> {
     ? Math.round(((currentMonthCount - prevMonthCount) / prevMonthCount) * 100)
     : 0;
 
-  // Peak hours: top 3
+  // Peak hours: top 3 (return just hour numbers)
   const peakHours = Object.entries(hourCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-    .map(([h, count]) => ({ hour: Number(h), count }));
+    .map(([h]) => Number(h));
 
-  // Peak days: top 3
-  const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  // Peak days: top 3 (return just day indices)
   const peakDays = Object.entries(dayCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-    .map(([d, count]) => ({ day: dayNames[Number(d)], count }));
+    .map(([d]) => Number(d));
 
   // Predictions: estimate next month based on trend
   const monthValues = Object.values(alertsByMonth);
@@ -232,7 +231,13 @@ async function handleTrends(): Promise<Response> {
     .filter(([, v]) => v.highSev >= 3 || v.total >= 10)
     .sort((a, b) => b[1].highSev - a[1].highSev)
     .slice(0, 10)
-    .map(([id, v]) => ({ school_id: id, name: v.name, alerts_30d: v.total, high_severity: v.highSev }));
+    .map(([id, v]) => ({
+      schoolId: id,
+      name: v.name,
+      total_alerts: v.total,
+      high_severity: v.highSev,
+      reason: v.highSev >= 3 ? 'Severite elevee recurrente' : 'Volume eleve d\'alertes',
+    }));
 
   return cors({
     trends: {
@@ -240,6 +245,7 @@ async function handleTrends(): Promise<Response> {
       monthly_change_pct: monthlyChangePct,
       peak_hours: peakHours,
       peak_days: peakDays,
+      hourly_distribution: hourCounts,
     },
     predictions: {
       next_month_estimate: nextMonthEstimate,
@@ -303,8 +309,8 @@ async function handleSectors(): Promise<Response> {
       city,
       school_count: citySchools.length,
       total_reports: totalReports,
-      top_categories: topCategories,
-      average_severity: severityCount > 0 ? Math.round((totalSeverity / severityCount) * 100) / 100 : 0,
+      top_categories: topCategories.map(t => t.category),
+      avg_severity: severityCount > 0 ? Math.round((totalSeverity / severityCount) * 100) / 100 : 0,
     };
   });
 
@@ -334,28 +340,29 @@ async function handleSectors(): Promise<Response> {
     const topCategories = Object.entries(catCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([cat, count]) => ({ category: cat, count }));
+      .map(([cat]) => cat);
 
     return {
       type,
       school_count: typeSchools.length,
       total_reports: totalReports,
       top_categories: topCategories,
-      average_severity: severityCount > 0 ? Math.round((totalSeverity / severityCount) * 100) / 100 : 0,
+      avg_severity: severityCount > 0 ? Math.round((totalSeverity / severityCount) * 100) / 100 : 0,
     };
   });
 
   // Hotspots: cities with highest severity and report density
   const hotspots = sectorsByCity
-    .filter((s) => s.average_severity >= 1.5 || s.total_reports >= 5)
-    .sort((a, b) => b.average_severity - a.average_severity)
+    .filter((s) => s.avg_severity >= 1.5 || s.total_reports >= 5)
+    .sort((a, b) => b.avg_severity - a.avg_severity)
     .slice(0, 10)
     .map((s) => ({
       city: s.city,
       school_count: s.school_count,
       total_reports: s.total_reports,
-      average_severity: s.average_severity,
-      top_category: s.top_categories[0]?.category || 'N/A',
+      avg_severity: s.avg_severity,
+      top_category: s.top_categories[0] || 'N/A',
+      reason: s.avg_severity >= 2 ? 'Severite elevee' : 'Volume important de signalements',
     }));
 
   return cors({
@@ -393,7 +400,7 @@ async function handlePrevention(): Promise<Response> {
 
   // Per-school risk analysis
   const riskBySchool: Array<{
-    school_id: string;
+    schoolId: string;
     name: string;
     risk_score: number;
     top_issue: string;
@@ -429,7 +436,7 @@ async function handlePrevention(): Promise<Response> {
     const topIssue = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'aucun';
 
     riskBySchool.push({
-      school_id: school.id,
+      schoolId: school.id,
       name: school.name,
       risk_score: riskScore,
       top_issue: topIssue,
