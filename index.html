@@ -17,25 +17,29 @@
 <meta property="og:type" content="website">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Nunito:wght@600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --p: #4f46e5; --p2: #6366f1; --p3: #818cf8; --pbg: #eef2ff; --pdark: #3730a3;
+  --p: #2563EB; --p2: #3b82f6; --p3: #60a5fa; --pbg: #eff6ff; --pdark: #1d4ed8;
   --g: #059669; --g2: #10b981; --gbg: #ecfdf5;
   --r: #dc2626; --r2: #ef4444; --rbg: #fef2f2;
   --a: #d97706; --abg: #fffbeb;
   --sky: #0ea5e9; --skybg: #f0f9ff;
-  --bg: #f5f4ff; --surface: #fff; --border: #e2e8f0;
-  --t: #1e1b4b; --tm: #64748b; --ts: #94a3b8;
+  --bg: #FFFFFF; --surface: #fff; --border: #e5e7eb;
+  --bg2: #F7F7F7;
+  --t: #111827; --tm: #6b7280; --ts: #9ca3af;
   --nav: 68px; --safe: env(safe-area-inset-bottom,0px);
   --r8: 8px; --r12: 12px; --r16: 16px; --r20: 20px; --r24: 24px;
-  --s1: 0 1px 4px rgba(79,70,229,.07),0 1px 2px rgba(79,70,229,.04);
-  --s2: 0 4px 16px rgba(79,70,229,.11),0 2px 6px rgba(79,70,229,.05);
-  --s3: 0 10px 40px rgba(79,70,229,.16),0 4px 12px rgba(79,70,229,.08);
+  --s1: 0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);
+  --s2: 0 4px 12px rgba(0,0,0,.06),0 2px 4px rgba(0,0,0,.03);
+  --s3: 0 8px 30px rgba(0,0,0,.08),0 4px 10px rgba(0,0,0,.04);
+  --font-body: 'Inter','DM Sans',system-ui,-apple-system,sans-serif;
+  --font-heading: 'Nunito','Inter',sans-serif;
+  --focus-ring: 0 0 0 3px rgba(37,99,235,.35);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
-h1,h2,h3,h4{font-family:'Nunito',sans-serif;font-weight:800;line-height:1.2}
+html,body{font-family:var(--font-body);background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-heading);font-weight:800;line-height:1.2}
 h1{font-size:clamp(1.55rem,5vw,2.1rem)}
 h2{font-size:clamp(1.25rem,4vw,1.6rem)}
 h3{font-size:1.05rem}
@@ -302,16 +306,21 @@ a{text-decoration:none}
 .ci-info p{font-size:.77rem;color:var(--tm)}
 .ci-num{font-family:'Nunito',sans-serif;font-weight:900;font-size:1.25rem;color:var(--p);margin-left:auto}
 
-/* ── V7 PRO — DARK MODE ── */
+/* ── V9 — DARK MODE (Notion-like) ── */
 html.dark {
-  --bg: #0f172a; --surface: #1e293b; --border: #334155;
-  --t: #f1f5f9; --tm: #94a3b8; --ts: #64748b;
-  --pbg: rgba(99,102,241,.15); --gbg: rgba(16,185,129,.15);
-  --rbg: rgba(220,38,38,.15); --abg: rgba(217,119,6,.15);
-  --skybg: rgba(14,165,233,.15);
+  --bg: #191919; --surface: #262626; --border: #363636;
+  --bg2: #1f1f1f;
+  --t: #F9FAFB; --tm: #a1a1aa; --ts: #71717a;
+  --pbg: rgba(37,99,235,.12); --gbg: rgba(16,185,129,.12);
+  --rbg: rgba(220,38,38,.12); --abg: rgba(217,119,6,.12);
+  --skybg: rgba(14,165,233,.12);
+  --s1: 0 1px 3px rgba(0,0,0,.2);
+  --s2: 0 4px 12px rgba(0,0,0,.25);
+  --s3: 0 8px 30px rgba(0,0,0,.35);
+  --focus-ring: 0 0 0 3px rgba(96,165,250,.4);
 }
 html.dark body { background: var(--bg); color: var(--t); }
-html.dark .bnav { background: rgba(15,23,42,.97); border-top-color: #334155; }
+html.dark .bnav { background: rgba(25,25,25,.97); border-top-color: var(--border); }
 html.dark .card, html.dark .cbtn, html.dark .fi, html.dark .fta, html.dark .fsel,
 html.dark .acc-item, html.dark .ri, html.dark .staff-card, html.dark .msg.b .mb,
 html.dark .ci-item, html.dark .qo, html.dark .rpt-item, html.dark .kpi,
@@ -319,25 +328,61 @@ html.dark .etab-card, html.dark .chat-in, html.dark .search-in,
 html.dark .ac, html.dark .kpi-card {
   background: var(--surface); color: var(--t); border-color: var(--border);
 }
-html.dark .fi, html.dark .fta, html.dark .fsel { color: var(--t); background: #0f172a; }
-html.dark .welcome { background: linear-gradient(150deg,#1e1b4b 0%,#1e293b 100%); }
-html.dark .chat-in-wrap { background: #1e293b; border-top-color: #334155; }
-html.dark .chat-head { background: #1e293b; border-bottom-color: #334155; }
-html.dark .chat-disc { background: rgba(217,119,6,.15); border-bottom-color: rgba(217,119,6,.2); color: #fbbf24; }
+html.dark .fi, html.dark .fta, html.dark .fsel { color: var(--t); background: #1f1f1f; }
+html.dark .welcome { background: linear-gradient(150deg,#1a1a2e 0%,#191919 100%); }
+html.dark .chat-in-wrap { background: var(--surface); border-top-color: var(--border); }
+html.dark .chat-head { background: var(--surface); border-bottom-color: var(--border); }
+html.dark .chat-disc { background: rgba(217,119,6,.12); border-bottom-color: rgba(217,119,6,.15); color: #fbbf24; }
 html.dark .tabs { background: var(--bg); }
-html.dark .toast.info { background: #312e81; }
-html.dark .modal { background: #1e293b; }
-html.dark .modal-overlay { background: rgba(15,23,42,.7); }
-html.dark .admin-wrap { background: linear-gradient(135deg,#0f172a,#1e1b4b,#312e81); }
-html.dark .admin-card { background: #1e293b; }
+html.dark .toast.info { background: #262626; }
+html.dark .modal { background: var(--surface); }
+html.dark .modal-overlay { background: rgba(0,0,0,.6); }
+html.dark .admin-wrap { background: linear-gradient(135deg,#0f0f0f,#1a1a2e,#191919); }
+html.dark .admin-card { background: var(--surface); }
 html.dark .emcard { background: linear-gradient(135deg,#7f1d1d,#991b1b); }
-html.dark .flink { background: var(--surface); border-color: rgba(99,102,241,.2); }
+html.dark .flink { background: var(--surface); border-color: rgba(37,99,235,.15); }
 html.dark .kpi-num, html.dark .donut-n { color: var(--t); }
-html.dark img { opacity: .9; }
+html.dark img { opacity: .92; }
 
 /* ── V7 PRO — SMOOTH TRANSITIONS ── */
 html { transition: background-color .3s ease, color .3s ease; }
 .page { transition: opacity .2s ease; }
+
+/* ── V9 — ACCESSIBILITY (WCAG 2.1 AA) ── */
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--p); outline-offset: 2px; box-shadow: var(--focus-ring);
+}
+.skip-link { position: absolute; top: -40px; left: 0; background: var(--p); color: #fff; padding: 8px 16px; z-index: 9999; font-weight: 600; border-radius: 0 0 8px 0; transition: top .2s; }
+.skip-link:focus { top: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.ecall, .callbtn, .ci-item { min-height: 44px; min-width: 44px; }
+.ni { min-height: 44px; }
+/* High-contrast badge text */
+.badge, .bn, .bi, .br, .ba, .bu { font-weight: 700; }
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── V9 — LANGUAGE PICKER ── */
+.lang-picker { display: flex; gap: 3px; background: rgba(37,99,235,.06); border: 1.5px solid rgba(37,99,235,.12); border-radius: 20px; padding: 2px; flex-wrap: wrap; }
+.lang-picker button { padding: 4px 10px; border-radius: 16px; border: none; font-size: .7rem; font-weight: 700; cursor: pointer; transition: .2s; background: transparent; color: var(--tm); white-space: nowrap; min-height: 28px; }
+.lang-picker button.active { background: var(--p); color: #fff; }
+.lang-picker button:hover:not(.active) { background: rgba(37,99,235,.08); }
+
+/* ── V9 — RGPD/COMPLIANCE PAGES ── */
+.compliance-page { padding: 24px 20px 80px; max-width: 600px; margin: 0 auto; }
+.compliance-page h1 { font-size: 1.5rem; margin-bottom: 16px; }
+.compliance-page h2 { font-size: 1.1rem; margin-top: 24px; margin-bottom: 10px; color: var(--t); }
+.compliance-page p { font-size: .9rem; line-height: 1.7; color: var(--tm); margin-bottom: 12px; }
+.compliance-page ul { padding-left: 20px; margin-bottom: 12px; }
+.compliance-page ul li { font-size: .88rem; color: var(--tm); line-height: 1.6; margin-bottom: 6px; }
+.compliance-page .gdpr-action { display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r12); margin-bottom: 12px; cursor: pointer; transition: .2s; }
+.compliance-page .gdpr-action:hover { border-color: var(--p); background: var(--pbg); }
+.compliance-page .gdpr-action .ga-icon { font-size: 1.5rem; flex-shrink: 0; }
+.compliance-page .gdpr-action .ga-info h4 { font-size: .92rem; font-weight: 700; color: var(--t); margin-bottom: 2px; }
+.compliance-page .gdpr-action .ga-info p { font-size: .8rem; color: var(--tm); margin-bottom: 0; }
 
 /* ── V7 PRO — ENHANCED ANIMATIONS ── */
 @keyframes slideInRight { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
@@ -561,19 +606,19 @@ html.dark .dm-switch::after { left:25px; }
 .rpt-modal-desc{background:#f8fafc;border-radius:12px;padding:12px;font-size:.88rem;color:#475569;line-height:1.6;margin:12px 0}
 .st-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .st-btn{padding:9px 16px;border-radius:20px;font-size:.82rem;font-weight:700;border:none;cursor:pointer;transition:.15s}
-</style></head>
+</style>
+<script src="/i18n-translations.js"></script>
+</head>
 <body>
-<div id="app">
+<a href="#app" class="skip-link" tabindex="0">Aller au contenu principal</a>
+<div id="app" role="main">
 
 <!-- ════ ESTABLISHMENT SELECTOR ════ -->
 <div id="pg-select-etab" style="display:none">
   <div class="etab-header">
     <div class="wbadge">🛡️ SafeSchool · Multi-établissements</div>
     <div style="display:flex;justify-content:center;margin-bottom:10px">
-      <div style="display:flex;gap:4px;background:rgba(79,70,229,.08);border:1.5px solid rgba(79,70,229,.15);border-radius:20px;padding:2px">
-        <button onclick="setLang('fr')" class="lang-btn" id="lang-fr-btn" style="padding:4px 12px;border-radius:16px;border:none;font-size:.75rem;font-weight:700;cursor:pointer;transition:.2s">FR</button>
-        <button onclick="setLang('en')" class="lang-btn" id="lang-en-btn" style="padding:4px 12px;border-radius:16px;border:none;font-size:.75rem;font-weight:700;cursor:pointer;transition:.2s">EN</button>
-      </div>
+      <div class="lang-picker" id="etab-lang-picker"></div>
     </div>
     <h1 id="etab-title"></h1>
     <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto" id="etab-subtitle"></p>
@@ -587,14 +632,14 @@ html.dark .dm-switch::after { left:25px; }
 </div>
 
 <!-- Emergency bar -->
-<div class="ebar">
+<div class="ebar" role="alert" aria-label="Emergency contacts">
   <div class="ebar-l">
     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-5.99-5.99 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l.98-.98a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg>
     En danger ?
   </div>
   <div class="ebar-r">
-    <a href="tel:3018" class="ecall">3018</a>
-    <a href="tel:15" class="ecall">15 SAMU</a>
+    <a href="tel:3018" class="ecall" aria-label="Appeler le 3018">3018</a>
+    <a href="tel:15" class="ecall" aria-label="Appeler le 15 SAMU">15 SAMU</a>
   </div>
 </div>
 
@@ -727,8 +772,23 @@ html.dark .dm-switch::after { left:25px; }
   <div id="dashboard-body"></div>
 </div>
 
+<!-- ════ PRIVACY ════ -->
+<div id="pg-privacy" class="page">
+  <div class="compliance-page" id="privacy-content"></div>
+</div>
+
+<!-- ════ LEGAL ════ -->
+<div id="pg-legal" class="page">
+  <div class="compliance-page" id="legal-content"></div>
+</div>
+
+<!-- ════ GDPR ════ -->
+<div id="pg-gdpr" class="page">
+  <div class="compliance-page" id="gdpr-content"></div>
+</div>
+
 <!-- Bottom Nav -->
-<nav class="bnav">
+<nav class="bnav" role="navigation" aria-label="Navigation principale">
   <button class="ni active" id="ni-home" onclick="go('home')">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -769,9 +829,21 @@ html.dark .dm-switch::after { left:25px; }
 
 <script>
 // ═══════════════════════════════════════════
-// INTERNATIONALIZATION (i18n)
+// INTERNATIONALIZATION (i18n) — 8 languages
 // ═══════════════════════════════════════════
-let currentLang = localStorage.getItem('ss_lang') || 'fr';
+const SS_LANGS = window.SS_LANGS || ['fr','en','es','de','it','pt','pl','nl'];
+const SS_LANG_LABELS = window.SS_LANG_LABELS || {fr:'Français',en:'English',es:'Español',de:'Deutsch',it:'Italiano',pt:'Português',pl:'Polski',nl:'Nederlands'};
+
+// Auto-detect language from browser on first visit
+function detectBrowserLang() {
+  const stored = localStorage.getItem('ss_lang');
+  if (stored && SS_LANGS.includes(stored)) return stored;
+  const navLang = (navigator.language || navigator.userLanguage || 'fr').substring(0,2).toLowerCase();
+  return SS_LANGS.includes(navLang) ? navLang : 'fr';
+}
+
+let currentLang = detectBrowserLang();
+localStorage.setItem('ss_lang', currentLang);
 
 const i18n = {
   fr: {
@@ -1081,16 +1153,33 @@ const i18n = {
   }
 };
 
-function t(key) { return (i18n[currentLang] || i18n.fr)[key] || (i18n.fr)[key] || key; }
+function t(key) {
+  // Look up in main i18n, then extended translations, then fall back to French
+  const ext = window.i18n_extended || {};
+  return (i18n[currentLang] || {})[key] || (ext[currentLang] || {})[key] || (i18n.fr)[key] || (ext.fr || {})[key] || key;
+}
 
 function setLang(lang) {
+  if (!SS_LANGS.includes(lang)) lang = 'fr';
   currentLang = lang;
   localStorage.setItem('ss_lang', lang);
   document.documentElement.lang = lang;
   applyLanguage();
 }
 
+function renderLangPicker(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = SS_LANGS.map(lang =>
+    `<button onclick="setLang('${lang}')" class="${currentLang===lang?'active':''}" aria-label="${SS_LANG_LABELS[lang]}">${lang.toUpperCase()}</button>`
+  ).join('');
+}
+
 function applyLanguage() {
+  // Render language pickers
+  renderLangPicker('etab-lang-picker');
+  renderLangPicker('home-lang-picker');
+
   // Update bottom nav labels
   const navLabels = document.querySelectorAll('.bnav .ni span');
   const navKeys = ['navHome','navLearn','navReport','navLea','navHelp','navProfile'];
@@ -1489,10 +1578,10 @@ function renderEtabList() {
   if(titleEl) titleEl.textContent = t('chooseSchool');
   if(subtitleEl) subtitleEl.textContent = t('chooseSchoolDesc');
   if(footerEl) footerEl.textContent = t('rgpdFooter');
-  // Update lang buttons
-  document.querySelectorAll('.lang-btn').forEach(b => { b.style.background='transparent'; b.style.color='var(--tm)'; });
-  const activeLangBtn = document.getElementById('lang-'+currentLang+'-btn');
-  if(activeLangBtn) { activeLangBtn.style.background='var(--p)'; activeLangBtn.style.color='#fff'; }
+
+  if(document.getElementById('pg-select-etab')?.style.display !== 'none') {
+    renderLangPicker('etab-lang-picker');
+  }
 
   if (etabList.length === 0) {
     el.innerHTML = `<div style="text-align:center;padding:30px">
@@ -1653,7 +1742,7 @@ async function createEstablishment() {
 // NAVIGATION
 // ═══════════════════════════════════════════
 function go(page) {
-  if (!currentEtab && page !== 'select-etab') { showEtabSelector(); return; }
+  if (!currentEtab && page !== 'select-etab' && !['privacy','legal','gdpr'].includes(page)) { showEtabSelector(); return; }
   if (page === 'dashboard' && !adminIn) { showAdminLogin(); return; }
   ssHaptic('light'); // V7 Pro haptic nav
   document.getElementById('pg-select-etab').style.display = 'none';
@@ -1668,11 +1757,14 @@ function go(page) {
   if (page==='report') initReport();
   if (page==='myreport') renderMyReportHistory();
   if (page==='home') renderHomePage();
-  if (page==='profile') renderProfile();
+  if (page==='profile') { renderProfile(); renderLangPicker('profile-lang-picker'); }
   if (page==='assistant') initChat();
   if (page==='education') initQuiz();
   if (page==='dashboard') { S.reloadReports().then(function(){ S.reloadStaff().then(function(){ S.reloadLogs().then(renderDashboardV3); }); }).catch(function(){ renderDashboardV3(); }); }
   if (page==='help') renderSchoolContacts();
+  if (page==='privacy') renderPrivacyPage();
+  if (page==='legal') renderLegalPage();
+  if (page==='gdpr') renderGdprPage();
 }
 
 // ═══════════════════════════════════════════
@@ -1690,10 +1782,7 @@ function renderHomePage() {
     <p>${t('homeDesc')}</p>
   </div>
   <div style="padding:8px 20px 0;display:flex;justify-content:flex-end">
-    <div style="display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:2px">
-      <button onclick="setLang('fr')" style="padding:4px 10px;border-radius:16px;border:none;font-size:.72rem;font-weight:700;cursor:pointer;transition:.2s;${currentLang==='fr'?'background:var(--p);color:#fff':'background:transparent;color:var(--tm)'}">FR</button>
-      <button onclick="setLang('en')" style="padding:4px 10px;border-radius:16px;border:none;font-size:.72rem;font-weight:700;cursor:pointer;transition:.2s;${currentLang==='en'?'background:var(--p);color:#fff':'background:transparent;color:var(--tm)'}">EN</button>
-    </div>
+    <div class="lang-picker" id="home-lang-picker"></div>
   </div>
   <div class="stitle">${t('whatToDo')}</div>
   <div class="agrid">
@@ -1724,8 +1813,15 @@ function renderHomePage() {
   </div>
   <div style="height:20px"></div>
   <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">${etabLabel}</p></div>
-  <div style="padding:4px 20px 8px;text-align:center"><span style="font-size:.65rem;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:6px;border:1px solid var(--border)">SafeSchool v8.1 Extra Pro · PWA · RGPD</span></div>
+  <div style="padding:4px 20px 8px;text-align:center"><span style="font-size:.65rem;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:6px;border:1px solid var(--border)">SafeSchool v9 · PWA · RGPD · 8 langues</span></div>
+  <div style="padding:0 20px 4px;display:flex;justify-content:center;gap:12px">
+    <a onclick="go('privacy');return false" href="#" style="font-size:.7rem;color:var(--ts);text-decoration:underline;cursor:pointer">${t('privacyTitle')}</a>
+    <a onclick="go('legal');return false" href="#" style="font-size:.7rem;color:var(--ts);text-decoration:underline;cursor:pointer">${t('legalTitle')}</a>
+    <a onclick="go('gdpr');return false" href="#" style="font-size:.7rem;color:var(--ts);text-decoration:underline;cursor:pointer">${t('gdprTitle')}</a>
+  </div>
   <div style="height:14px"></div>`;
+  // Render language picker after DOM update
+  renderLangPicker('home-lang-picker');
   // Re-bind secret superadmin tap
   const badge = document.getElementById('sa-secret-tap');
   if (badge) {
@@ -2794,13 +2890,17 @@ function renderProfile(){
   <div style="padding:18px 20px">
     <button class="btn btn-soft btn-full" onclick="go('education')">🎯 Gagner des points</button>
   </div>
-  <div class="stitle">Paramètres</div>
+  <div class="stitle">${currentLang==='fr'?'Paramètres':'Settings'}</div>
+  <div style="padding:0 20px 6px">
+    <div style="font-size:.8rem;font-weight:700;color:var(--ts);margin-bottom:8px;text-transform:uppercase">${t('language')}</div>
+    <div class="lang-picker" id="profile-lang-picker"></div>
+  </div>
   <div class="dm-toggle" onclick="toggleDarkMode()">
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:1.2rem">${document.documentElement.classList.contains('dark')?'🌙':'☀️'}</span>
       <div>
-        <div style="font-size:.88rem;font-weight:700;color:var(--t)">Mode sombre</div>
-        <div style="font-size:.74rem;color:var(--tm)">Adapte l'affichage</div>
+        <div style="font-size:.88rem;font-weight:700;color:var(--t)">${t('darkMode')}</div>
+        <div style="font-size:.74rem;color:var(--tm)">${currentLang==='fr'?'Adapte l\'affichage':'Adjust display'}</div>
       </div>
     </div>
     <div class="dm-switch"></div>
@@ -3957,27 +4057,8 @@ function maybeShowNotifOptIn() {
 }
 
 // ═══════════════════════════════════════════
-// V7 PRO — DARK MODE
-// ═══════════════════════════════════════════
-function initDarkMode() {
-  const saved = localStorage.getItem('ss_dark_mode');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = saved ? saved === '1' : prefersDark;
-  if (isDark) document.documentElement.classList.add('dark');
-
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-    if (!localStorage.getItem('ss_dark_mode')) {
-      document.documentElement.classList.toggle('dark', e.matches);
-    }
-  });
-}
-function toggleDarkMode() {
-  const isDark = document.documentElement.classList.toggle('dark');
-  localStorage.setItem('ss_dark_mode', isDark ? '1' : '0');
-  ssHaptic('light');
-  toast(isDark ? 'Mode sombre activé' : 'Mode clair activé', 'info');
-}
-initDarkMode();
+// V7 PRO — DARK MODE (superseded by V9 initTheme)
+// initDarkMode and toggleDarkMode now defined in V9 section above
 
 // ═══════════════════════════════════════════
 // V7 PRO — HAPTIC FEEDBACK
@@ -4044,12 +4125,160 @@ document.addEventListener('touchend', () => {
 });
 
 // ═══════════════════════════════════════════
+// V9 — COMPLIANCE PAGES (Privacy, Legal, GDPR)
+// ═══════════════════════════════════════════
+function renderPrivacyPage() {
+  const el = document.getElementById('privacy-content');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="go('home')" style="margin-bottom:16px">${t('back')}</button>
+    <h1>${t('privacyTitle')}</h1>
+    <p><strong>SafeSchool</strong> — ${currentLang === 'fr' ? 'Plateforme anti-harcèlement scolaire' : 'Anti-bullying school platform'}</p>
+    <h2>${currentLang === 'fr' ? 'Données collectées' : 'Data collected'}</h2>
+    <ul>
+      <li>${currentLang === 'fr' ? 'Signalements (description, type, niveau d\'urgence) — anonymes par défaut' : 'Reports (description, type, urgency level) — anonymous by default'}</li>
+      <li>${currentLang === 'fr' ? 'Nom/email uniquement si choix d\'identification volontaire' : 'Name/email only if voluntary identification is chosen'}</li>
+      <li>${currentLang === 'fr' ? 'Langue préférée et thème (stockés localement sur l\'appareil)' : 'Preferred language and theme (stored locally on device)'}</li>
+      <li>${currentLang === 'fr' ? 'Aucun cookie tiers, aucun traceur publicitaire' : 'No third-party cookies, no advertising trackers'}</li>
+    </ul>
+    <h2>${currentLang === 'fr' ? 'Finalité du traitement' : 'Purpose of processing'}</h2>
+    <p>${currentLang === 'fr' ? 'Les données sont collectées dans le seul but de prévenir et traiter les situations de harcèlement scolaire. Elles sont transmises exclusivement à l\'équipe éducative de l\'établissement sélectionné.' : 'Data is collected for the sole purpose of preventing and addressing school bullying situations. It is transmitted exclusively to the educational team of the selected school.'}</p>
+    <h2>${currentLang === 'fr' ? 'Durée de conservation' : 'Retention period'}</h2>
+    <p>${currentLang === 'fr' ? 'Les signalements sont conservés pendant la durée de traitement et 12 mois après clôture, sauf demande de suppression anticipée (droit RGPD).' : 'Reports are kept for the duration of processing and 12 months after closure, unless early deletion is requested (GDPR right).'}</p>
+    <h2>${currentLang === 'fr' ? 'Assistant Léa' : 'Lea Assistant'}</h2>
+    <p>${currentLang === 'fr' ? 'Les conversations avec l\'assistante Léa ne sont PAS enregistrées. Aucune donnée n\'est conservée côté serveur. Les messages restent uniquement dans la mémoire locale du navigateur et sont supprimés à la fermeture.' : 'Conversations with Lea assistant are NOT recorded. No data is stored server-side. Messages remain only in browser local memory and are deleted on close.'}</p>
+    <h2>${currentLang === 'fr' ? 'Chiffrement' : 'Encryption'}</h2>
+    <p>${currentLang === 'fr' ? 'Les données sensibles (description, nom du déclarant) sont chiffrées côté serveur avec AES-256-GCM avant stockage en base de données.' : 'Sensitive data (description, reporter name) is encrypted server-side with AES-256-GCM before database storage.'}</p>
+    <h2>Contact DPO</h2>
+    <p>dpo@safeschool.fr</p>
+  `;
+}
+
+function renderLegalPage() {
+  const el = document.getElementById('legal-content');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="go('home')" style="margin-bottom:16px">${t('back')}</button>
+    <h1>${t('legalTitle')}</h1>
+    <h2>${currentLang === 'fr' ? 'Éditeur' : 'Publisher'}</h2>
+    <p>SafeSchool SAS<br>${currentLang === 'fr' ? 'Plateforme anti-harcèlement scolaire' : 'Anti-bullying school platform'}</p>
+    <h2>${currentLang === 'fr' ? 'Hébergement' : 'Hosting'}</h2>
+    <p>Netlify, Inc.<br>2325 3rd Street, Suite 296<br>San Francisco, CA 94107, USA</p>
+    <h2>${currentLang === 'fr' ? 'Base de données' : 'Database'}</h2>
+    <p>Supabase (PostgreSQL) — ${currentLang === 'fr' ? 'Hébergé dans l\'UE' : 'Hosted in the EU'}</p>
+    <h2>${currentLang === 'fr' ? 'Responsable de traitement' : 'Data controller'}</h2>
+    <p>${currentLang === 'fr' ? 'Le responsable de traitement est l\'établissement scolaire abonné à SafeSchool. SafeSchool agit en tant que sous-traitant au sens du RGPD (art. 28).' : 'The data controller is the school subscribed to SafeSchool. SafeSchool acts as a data processor under GDPR (art. 28).'}</p>
+    <h2>${currentLang === 'fr' ? 'Conformité RGPD' : 'GDPR compliance'}</h2>
+    <p>${currentLang === 'fr' ? 'SafeSchool est conforme au Règlement Général sur la Protection des Données (UE 2016/679). Données hébergées dans l\'Espace Économique Européen.' : 'SafeSchool complies with the General Data Protection Regulation (EU 2016/679). Data hosted within the European Economic Area.'}</p>
+  `;
+}
+
+function renderGdprPage() {
+  const el = document.getElementById('gdpr-content');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="go('home')" style="margin-bottom:16px">${t('back')}</button>
+    <h1>${t('gdprTitle')}</h1>
+    <p>${currentLang === 'fr' ? 'En vertu du RGPD (UE 2016/679), tu disposes des droits suivants :' : 'Under GDPR (EU 2016/679), you have the following rights:'}</p>
+    <ul>
+      <li><strong>${currentLang === 'fr' ? 'Droit d\'accès' : 'Right of access'}</strong> — ${currentLang === 'fr' ? 'Savoir quelles données sont conservées' : 'Know what data is stored'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit de rectification' : 'Right to rectification'}</strong> — ${currentLang === 'fr' ? 'Corriger des données inexactes' : 'Correct inaccurate data'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit à l\'effacement' : 'Right to erasure'}</strong> — ${currentLang === 'fr' ? 'Demander la suppression de tes données' : 'Request deletion of your data'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit à la portabilité' : 'Right to portability'}</strong> — ${currentLang === 'fr' ? 'Exporter tes données dans un format lisible' : 'Export your data in a readable format'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit d\'opposition' : 'Right to object'}</strong> — ${currentLang === 'fr' ? 'T\'opposer au traitement de tes données' : 'Object to processing of your data'}</li>
+    </ul>
+    <h2>${currentLang === 'fr' ? 'Exercer tes droits' : 'Exercise your rights'}</h2>
+    <div class="gdpr-action" onclick="gdprExport()">
+      <div class="ga-icon">📤</div>
+      <div class="ga-info">
+        <h4>${t('gdprExport')}</h4>
+        <p>${t('gdprExportDesc')}</p>
+      </div>
+    </div>
+    <div class="gdpr-action" onclick="gdprDeleteRequest()">
+      <div class="ga-icon">🗑️</div>
+      <div class="ga-info">
+        <h4>${t('gdprDelete')}</h4>
+        <p>${t('gdprDeleteDesc')}</p>
+      </div>
+    </div>
+    <p style="margin-top:20px;font-size:.82rem">${currentLang === 'fr' ? 'Tu peux aussi contacter notre DPO : ' : 'You can also contact our DPO: '}<strong>dpo@safeschool.fr</strong></p>
+  `;
+}
+
+function gdprExport() {
+  const code = prompt(currentLang === 'fr' ? 'Entre ton code de suivi (SS-XXXXXX) :' : 'Enter your tracking code (SS-XXXXXX):');
+  if (!code) return;
+  fetch('/api/gdpr/export?code=' + encodeURIComponent(code.trim().toUpperCase()))
+    .then(r => r.json())
+    .then(data => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'safeschool-export-' + code + '.json'; a.click();
+      URL.revokeObjectURL(url);
+      toast(currentLang === 'fr' ? 'Export téléchargé' : 'Export downloaded', 'ok');
+    })
+    .catch(() => toast(currentLang === 'fr' ? 'Erreur lors de l\'export' : 'Export error', 'err'));
+}
+
+function gdprDeleteRequest() {
+  const code = prompt(currentLang === 'fr' ? 'Entre ton code de suivi (SS-XXXXXX) pour demander la suppression :' : 'Enter your tracking code (SS-XXXXXX) to request deletion:');
+  if (!code) return;
+  if (!confirm(currentLang === 'fr' ? 'Cette action est irréversible. Confirmer la demande de suppression ?' : 'This action is irreversible. Confirm deletion request?')) return;
+  fetch('/api/gdpr/delete-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code.trim().toUpperCase() })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) toast(currentLang === 'fr' ? 'Demande de suppression enregistrée' : 'Deletion request recorded', 'ok');
+      else toast(data.error || 'Error', 'err');
+    })
+    .catch(() => toast(currentLang === 'fr' ? 'Erreur lors de la demande' : 'Request error', 'err'));
+}
+
+// ═══════════════════════════════════════════
+// V9 — DARK MODE (improved with system detection)
+// ═══════════════════════════════════════════
+function initTheme() {
+  const stored = localStorage.getItem('ss_theme');
+  if (stored === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else if (stored === 'light') {
+    document.documentElement.classList.remove('dark');
+  } else {
+    // Follow system preference
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+  }
+}
+initTheme();
+
+// Listen for system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  const stored = localStorage.getItem('ss_theme');
+  if (!stored || stored === 'system') {
+    document.documentElement.classList.toggle('dark', e.matches);
+  }
+});
+
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('ss_theme', isDark ? 'dark' : 'light');
+  // Update theme-color meta tag
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark ? '#191919' : '#2563EB');
+}
+
+// ═══════════════════════════════════════════
 // V7 PRO — SHORTCUT LAUNCH HANDLER
 // ═══════════════════════════════════════════
 (function handleShortcuts() {
   const params = new URLSearchParams(window.location.search);
   const page = params.get('page');
-  if (page && ['report', 'assistant', 'myreport', 'education', 'help'].includes(page)) {
+  if (page && ['report', 'assistant', 'myreport', 'education', 'help', 'privacy', 'legal', 'gdpr'].includes(page)) {
     // Wait for establishment to load, then navigate
     const waitAndGo = setInterval(() => {
       if (currentEtab || document.getElementById('pg-select-etab')?.style.display === 'flex') {
