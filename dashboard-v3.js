@@ -14,7 +14,7 @@ var TYPES = {
   verbal:    { label: "Verbal",    color: "#dc2626" },
   physique:  { label: "Physique",  color: "#ea580c" },
   cyber:     { label: "Cyber",     color: "#7c3aed" },
-  exclusion: { label: "Exclusion", color: "#0891b2" },
+  exclusion: { label: "Mise à l'écart", color: "#0891b2" },
   autre:     { label: "Autre",     color: "#64748b" }
 };
 var URGENCES = {
