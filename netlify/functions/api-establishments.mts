@@ -4,6 +4,8 @@ import type { Context, Config } from '@netlify/functions';
 // ── V8 Extra Pro — Environment-driven auth with no hardcoded fallbacks ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
 const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
+const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
+const SUPABASE_SERVICE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
 
 function authCheck(req: Request): boolean {
   const auth = req.headers.get('x-sa-token');
@@ -15,9 +17,7 @@ function authCheck(req: Request): boolean {
 }
 
 function sanitize(str: string): string {
-  return String(str).replace(/[<>"'&]/g, c => ({
-    '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '&': '&amp;'
-  }[c] || c));
+  return String(str).replace(/[<>]/g, '').trim();
 }
 
 function isValidEmail(email: string): boolean {
@@ -51,6 +51,48 @@ function genSlug(name: string): string {
     .slice(0, 30);
 }
 
+// Sync school to Supabase (non-blocking, best-effort)
+async function syncToSupabase(school: any, store: any): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: JSON.stringify({
+        name: school.name,
+        slug: school.slug,
+        ville: school.city || null,
+        email_contact: school.email || null,
+        plan: school.plan,
+        status: school.status,
+        max_students: school.max_students,
+        max_reports_month: school.max_reports,
+        max_admins: school.max_admins,
+        expires_at: school.expires_at
+      })
+    });
+    if (res.ok) {
+      // Store Supabase UUID back into the blob for cross-reference
+      try {
+        const supaData = await res.json();
+        if (Array.isArray(supaData) && supaData.length > 0 && supaData[0].id) {
+          school.supabase_id = supaData[0].id;
+          await store.setJSON(`school_${school.id}`, school);
+        }
+      } catch { /* ignore parse errors */ }
+    } else {
+      console.warn('Supabase sync failed:', res.status, await res.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.warn('Supabase sync error:', e);
+  }
+}
+
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') {
     return cors({ ok: true });
@@ -68,8 +110,9 @@ export default async (req: Request, context: Context) => {
     if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404);
     const data = await store.get(`school_${entry.id}`, { type: 'json' });
     if (!data) return cors({ error: 'Données non trouvées' }, 404);
-    // Return only public info
-    return cors({
+    // If authenticated as superadmin, return admin info too
+    const isAdmin = authCheck(req);
+    const publicInfo: any = {
       id: (data as any).id,
       name: (data as any).name,
       slug: (data as any).slug,
@@ -77,7 +120,13 @@ export default async (req: Request, context: Context) => {
       type: (data as any).type,
       plan: (data as any).plan,
       is_active: (data as any).is_active
-    });
+    };
+    if (isAdmin) {
+      publicInfo.admin_code = (data as any).admin_code;
+      publicInfo.admin_email = (data as any).admin_email;
+      publicInfo.admin_password = (data as any).admin_password;
+    }
+    return cors(publicInfo);
   }
 
   // Public endpoint: list active establishments (for app)
@@ -87,6 +136,41 @@ export default async (req: Request, context: Context) => {
     return cors(active.map((e: any) => ({
       id: e.id, name: e.name, slug: e.slug, city: e.city, type: e.type, plan: e.plan
     })));
+  }
+
+  // Public endpoint: admin login for a school (verifies credentials without exposing them)
+  if (req.method === 'POST' && path.startsWith('/admin-login/')) {
+    const slug = path.replace('/admin-login/', '');
+    const index = await store.get('_index', { type: 'json' }) as any[] || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Établissement non trouvé' }, 404);
+    const data = await store.get(`school_${entry.id}`, { type: 'json' }) as any;
+    if (!data) return cors({ error: 'Données non trouvées' }, 404);
+
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
+
+    const email = (body.email || '').trim().toLowerCase();
+    const password = (body.password || '').trim();
+
+    if (!email || !password) return cors({ error: 'Email et mot de passe requis' }, 400);
+
+    // Check admin credentials
+    const storedEmail = (data.admin_email || '').toLowerCase();
+    const storedCode = data.admin_code || '';
+    const storedPassword = data.admin_password || '';
+
+    if (email === storedEmail && (password === storedCode || password === storedPassword)) {
+      return cors({
+        ok: true,
+        school_id: data.id,
+        name: data.name,
+        plan: data.plan,
+        admin_email: data.admin_email
+      });
+    }
+
+    return cors({ error: 'Identifiants incorrects' }, 401);
   }
 
   // All other endpoints require superadmin auth
@@ -179,6 +263,9 @@ export default async (req: Request, context: Context) => {
     });
     await store.setJSON('_index', index);
 
+    // Sync to Supabase (non-blocking)
+    syncToSupabase(school, store).catch(() => {});
+
     return cors(school, 201);
   }
 
@@ -256,5 +343,5 @@ export default async (req: Request, context: Context) => {
 };
 
 export const config: Config = {
-  path: '/api/establishments/*'
+  path: ['/api/establishments', '/api/establishments/*']
 };

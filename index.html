@@ -575,7 +575,6 @@ html.dark .dm-switch::after { left:25px; }
   </div>
   <div class="etab-footer">
     <p style="font-size:.76rem;color:var(--ts)">Chaque établissement a son propre espace sécurisé · Conforme RGPD (UE 2016/679)</p>
-    <p style="font-size:.72rem;color:var(--ts);margin-top:6px">Version branchée à Supabase pour la liste des établissements.</p>
   </div>
 </div>
 
@@ -984,38 +983,45 @@ const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'
 
 async function loadEstablishments() {
   try {
-    // Load from API (Netlify Blobs) first for plan info
+    // Primary source: Netlify Blobs API (managed by superadmin)
     let apiSchools = [];
     try {
       const r = await fetch('/api/establishments/public');
-      if (r.ok) apiSchools = await r.json();
-    } catch(e) { console.warn('API establishments unavailable, fallback to Supabase'); }
+      if (r.ok) {
+        const ct = r.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          apiSchools = await r.json();
+        }
+      }
+    } catch(e) { console.warn('API establishments unavailable:', e); }
 
-    // Also load from Supabase for school IDs
-    const { data, error } = await ssSupabase
-      .from('schools')
-      .select('id, name, slug, city, is_active')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
+    // Look up Supabase UUIDs for report storage (non-blocking)
+    let supaSchoolMap = {};
+    if (apiSchools.length > 0) {
+      try {
+        const { data } = await ssSupabase
+          .from('schools')
+          .select('id, slug')
+          .order('name', { ascending: true });
+        if (data) {
+          data.forEach(s => { supaSchoolMap[s.slug] = s.id; });
+        }
+      } catch(e) { console.warn('Supabase UUID lookup skipped:', e); }
+    }
 
-    if (error) throw error;
-
-    etabList = (data || []).map(s => {
-      const apiMatch = apiSchools.find(a => a.slug === s.slug);
-      return {
-        id: s.id,
-        name: s.name,
-        slug: s.slug,
-        address: s.city || '',
-        city: s.city || '',
-        type: apiMatch?.type || 'lycee',
-        plan: apiMatch?.plan || 'starter',
-        isActive: s.is_active,
-        apiId: apiMatch?.id || null
-      };
-    });
+    etabList = apiSchools.map(s => ({
+      id: supaSchoolMap[s.slug] || s.id,
+      name: s.name,
+      slug: s.slug,
+      address: s.city || '',
+      city: s.city || '',
+      type: s.type || 'lycee',
+      plan: s.plan || 'starter',
+      isActive: true,
+      apiId: s.id
+    }));
   } catch (e) {
-    console.error('Failed to load establishments from Supabase', e);
+    console.error('Failed to load establishments', e);
     etabList = [];
     toast("Impossible de charger les établissements.", "err");
   }
@@ -1026,7 +1032,12 @@ function renderEtabList() {
   const el = document.getElementById('etab-list');
   if (!el) return;
   if (etabList.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:30px"><p>Aucun établissement configuré.</p></div>`;
+    el.innerHTML = `<div style="text-align:center;padding:30px">
+      <div style="font-size:2.5rem;margin-bottom:12px">🏫</div>
+      <p style="font-weight:600;margin-bottom:8px">Aucun établissement disponible</p>
+      <p style="font-size:.85rem;color:var(--ts);max-width:280px;margin:0 auto 16px">Les établissements sont configurés par l'administration SafeSchool.</p>
+      <p style="font-size:.78rem;color:var(--ts)">Contacte ton administration pour qu'elle inscrive ton établissement.</p>
+    </div>`;
     return;
   }
   el.innerHTML = etabList.map(e => `
@@ -1125,35 +1136,19 @@ function showAddEtabModal() {
   <div class="modal-overlay" id="add-etab-modal" onclick="if(event.target===this)closeAddEtabModal()">
     <div class="modal">
       <div class="mhandle"></div>
-      <h3>Ajouter un établissement</h3>
-      <div class="fg">
-        <label class="fl">Nom de l'établissement *</label>
-        <input type="text" class="fi" id="new-etab-name" placeholder="Ex: Lycée Jean Moulin">
+      <h3>Établissement non listé ?</h3>
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:2.5rem;margin-bottom:12px">🏫</div>
+        <p style="font-size:.92rem;color:var(--tm);margin-bottom:12px">Les établissements sont ajoutés par l'administration SafeSchool.</p>
+        <p style="font-size:.85rem;color:var(--ts);max-width:300px;margin:0 auto">Demande à ton CPE ou à la direction de contacter <strong>SafeSchool</strong> pour inscrire ton établissement.</p>
       </div>
-      <div class="fg">
-        <label class="fl">Type *</label>
-        <select class="fsel" id="new-etab-type">
-          <option value="lycee">Lycée</option>
-          <option value="college">Collège</option>
-          <option value="ecole">École primaire</option>
-          <option value="autre">Autre</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label class="fl">Adresse</label>
-        <input type="text" class="fi" id="new-etab-addr" placeholder="Adresse de l'établissement">
-      </div>
-      <div class="fg">
-        <label class="fl">Email administrateur *</label>
-        <input type="email" class="fi" id="new-etab-email" placeholder="admin@etablissement.fr">
-      </div>
-      <div class="fg">
-        <label class="fl">Mot de passe administrateur *</label>
-        <input type="password" class="fi" id="new-etab-pass" placeholder="Mot de passe sécurisé">
+      <div style="background:var(--abg);border:1.5px solid rgba(217,119,6,.2);border-radius:var(--r12);padding:14px;margin:12px 0">
+        <p style="font-size:.82rem;color:#92400e;text-align:center">
+          📧 Contact : <strong>admin@safeschool.fr</strong>
+        </p>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" style="flex:1" onclick="closeAddEtabModal()">Annuler</button>
-        <button class="btn btn-p" style="flex:2" onclick="createEstablishment()">Créer l'établissement</button>
+        <button class="btn btn-p btn-full" onclick="closeAddEtabModal()">Compris</button>
       </div>
     </div>
   </div>`);
@@ -1161,58 +1156,10 @@ function showAddEtabModal() {
 
 function closeAddEtabModal() { document.getElementById('add-etab-modal')?.remove(); }
 
+// createEstablishment kept for backwards compatibility but now guides users
 async function createEstablishment() {
-  const name = document.getElementById('new-etab-name').value.trim();
-  const type = document.getElementById('new-etab-type').value;
-  const address = document.getElementById('new-etab-addr').value.trim();
-  const adminEmail = document.getElementById('new-etab-email').value.trim();
-  const adminPassword = document.getElementById('new-etab-pass').value;
-
-  if (!name) { toast('Le nom est requis', 'err'); return; }
-  if (!adminEmail || !adminPassword) { toast('Email et mot de passe admin requis', 'err'); return; }
-
-  const slug = name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  try {
-    const { data, error } = await ssSupabase
-      .from('schools')
-      .insert([{ name, slug, city: address || null, is_active: true }])
-      .select('id, name, slug, city, is_active')
-      .single();
-
-    if (error) throw error;
-
-    const newEtab = {
-      id: data.id,
-      name: data.name,
-      slug: data.slug,
-      address: data.city || '',
-      city: data.city || '',
-      type,
-      isActive: data.is_active
-    };
-
-    etabList.push(newEtab);
-    etabList.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-
-    // Save admin credentials locally for this establishment
-    const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-    creds[data.id] = { email: adminEmail, password: adminPassword };
-    localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
-
-    closeAddEtabModal();
-    renderEtabList();
-    toast(`${name} créé !`, 'ok');
-    toast(`Admin local sauvegardé : ${adminEmail}`, "info");
-  } catch (e) {
-    console.error('Erreur création établissement Supabase', e);
-    toast(e.message || 'Erreur de connexion', 'err');
-  }
+  toast('Contacte ton administration pour ajouter ton établissement', 'info');
+  closeAddEtabModal();
 }
 
 // ═══════════════════════════════════════════
@@ -2150,21 +2097,23 @@ async function tryLogin(){
     return;
   }
 
-  // Check against API (admin code from superadmin)
+  // Check against API (admin-login endpoint)
   try {
-    const r = await fetch('/api/establishments/by-slug/' + (currentEtab.slug || ''));
+    const r = await fetch('/api/establishments/admin-login/' + (currentEtab.slug || ''), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: e, password: p })
+    });
     if (r.ok) {
-      const apiSchool = await r.json();
-      if (apiSchool && apiSchool.id) {
-        // Fetch full data to check admin credentials
-        // The admin_email and admin_password are checked server-side via the public endpoint
-        // For now, check if the code matches by trying the admin_code as password
-        if (e === (apiSchool.admin_email || '').toLowerCase() || p === apiSchool.admin_code) {
+      const ct = r.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const apiRes = await r.json();
+        if (apiRes.ok) {
           // Save creds locally for future logins
           creds[currentEtab.id] = { email: e, password: p };
           localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
           // Store the plan for subscription-based features
-          localStorage.setItem('ss_plan_' + currentEtab.id, apiSchool.plan || 'starter');
+          localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || 'starter');
           adminIn = true;
           document.getElementById('admin-overlay')?.remove();
           document.getElementById('pg-dashboard').style.display='flex';
@@ -2715,18 +2664,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Check for subdomain auto-selection (injected by edge function)
   const subdomainSlug = window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
+  const autoAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
   if (subdomainSlug) {
     const etab = etabList.find(e => e.slug === subdomainSlug);
     if (etab) {
       await selectEstablishment(etab.id);
+      // Auto-open admin dashboard if admin=1 parameter is set (from superadmin)
+      if (autoAdmin) {
+        try {
+          // Fetch admin credentials via API with superadmin token from sessionStorage
+          const saToken = sessionStorage.getItem('sa_token') || '';
+          const r = await fetch('/api/establishments/by-slug/' + subdomainSlug, {
+            headers: saToken ? { 'x-sa-token': saToken } : {}
+          });
+          if (r.ok) {
+            const ct = r.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+              const apiSchool = await r.json();
+              if (apiSchool && (apiSchool.admin_code || apiSchool.admin_email)) {
+                // Auto-login with admin credentials from API
+                const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+                creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || '' };
+                localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
+                localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || 'starter');
+                adminIn = true;
+                document.getElementById('pg-dashboard').style.display = 'flex';
+                await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                go('dashboard');
+                toast('Mode admin (acces superadmin)', 'ok');
+              }
+            }
+          }
+        } catch(err) { console.warn('Auto-admin login failed:', err); }
+      }
       return;
     }
   }
 
   // Check if user had a previously selected establishment
   const savedEtabId = localStorage.getItem('ss_current_etab');
-  if (savedEtabId && etabList.find(e => e.id === savedEtabId)) {
-    await selectEstablishment(savedEtabId);
+  if (savedEtabId) {
+    // Try matching by ID first, then by slug (IDs may change between sessions)
+    const matched = etabList.find(e => e.id === savedEtabId || e.slug === savedEtabId || e.apiId === savedEtabId);
+    if (matched) {
+      await selectEstablishment(matched.id);
+    } else {
+      // Saved establishment no longer exists, clear and show selector
+      localStorage.removeItem('ss_current_etab');
+      document.getElementById('pg-select-etab').style.display = 'flex';
+      renderEtabList();
+    }
   } else {
     // Show establishment selector
     document.getElementById('pg-select-etab').style.display = 'flex';

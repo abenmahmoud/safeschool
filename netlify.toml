@@ -4,12 +4,6 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# API routes should not be redirected
-[[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
-  status = 200
-
 # Superadmin page
 [[redirects]]
   from = "/superadmin"
@@ -32,6 +26,12 @@
 [[redirects]]
   from = "/offline"
   to = "/offline.html"
+  status = 200
+
+# Prevent SPA fallback from intercepting API calls
+[[redirects]]
+  from = "/api/*"
+  to = "/api/:splat"
   status = 200
 
 # SPA fallback (must be last)
