@@ -2093,7 +2093,7 @@ async function lookupCode(){
     // Search by tracking_code
     let { data, error } = await ssSupabase
       .from('reports')
-      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency, description')
+      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgence, description')
       .or(`tracking_code.eq.${code},case_number.eq.${raw}`)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -2139,7 +2139,7 @@ async function lookupCode(){
           <span>📌 Code de suivi : <strong>${data.tracking_code}</strong></span>
           <span>🗂️ Numéro de dossier : <strong>${data.case_number || 'En cours de génération'}</strong></span>
           <span>📅 Déposé le ${fmtDate(data.created_at)} à ${fmtTime(data.created_at)}</span>
-          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgency || 'faible'}</span>
+          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgence || 'faible'}</span>
         </div>
       </div>
     </div>`;
