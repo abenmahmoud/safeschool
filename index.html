@@ -64,6 +64,8 @@ a{text-decoration:none}
 .ni svg{transition:.2s}
 .ni.active{color:var(--p)}
 .ni.active svg{transform:translateY(-2px)}
+#ni-dashboard{color:#7c3aed}
+#ni-dashboard.active{color:#4f46e5;font-weight:800}
 .ni-pip{position:absolute;top:3px;width:30px;height:30px;background:var(--pbg);border-radius:9px;z-index:-1;opacity:0;transition:.2s}
 .ni.active .ni-pip{opacity:1}
 .ni-report{flex:1.2;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border-radius:14px;margin:-8px 3px 0;box-shadow:0 4px 16px rgba(79,70,229,.35)}
@@ -524,7 +526,7 @@ html.dark .dm-switch::after { left:25px; }
 .tag-verbal{background:#fee2e2;color:#dc2626}
 .tag-physique{background:#ffedd5;color:#c2410c}
 .tag-cyber{background:#ede9fe;color:#7c3aed}
-.tag-exclusion{background:#e0f2fe;color:#0369a1}
+.tag-exclusion,.tag-mise-a-lecart{background:#e0f2fe;color:#0369a1}
 .tag-autre{background:#f1f5f9;color:#64748b}
 .tag-nouveau{background:#dbeafe;color:#1d4ed8}
 .tag-en-cours{background:#fef9c3;color:#a16207}
@@ -567,14 +569,20 @@ html.dark .dm-switch::after { left:25px; }
 <div id="pg-select-etab" style="display:none">
   <div class="etab-header">
     <div class="wbadge">🛡️ SafeSchool · Multi-établissements</div>
-    <h1>Choisis ton établissement</h1>
-    <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto">Sélectionne ton école, collège ou lycée pour accéder à l'espace dédié.</p>
+    <div style="display:flex;justify-content:center;margin-bottom:10px">
+      <div style="display:flex;gap:4px;background:rgba(79,70,229,.08);border:1.5px solid rgba(79,70,229,.15);border-radius:20px;padding:2px">
+        <button onclick="setLang('fr')" class="lang-btn" id="lang-fr-btn" style="padding:4px 12px;border-radius:16px;border:none;font-size:.75rem;font-weight:700;cursor:pointer;transition:.2s">FR</button>
+        <button onclick="setLang('en')" class="lang-btn" id="lang-en-btn" style="padding:4px 12px;border-radius:16px;border:none;font-size:.75rem;font-weight:700;cursor:pointer;transition:.2s">EN</button>
+      </div>
+    </div>
+    <h1 id="etab-title"></h1>
+    <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto" id="etab-subtitle"></p>
   </div>
   <div class="etab-list" id="etab-list">
     <div class="etab-loading"><div class="spinner"></div><p>Chargement des établissements…</p></div>
   </div>
   <div class="etab-footer">
-    <p style="font-size:.76rem;color:var(--ts)">Chaque établissement a son propre espace sécurisé · Conforme RGPD (UE 2016/679)</p>
+    <p style="font-size:.76rem;color:var(--ts)" id="etab-footer-text"></p>
   </div>
 </div>
 
@@ -605,46 +613,7 @@ html.dark .dm-switch::after { left:25px; }
 
 <!-- ════ HOME ════ -->
 <div id="pg-home" class="page active">
-  <div class="welcome">
-    <svg class="wdeco" width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="80" stroke="#4f46e5" stroke-width="28"/><circle cx="90" cy="90" r="45" fill="#4f46e5"/></svg>
-    <div class="wbadge" id="sa-secret-tap">🛡️ SafeSchool · Espace sécurisé</div>
-    <h1>Tu n'es<br>pas seul(e).</h1>
-    <p>Signale, apprends, et trouve de l'aide en quelques secondes.</p>
-  </div>
-  <div class="stitle">Que veux-tu faire ?</div>
-  <div class="agrid">
-    <div class="ac ac-r" onclick="go('report')">
-      <div class="ai air">🚨</div><h3>Signaler</h3><p>Décrire une situation</p>
-    </div>
-    <div class="ac ac-g" onclick="go('education')">
-      <div class="ai aig">📚</div><h3>Apprendre</h3><p>Comprendre et quiz</p>
-    </div>
-    <div class="ac ac-p" onclick="go('assistant')">
-      <div class="ai aip">🤖</div><h3>Assistant Léa</h3><p>Parler, être écouté(e)</p>
-    </div>
-    <div class="ac ac-s" onclick="go('help')">
-      <div class="ai ais">🆘</div><h3>Aide</h3><p>Contacts & urgences</p>
-    </div>
-  </div>
-  <div style="height:14px"></div>
-  <div class="sdiv"><span>Déjà signalé ?</span></div>
-  <div class="flink" onclick="go('myreport')">
-    <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-    J'ai un code — voir ma réponse
-    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-  </div>
-  <div style="height:16px"></div>
-  <div style="padding:0 20px 8px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ Dashboard admin</button>
-    <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 Suivre mon dossier</button>
-  </div>
-  <div style="height:20px"></div>
-  <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">Signalements confidentiels · RGPD</p></div>
-  <div style="padding:10px 20px 4px;text-align:center">
-    <a href="/pricing" style="font-size:.74rem;color:var(--p);font-weight:600;text-decoration:none">En savoir plus sur SafeSchool pour votre établissement →</a>
-  </div>
-  <div style="padding:4px 20px 8px;text-align:center"><span style="font-size:.65rem;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:6px;border:1px solid var(--border)">SafeSchool v8.1 Extra Pro · PWA · RGPD</span></div>
-  <div style="height:14px"></div>
+  <div id="home-content"></div>
 </div>
 
 <!-- ════ REPORT ════ -->
@@ -654,16 +623,16 @@ html.dark .dm-switch::after { left:25px; }
 
 <!-- ════ MY REPORT ════ -->
 <div id="pg-myreport" class="page">
-  <div style="padding:22px 20px 8px"><h1>Suivre mon dossier</h1><p class="subtitle">Saisis ton code pour voir la réponse de l'équipe</p></div>
+  <div style="padding:22px 20px 8px"><h1 id="myreport-title">Suivre mon dossier</h1><p class="subtitle" id="myreport-subtitle">Saisis ton code pour voir la réponse de l'équipe</p></div>
   <div style="padding:0 20px">
     <div class="fg">
-      <label class="fl">Ton code de suivi</label>
-      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123 ou numéro" maxlength="20" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
-      <p class="fhint">Code de suivi (SS-XXXXXX) ou numéro de dossier</p>
+      <label class="fl" id="myreport-code-label">Ton code de suivi</label>
+      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="20" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+      <p class="fhint" id="myreport-hint">Code de suivi (SS-XXXXXX) ou numéro de dossier</p>
     </div>
     <button class="btn btn-p btn-full btn-lg" onclick="lookupCode()">
       <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      Rechercher mon dossier
+      <span id="myreport-search-btn">Rechercher mon dossier</span>
     </button>
     <div id="lookup-result" style="margin-top:22px"></div>
   </div>
@@ -690,8 +659,8 @@ html.dark .dm-switch::after { left:25px; }
       <div class="acc-body"><p>Le cyberharcèlement se passe en ligne — il ne s'arrête pas à la sortie du lycée. Il peut toucher la victime 24h/24.</p><ul><li>Messages insultants sur WhatsApp, Instagram, TikTok…</li><li>Publication de photos ou vidéos humiliantes sans consentement</li><li>Création de faux profils ou de groupes pour se moquer</li></ul><p><strong>Appelle le 3018</strong> — ligne nationale gratuite dédiée au cyberharcèlement.</p></div>
     </div>
     <div class="acc-item" onclick="toggleAcc(this)">
-      <div class="acc-head"><div class="acc-ico">🚪</div><div class="acc-title"><h3>Exclusion et isolement</h3><p>Mise à l'écart du groupe</p></div><svg class="acc-arr" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
-      <div class="acc-body"><p>L'exclusion forcée cause des dommages psychologiques sévères, souvent sous-estimés car invisibles.</p><ul><li>Ignorer systématiquement une personne</li><li>Empêcher les autres de lui parler</li><li>Ne jamais l'inclure dans les activités de groupe</li></ul></div>
+      <div class="acc-head"><div class="acc-ico">🚪</div><div class="acc-title"><h3>Mise à l'écart et isolement</h3><p>Mise à l'écart du groupe</p></div><svg class="acc-arr" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="acc-body"><p>La mise à l'écart forcée cause des dommages psychologiques sévères, souvent sous-estimés car invisibles.</p><ul><li>Ignorer systématiquement une personne</li><li>Empêcher les autres de lui parler</li><li>Ne jamais l'inclure dans les activités de groupe</li></ul></div>
     </div>
     <div class="acc-item" onclick="toggleAcc(this)">
       <div class="acc-head"><div class="acc-ico">🪞</div><div class="acc-title"><h3>Harcèlement discriminatoire</h3><p>Genre, origine, religion, handicap</p></div><svg class="acc-arr" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
@@ -709,13 +678,13 @@ html.dark .dm-switch::after { left:25px; }
   <div class="chat-wrap">
     <div class="chat-head">
       <div class="chat-av">🤖</div>
-      <div class="chat-info"><h3>Léa — Assistante bien-être</h3><p>Écoute · Orientation · Confidentiel</p></div>
-      <button class="btn btn-ghost btn-sm" onclick="clearChat()" style="margin-left:auto">Effacer</button>
+      <div class="chat-info"><h3 id="chat-title">Léa — Assistante bien-être</h3><p id="chat-subtitle">Écoute · Orientation · Confidentiel</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearChat()" style="margin-left:auto" id="chat-clear-btn">Effacer</button>
     </div>
-    <div class="chat-disc">⚠️ Léa est une IA — pas un professionnel de santé. En cas de danger : <strong>3018</strong> ou <strong>15</strong>. Tes messages ne sont pas enregistrés (RGPD).</div>
+    <div class="chat-disc" id="chat-disclaimer">⚠️ Léa est une IA — pas un professionnel de santé. En cas de danger : <strong>3018</strong> ou <strong>15</strong>. Tes messages ne sont pas enregistrés (RGPD).</div>
     <div class="chat-msgs" id="chat-msgs"></div>
     <div class="chat-in-wrap">
-      <textarea class="chat-in" id="chat-in" placeholder="Écris ton message…" rows="1"
+      <textarea class="chat-in" id="chat-in" rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
         oninput="autoH(this)"></textarea>
       <button class="send-btn" onclick="sendMsg()">
@@ -788,11 +757,394 @@ html.dark .dm-switch::after { left:25px; }
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span>Profil</span>
   </button>
+  <button class="ni" id="ni-dashboard" onclick="go('dashboard')" style="display:none">
+    <div class="ni-pip"></div>
+    <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>Admin</span>
+  </button>
 </nav>
 
 </div><!-- #app -->
 
 <script>
+// ═══════════════════════════════════════════
+// INTERNATIONALIZATION (i18n)
+// ═══════════════════════════════════════════
+let currentLang = localStorage.getItem('ss_lang') || 'fr';
+
+const i18n = {
+  fr: {
+    // Emergency bar
+    inDanger: 'En danger ?',
+    // Establishment selector
+    chooseSchool: 'Choisis ton établissement',
+    chooseSchoolDesc: 'Sélectionne ton école, collège ou lycée pour accéder à l\'espace dédié.',
+    noSchools: 'Aucun établissement disponible',
+    noSchoolsDesc: 'Les établissements sont configurés par l\'administration SafeSchool.',
+    contactAdmin: 'Contacte ton administration pour qu\'elle inscrive ton établissement.',
+    notInList: 'Ton établissement n\'est pas dans la liste ?',
+    askAdmin: 'Demande à ton administration de contacter SafeSchool pour l\'inscription.',
+    rgpdFooter: 'Chaque établissement a son propre espace sécurisé · Conforme RGPD (UE 2016/679)',
+    confirmSchool: 'Confirme ton établissement',
+    confirmQ: 'Es-tu bien inscrit(e) dans cet établissement ?',
+    confirmWarn: 'Signaler dans le mauvais établissement peut retarder le traitement de ton dossier.',
+    yesMySchool: 'Oui, c\'est mon établissement',
+    noOther: '← Non, je veux choisir un autre',
+    changeSchool: 'Changer d\'établissement',
+    // Home
+    notAlone: 'Tu n\'es<br>pas seul(e).',
+    homeDesc: 'Signale, apprends, et trouve de l\'aide en quelques secondes.',
+    whatToDo: 'Que veux-tu faire ?',
+    report: 'Signaler',
+    reportDesc: 'Décrire une situation',
+    learn: 'Apprendre',
+    learnDesc: 'Comprendre et quiz',
+    assistant: 'Assistant Léa',
+    assistantDesc: 'Parler, être écouté(e)',
+    help: 'Aide',
+    helpDesc: 'Contacts & urgences',
+    alreadyReported: 'Déjà signalé ?',
+    haveCode: 'J\'ai un code — voir ma réponse',
+    adminDash: 'Dashboard admin',
+    trackCase: 'Suivre mon dossier',
+    // Bottom nav
+    navHome: 'Accueil',
+    navLearn: 'Apprendre',
+    navReport: 'Signaler',
+    navLea: 'Léa',
+    navHelp: 'Aide',
+    navProfile: 'Profil',
+    // Report steps
+    step: 'Étape',
+    yourRole: 'Ton rôle',
+    youAre: 'Tu es…',
+    harassType: 'Type de harcèlement',
+    whatType: 'Quel type ?',
+    describeSituation: 'Décris la situation',
+    moreDetails: 'Plus de détails',
+    context: 'Contexte',
+    whereWhen: 'Où et quand ?',
+    yourIdentity: 'Ton identité',
+    howToReport: 'Comment signaler ?',
+    iAmVictim: 'Je suis victime',
+    victimDesc: 'C\'est moi qui subis le harcèlement',
+    iAmWitness: 'Je suis témoin',
+    witnessDesc: 'J\'ai vu une situation préoccupante',
+    iAmParent: 'Je suis parent',
+    parentDesc: 'Mon enfant est concerné(e)',
+    iAmStaff: 'Personnel éducatif',
+    staffDesc: 'Je suis un membre du personnel',
+    physical: 'Physique',
+    verbal: 'Verbal',
+    cyber: 'Cyber',
+    exclusion: 'Mise à l\'écart',
+    other: 'Autre',
+    describeWhat: 'Décris ce qui se passe',
+    describePlaceholder: 'Décris la situation avec le plus de détails possible. Qui, quoi, quand…',
+    minChars: '20 caractères minimum',
+    proofs: 'Preuves',
+    optional: 'optionnel',
+    proofDesc: 'Photos, captures d\'écran, vidéos',
+    maxFiles: 'Max 5 fichiers · 10MB chacun',
+    location: 'Lieu',
+    locationPlaceholder: 'Ex: Cour de récréation, couloir du 1er…',
+    frequency: 'Fréquence',
+    selectFreq: 'Sélectionne une fréquence',
+    once: 'Une seule fois',
+    several: 'Plusieurs fois',
+    weekly: 'Chaque semaine',
+    daily: 'Chaque jour',
+    urgencyLevel: 'Niveau d\'urgence',
+    normal: 'Normal',
+    serious: 'Sérieux',
+    urgent: 'Urgent',
+    additionalInfo: 'Informations complémentaires',
+    optionalStats: 'facultatif — aide aux statistiques',
+    schoolLevel: 'Niveau scolaire',
+    preferNotSay: 'Préfère ne pas répondre',
+    classLabel: 'Classe',
+    classPlaceholder: 'Facultatif',
+    ageRange: 'Tranche d\'âge',
+    gender: 'Genre',
+    male: 'Masculin',
+    female: 'Féminin',
+    nonBinary: 'Non-binaire',
+    sinceWhen: 'Depuis quand cette situation dure ?',
+    lessThanWeek: 'Moins d\'une semaine',
+    lessThanMonth: 'Moins d\'un mois',
+    oneToThreeMonths: '1 à 3 mois',
+    threeToSixMonths: '3 à 6 mois',
+    moreThanSix: 'Plus de 6 mois',
+    moreThanYear: 'Plus d\'un an',
+    anonymousInfoNote: 'Ces informations sont anonymes et servent uniquement à améliorer la prévention. Aucune réponse n\'est obligatoire.',
+    anonymousRecommended: 'Signalement anonyme recommandé.',
+    anonymousDesc: 'Personne ne saura qui tu es. Un code de suivi et un numéro de dossier te permettront de suivre la réponse.',
+    anonymous: 'Anonyme',
+    recommended: 'RECOMMANDÉ',
+    anonymousCodeDesc: 'Je reçois un code de suivi sans révéler mon identité',
+    identified: 'Identifié(e)',
+    identifiedDesc: 'Je donne mes coordonnées pour être recontacté(e)',
+    firstName: 'Prénom et Nom',
+    emailOptional: 'Email',
+    emailOptinLabel: 'Je souhaite recevoir par email les mises à jour non sensibles de mon dossier.',
+    confirmEtabLabel: 'Vérification de l\'établissement',
+    confirmEtabQ: 'Je confirme que je suis bien inscrit(e) ou que je fais partie de cet établissement.',
+    wrongSchool: 'Si ce n\'est pas le bon établissement,',
+    changeHere: 'change d\'établissement ici',
+    consentLabel: 'J\'accepte les conditions d\'utilisation et la politique de confidentialité.',
+    back: '← Retour',
+    continue: 'Continuer →',
+    send: 'Envoyer le signalement',
+    cancel: 'Annuler',
+    // Success
+    reportSent: 'Signalement envoyé !',
+    trackCodeLabel: 'Ton code de suivi',
+    trackCodeWarn: 'Note-le précieusement. Il te permettra de suivre la réponse.',
+    caseNumberLabel: 'Numéro de dossier',
+    copy: 'Copier le code',
+    copied: 'Copié !',
+    goHome: 'Retour à l\'accueil',
+    // My report
+    trackMyCase: 'Suivre mon dossier',
+    trackDesc: 'Saisis ton code pour voir la réponse de l\'équipe',
+    trackCode: 'Ton code de suivi',
+    trackCodeHint: 'Code de suivi (SS-XXXXXX) ou numéro de dossier',
+    searchMyCase: 'Rechercher mon dossier',
+    // Education
+    understandLearn: 'Comprendre & Apprendre',
+    allForms: 'Le harcèlement sous toutes ses formes',
+    understand: 'Comprendre',
+    quiz: 'Quiz',
+    // Help
+    helpContacts: 'Aide & Contacts',
+    helpDesc: 'Des personnes sont là pour toi, maintenant',
+    nationalNumbers: 'Numéros nationaux',
+    talkToLea: 'Parler à l\'assistante Léa',
+    // Chat
+    leaTitle: 'Léa — Assistante bien-être',
+    leaSubtitle: 'Écoute · Orientation · Confidentiel',
+    leaDisclaimer: 'Léa est une IA — pas un professionnel de santé. En cas de danger : 3018 ou 15. Tes messages ne sont pas enregistrés (RGPD).',
+    writeMsg: 'Écris ton message…',
+    clear: 'Effacer',
+    // Language
+    language: 'Langue',
+    langFr: 'Français',
+    langEn: 'English'
+  },
+  en: {
+    inDanger: 'In danger?',
+    chooseSchool: 'Choose your school',
+    chooseSchoolDesc: 'Select your school to access its dedicated space.',
+    noSchools: 'No schools available',
+    noSchoolsDesc: 'Schools are set up by the SafeSchool administration.',
+    contactAdmin: 'Contact your administration to register your school.',
+    notInList: 'Your school is not in the list?',
+    askAdmin: 'Ask your administration to contact SafeSchool to register.',
+    rgpdFooter: 'Each school has its own secure space · GDPR compliant (EU 2016/679)',
+    confirmSchool: 'Confirm your school',
+    confirmQ: 'Are you registered at this school?',
+    confirmWarn: 'Reporting to the wrong school can delay your case.',
+    yesMySchool: 'Yes, this is my school',
+    noOther: '← No, I want to choose another',
+    changeSchool: 'Change school',
+    notAlone: 'You are<br>not alone.',
+    homeDesc: 'Report, learn, and get help in seconds.',
+    whatToDo: 'What would you like to do?',
+    report: 'Report',
+    reportDesc: 'Describe a situation',
+    learn: 'Learn',
+    learnDesc: 'Understand & quiz',
+    assistant: 'Lea Assistant',
+    assistantDesc: 'Talk, be heard',
+    help: 'Help',
+    helpDesc: 'Contacts & emergencies',
+    alreadyReported: 'Already reported?',
+    haveCode: 'I have a code — see my response',
+    adminDash: 'Admin Dashboard',
+    trackCase: 'Track my case',
+    navHome: 'Home',
+    navLearn: 'Learn',
+    navReport: 'Report',
+    navLea: 'Lea',
+    navHelp: 'Help',
+    navProfile: 'Profile',
+    step: 'Step',
+    yourRole: 'Your role',
+    youAre: 'You are…',
+    harassType: 'Type of bullying',
+    whatType: 'What type?',
+    describeSituation: 'Describe the situation',
+    moreDetails: 'More details',
+    context: 'Context',
+    whereWhen: 'Where and when?',
+    yourIdentity: 'Your identity',
+    howToReport: 'How to report?',
+    iAmVictim: 'I am a victim',
+    victimDesc: 'I am being bullied',
+    iAmWitness: 'I am a witness',
+    witnessDesc: 'I have seen a concerning situation',
+    iAmParent: 'I am a parent',
+    parentDesc: 'My child is affected',
+    iAmStaff: 'School staff',
+    staffDesc: 'I am a staff member',
+    physical: 'Physical',
+    verbal: 'Verbal',
+    cyber: 'Cyber',
+    exclusion: 'Social exclusion',
+    other: 'Other',
+    describeWhat: 'Describe what is happening',
+    describePlaceholder: 'Describe the situation with as much detail as possible. Who, what, when…',
+    minChars: 'Minimum 20 characters',
+    proofs: 'Evidence',
+    optional: 'optional',
+    proofDesc: 'Photos, screenshots, videos',
+    maxFiles: 'Max 5 files · 10MB each',
+    location: 'Location',
+    locationPlaceholder: 'E.g.: Playground, first floor hallway…',
+    frequency: 'Frequency',
+    selectFreq: 'Select a frequency',
+    once: 'Once',
+    several: 'Several times',
+    weekly: 'Every week',
+    daily: 'Every day',
+    urgencyLevel: 'Urgency level',
+    normal: 'Normal',
+    serious: 'Serious',
+    urgent: 'Urgent',
+    additionalInfo: 'Additional information',
+    optionalStats: 'optional — helps statistics',
+    schoolLevel: 'School level',
+    preferNotSay: 'Prefer not to say',
+    classLabel: 'Class',
+    classPlaceholder: 'Optional',
+    ageRange: 'Age range',
+    gender: 'Gender',
+    male: 'Male',
+    female: 'Female',
+    nonBinary: 'Non-binary',
+    sinceWhen: 'How long has this been going on?',
+    lessThanWeek: 'Less than a week',
+    lessThanMonth: 'Less than a month',
+    oneToThreeMonths: '1 to 3 months',
+    threeToSixMonths: '3 to 6 months',
+    moreThanSix: 'More than 6 months',
+    moreThanYear: 'More than a year',
+    anonymousInfoNote: 'This information is anonymous and only used to improve prevention. No answer is required.',
+    anonymousRecommended: 'Anonymous reporting recommended.',
+    anonymousDesc: 'Nobody will know who you are. A tracking code and case number will let you follow the response.',
+    anonymous: 'Anonymous',
+    recommended: 'RECOMMENDED',
+    anonymousCodeDesc: 'I get a tracking code without revealing my identity',
+    identified: 'Identified',
+    identifiedDesc: 'I share my details to be contacted back',
+    firstName: 'First and Last name',
+    emailOptional: 'Email',
+    emailOptinLabel: 'I want to receive non-sensitive updates about my case by email.',
+    confirmEtabLabel: 'School verification',
+    confirmEtabQ: 'I confirm that I am enrolled at or belong to this school.',
+    wrongSchool: 'If this is not the right school,',
+    changeHere: 'change school here',
+    consentLabel: 'I accept the terms of use and privacy policy.',
+    back: '← Back',
+    continue: 'Continue →',
+    send: 'Send report',
+    cancel: 'Cancel',
+    reportSent: 'Report sent!',
+    trackCodeLabel: 'Your tracking code',
+    trackCodeWarn: 'Write it down carefully. It will let you follow the response.',
+    caseNumberLabel: 'Case number',
+    copy: 'Copy code',
+    copied: 'Copied!',
+    goHome: 'Back to home',
+    trackMyCase: 'Track my case',
+    trackDesc: 'Enter your code to see the team\'s response',
+    trackCode: 'Your tracking code',
+    trackCodeHint: 'Tracking code (SS-XXXXXX) or case number',
+    searchMyCase: 'Search my case',
+    understandLearn: 'Understand & Learn',
+    allForms: 'Bullying in all its forms',
+    understand: 'Understand',
+    quiz: 'Quiz',
+    helpContacts: 'Help & Contacts',
+    helpDesc: 'People are here for you, right now',
+    nationalNumbers: 'National helplines',
+    talkToLea: 'Talk to Lea assistant',
+    leaTitle: 'Lea — Wellbeing Assistant',
+    leaSubtitle: 'Listening · Guidance · Confidential',
+    leaDisclaimer: 'Lea is an AI — not a health professional. In case of danger: 3018 or 15. Your messages are not recorded (GDPR).',
+    writeMsg: 'Write your message…',
+    clear: 'Clear',
+    language: 'Language',
+    langFr: 'Français',
+    langEn: 'English'
+  }
+};
+
+function t(key) { return (i18n[currentLang] || i18n.fr)[key] || (i18n.fr)[key] || key; }
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('ss_lang', lang);
+  document.documentElement.lang = lang;
+  applyLanguage();
+}
+
+function applyLanguage() {
+  // Update bottom nav labels
+  const navLabels = document.querySelectorAll('.bnav .ni span');
+  const navKeys = ['navHome','navLearn','navReport','navLea','navHelp','navProfile'];
+  navLabels.forEach((el,i) => { if(navKeys[i]) el.textContent = t(navKeys[i]); });
+
+  // Update emergency bar
+  const ebarL = document.querySelector('.ebar-l');
+  if(ebarL) { const txt = ebarL.childNodes; for(let n of txt) if(n.nodeType===3) n.textContent = '\n    '+t('inDanger')+'\n  '; }
+
+  // Update etab current bar text
+  const etabAddr = document.getElementById('etab-bar-addr');
+  if(etabAddr && (!currentEtab || etabAddr.textContent===i18n.fr.changeSchool || etabAddr.textContent===i18n.en.changeSchool)) {
+    etabAddr.textContent = t('changeSchool');
+  }
+
+  // My report page
+  const mrTitle = document.getElementById('myreport-title');
+  if(mrTitle) mrTitle.textContent = t('trackMyCase');
+  const mrSub = document.getElementById('myreport-subtitle');
+  if(mrSub) mrSub.textContent = t('trackDesc');
+  const mrCodeLabel = document.getElementById('myreport-code-label');
+  if(mrCodeLabel) mrCodeLabel.textContent = t('trackCode');
+  const mrHint = document.getElementById('myreport-hint');
+  if(mrHint) mrHint.textContent = t('trackCodeHint');
+  const mrBtn = document.getElementById('myreport-search-btn');
+  if(mrBtn) mrBtn.textContent = t('searchMyCase');
+
+  // Chat page
+  const chatTitle = document.getElementById('chat-title');
+  if(chatTitle) chatTitle.textContent = t('leaTitle');
+  const chatSub = document.getElementById('chat-subtitle');
+  if(chatSub) chatSub.textContent = t('leaSubtitle');
+  const chatDisc = document.getElementById('chat-disclaimer');
+  if(chatDisc) chatDisc.innerHTML = '⚠️ '+t('leaDisclaimer');
+  const chatClear = document.getElementById('chat-clear-btn');
+  if(chatClear) chatClear.textContent = t('clear');
+  const chatIn = document.getElementById('chat-in');
+  if(chatIn) chatIn.placeholder = t('writeMsg');
+
+  // Re-render current page content if it's a user-facing page
+  if (typeof currentPage !== 'undefined') {
+    if(currentPage === 'home') {
+      renderHomePage();
+    }
+    if(currentPage === 'report') {
+      renderRStep();
+    }
+  }
+
+  // Update etab selector if visible
+  if(document.getElementById('pg-select-etab')?.style.display !== 'none') {
+    renderEtabList();
+  }
+}
+
 // ═══════════════════════════════════════════
 // MULTI-ESTABLISHMENT STATE
 // ═══════════════════════════════════════════
@@ -831,7 +1183,7 @@ function normalizeReportFromDb(r){
     frequency: r.frequency || '',
     harassmentType: dbTypeToUi(r.type),
     type: r.type || null,
-    urgency: dbUrgencyToUi(r.urgency),
+    urgency: dbUrgencyToUi(r.urgence || r.urgency),
     reporterType: r.reporter_role || '',
     isAnonymous: r.is_anonymous !== false,
     reporterName: r.reporter_name || '',
@@ -1010,7 +1362,8 @@ async function loadEstablishments() {
     }
 
     etabList = apiSchools.map(s => ({
-      id: supaSchoolMap[s.slug] || s.id,
+      id: supaSchoolMap[s.slug] || s.supabase_id || s.id,
+      blobId: s.id,
       name: s.name,
       slug: s.slug,
       address: s.city || '',
@@ -1020,6 +1373,24 @@ async function loadEstablishments() {
       isActive: true,
       apiId: s.id
     }));
+
+    // Resolve non-UUID IDs in background (for old establishments)
+    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const etab of etabList) {
+      if (!uuidRx.test(etab.id)) {
+        try {
+          const r = await fetch('/api/establishments/ensure-uuid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blob_id: etab.blobId || etab.apiId, slug: etab.slug })
+          });
+          if (r.ok) {
+            const d = await r.json();
+            if (d.uuid) { etab.id = d.uuid; }
+          }
+        } catch(e) { console.warn('UUID resolve failed for', etab.name, e); }
+      }
+    }
   } catch (e) {
     console.error('Failed to load establishments', e);
     etabList = [];
@@ -1031,12 +1402,24 @@ async function loadEstablishments() {
 function renderEtabList() {
   const el = document.getElementById('etab-list');
   if (!el) return;
+  // Update i18n texts
+  const titleEl = document.getElementById('etab-title');
+  const subtitleEl = document.getElementById('etab-subtitle');
+  const footerEl = document.getElementById('etab-footer-text');
+  if(titleEl) titleEl.textContent = t('chooseSchool');
+  if(subtitleEl) subtitleEl.textContent = t('chooseSchoolDesc');
+  if(footerEl) footerEl.textContent = t('rgpdFooter');
+  // Update lang buttons
+  document.querySelectorAll('.lang-btn').forEach(b => { b.style.background='transparent'; b.style.color='var(--tm)'; });
+  const activeLangBtn = document.getElementById('lang-'+currentLang+'-btn');
+  if(activeLangBtn) { activeLangBtn.style.background='var(--p)'; activeLangBtn.style.color='#fff'; }
+
   if (etabList.length === 0) {
     el.innerHTML = `<div style="text-align:center;padding:30px">
       <div style="font-size:2.5rem;margin-bottom:12px">🏫</div>
-      <p style="font-weight:600;margin-bottom:8px">Aucun établissement disponible</p>
-      <p style="font-size:.85rem;color:var(--ts);max-width:280px;margin:0 auto 16px">Les établissements sont configurés par l'administration SafeSchool.</p>
-      <p style="font-size:.78rem;color:var(--ts)">Contacte ton administration pour qu'elle inscrive ton établissement.</p>
+      <p style="font-weight:600;margin-bottom:8px">${t('noSchools')}</p>
+      <p style="font-size:.85rem;color:var(--ts);max-width:280px;margin:0 auto 16px">${t('noSchoolsDesc')}</p>
+      <p style="font-size:.78rem;color:var(--ts)">${t('contactAdmin')}</p>
     </div>`;
     return;
   }
@@ -1053,8 +1436,8 @@ function renderEtabList() {
     </div>
   `).join('') + `
     <div style="margin-top:14px;text-align:center">
-      <p style="font-size:.78rem;color:var(--ts);margin-bottom:8px">Ton établissement n'est pas dans la liste ?</p>
-      <p style="font-size:.74rem;color:var(--ts)">Demande à ton administration de contacter SafeSchool pour l'inscription.</p>
+      <p style="font-size:.78rem;color:var(--ts);margin-bottom:8px">${t('notInList')}</p>
+      <p style="font-size:.74rem;color:var(--ts)">${t('askAdmin')}</p>
     </div>`;
 }
 
@@ -1070,7 +1453,7 @@ function confirmEstablishment(etabId) {
   <div class="modal-overlay" id="confirm-etab-modal" onclick="if(event.target===this)document.getElementById('confirm-etab-modal').remove()">
     <div class="modal">
       <div class="mhandle"></div>
-      <h3 style="text-align:center">Confirme ton établissement</h3>
+      <h3 style="text-align:center">${t('confirmSchool')}</h3>
       <div style="text-align:center;padding:10px 0 16px">
         <div style="font-size:2.5rem;margin-bottom:10px">${etabTypeIcons[etab.type]||'🏫'}</div>
         <h2 style="font-size:1.2rem;margin-bottom:4px">${etab.name}</h2>
@@ -1078,18 +1461,18 @@ function confirmEstablishment(etabId) {
       </div>
       <div style="background:var(--abg);border:1.5px solid rgba(217,119,6,.2);border-radius:var(--r12);padding:14px;margin-bottom:16px">
         <p style="font-size:.86rem;color:#92400e;font-weight:500;text-align:center">
-          ⚠️ Es-tu bien inscrit(e) dans cet établissement ?
+          ⚠️ ${t('confirmQ')}
         </p>
         <p style="font-size:.78rem;color:#92400e;text-align:center;margin-top:6px">
-          Signaler dans le mauvais établissement peut retarder le traitement de ton dossier.
+          ${t('confirmWarn')}
         </p>
       </div>
       <div class="modal-actions" style="flex-direction:column;gap:10px">
         <button class="btn btn-p btn-full" onclick="document.getElementById('confirm-etab-modal').remove();selectEstablishment('${etabId}')">
-          ✅ Oui, c'est mon établissement
+          ✅ ${t('yesMySchool')}
         </button>
         <button class="btn btn-ghost btn-full" onclick="document.getElementById('confirm-etab-modal').remove()">
-          ← Non, je veux choisir un autre
+          ${t('noOther')}
         </button>
       </div>
     </div>
@@ -1100,7 +1483,9 @@ async function selectEstablishment(etabId) {
   const etab = etabList.find(e => e.id === etabId);
   if (!etab) return;
   currentEtab = etab;
-  localStorage.setItem('ss_current_etab', etabId);
+  localStorage.setItem('ss_current_etab', etab.id);
+  // Store the plan from API data
+  if (etab.plan) localStorage.setItem('ss_plan_' + etab.id, etab.plan);
 
   // Load data for this establishment
   await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
@@ -1114,8 +1499,7 @@ async function selectEstablishment(etabId) {
   // Update UI
   document.getElementById('etab-bar-icon').textContent = etabTypeIcons[etab.type] || '🏫';
   document.getElementById('etab-bar-name').textContent = etab.name;
-  document.getElementById('etab-bar-addr').textContent = etab.address || 'Changer d\'établissement';
-  document.getElementById('home-etab-label').textContent = `${etab.name} · Signalements confidentiels · RGPD`;
+  document.getElementById('etab-bar-addr').textContent = etab.address || t('changeSchool');
 
   go('home');
 }
@@ -1123,6 +1507,7 @@ async function selectEstablishment(etabId) {
 function showEtabSelector() {
   adminIn = false;
   document.getElementById('pg-dashboard').style.display = 'none';
+  document.getElementById('ni-dashboard').style.display = 'none';
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.getElementById('pg-select-etab').style.display = 'flex';
   document.getElementById('etab-current-bar').style.display = 'none';
@@ -1179,11 +1564,76 @@ function go(page) {
   if (ni) ni.classList.add('active');
   currentPage = page; window.scrollTo(0,0);
   if (page==='report') initReport();
+  if (page==='home') renderHomePage();
   if (page==='profile') renderProfile();
   if (page==='assistant') initChat();
   if (page==='education') initQuiz();
   if (page==='dashboard') renderDashboardV3();
   if (page==='help') renderSchoolContacts();
+}
+
+// ═══════════════════════════════════════════
+// HOME PAGE RENDER (i18n)
+// ═══════════════════════════════════════════
+function renderHomePage() {
+  const el = document.getElementById('home-content');
+  if (!el) return;
+  const etabLabel = currentEtab ? `${currentEtab.name} · ${currentLang==='en'?'Confidential reports · GDPR':'Signalements confidentiels · RGPD'}` : (currentLang==='en'?'Confidential reports · GDPR':'Signalements confidentiels · RGPD');
+  el.innerHTML = `
+  <div class="welcome">
+    <svg class="wdeco" width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="80" stroke="#4f46e5" stroke-width="28"/><circle cx="90" cy="90" r="45" fill="#4f46e5"/></svg>
+    <div class="wbadge" id="sa-secret-tap">🛡️ SafeSchool · ${currentLang==='en'?'Safe space':'Espace sécurisé'}</div>
+    <h1>${t('notAlone')}</h1>
+    <p>${t('homeDesc')}</p>
+  </div>
+  <div style="padding:8px 20px 0;display:flex;justify-content:flex-end">
+    <div style="display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:2px">
+      <button onclick="setLang('fr')" style="padding:4px 10px;border-radius:16px;border:none;font-size:.72rem;font-weight:700;cursor:pointer;transition:.2s;${currentLang==='fr'?'background:var(--p);color:#fff':'background:transparent;color:var(--tm)'}">FR</button>
+      <button onclick="setLang('en')" style="padding:4px 10px;border-radius:16px;border:none;font-size:.72rem;font-weight:700;cursor:pointer;transition:.2s;${currentLang==='en'?'background:var(--p);color:#fff':'background:transparent;color:var(--tm)'}">EN</button>
+    </div>
+  </div>
+  <div class="stitle">${t('whatToDo')}</div>
+  <div class="agrid">
+    <div class="ac ac-r" onclick="go('report')">
+      <div class="ai air">🚨</div><h3>${t('report')}</h3><p>${t('reportDesc')}</p>
+    </div>
+    <div class="ac ac-g" onclick="go('education')">
+      <div class="ai aig">📚</div><h3>${t('learn')}</h3><p>${t('learnDesc')}</p>
+    </div>
+    <div class="ac ac-p" onclick="go('assistant')">
+      <div class="ai aip">🤖</div><h3>${t('assistant')}</h3><p>${t('assistantDesc')}</p>
+    </div>
+    <div class="ac ac-s" onclick="go('help')">
+      <div class="ai ais">🆘</div><h3>${t('help')}</h3><p>${t('helpDesc')}</p>
+    </div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="sdiv"><span>${t('alreadyReported')}</span></div>
+  <div class="flink" onclick="go('myreport')">
+    <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+    ${t('haveCode')}
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div style="height:16px"></div>
+  <div style="padding:0 20px 8px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ ${t('adminDash')}</button>
+    <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 ${t('trackCase')}</button>
+  </div>
+  <div style="height:20px"></div>
+  <div style="padding:0 20px;text-align:center"><p style="font-size:.76rem;color:var(--ts)" id="home-etab-label">${etabLabel}</p></div>
+  <div style="padding:4px 20px 8px;text-align:center"><span style="font-size:.65rem;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:6px;border:1px solid var(--border)">SafeSchool v8.1 Extra Pro · PWA · RGPD</span></div>
+  <div style="height:14px"></div>`;
+  // Re-bind secret superadmin tap
+  const badge = document.getElementById('sa-secret-tap');
+  if (badge) {
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      saTapCount++;
+      clearTimeout(saTapTimer);
+      if (saTapCount >= 5) { saTapCount = 0; openSuperAdminPage(); }
+      else { saTapTimer = setTimeout(() => { saTapCount = 0; }, 2000); }
+    });
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1200,22 +1650,7 @@ function openSuperAdminPage(){
 
 // Secret superadmin access: 5 rapid taps on the SafeSchool badge
 let saTapCount = 0, saTapTimer = null;
-document.addEventListener('DOMContentLoaded', () => {
-  const badge = document.getElementById('sa-secret-tap');
-  if (badge) {
-    badge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      saTapCount++;
-      clearTimeout(saTapTimer);
-      if (saTapCount >= 5) {
-        saTapCount = 0;
-        openSuperAdminPage();
-      } else {
-        saTapTimer = setTimeout(() => { saTapCount = 0; }, 2000);
-      }
-    });
-  }
-});
+// Note: tap handler is attached in renderHomePage()
 
 // ═══════════════════════════════════════════
 // TOAST
@@ -1250,52 +1685,53 @@ function fmtTime(iso) { return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2
 function initReport() { rStep=1; rData={urgency:1,isAnonymous:true,consentAccepted:false,followupEmailOptIn:false}; renderRStep(); }
 
 const rSteps = [
-  {t:'Ton rôle',s:'Tu es…'},
-  {t:'Type de harcèlement',s:'Quel type ?'},
-  {t:'Décris la situation',s:'Plus de détails'},
-  {t:'Contexte',s:'Où et quand ?'},
-  {t:'Ton identité',s:'Comment signaler ?'},
+  {t:() => t('yourRole'),s:() => t('youAre')},
+  {t:() => t('harassType'),s:() => t('whatType')},
+  {t:() => t('describeSituation'),s:() => t('moreDetails')},
+  {t:() => t('context'),s:() => t('whereWhen')},
+  {t:() => t('yourIdentity'),s:() => t('howToReport')},
 ];
 
 function renderRStep() {
   const pct = (rStep/5)*100;
+  const stepInfo = rSteps[rStep-1];
   let h = `
-  <div style="padding:22px 20px 8px"><h1>${rSteps[rStep-1].t}</h1><p style="margin-top:3px">${rSteps[rStep-1].s}</p></div>
-  <div class="spbar"><div class="sbt"><div class="sbf" style="width:${pct}%"></div></div><span class="sbl">Étape ${rStep}/5</span></div>
+  <div style="padding:22px 20px 8px"><h1>${typeof stepInfo.t === 'function' ? stepInfo.t() : stepInfo.t}</h1><p style="margin-top:3px">${typeof stepInfo.s === 'function' ? stepInfo.s() : stepInfo.s}</p></div>
+  <div class="spbar"><div class="sbt"><div class="sbf" style="width:${pct}%"></div></div><span class="sbl">${t('step')} ${rStep}/5</span></div>
   <div style="padding:4px 20px 0">`;
 
   if (rStep===1) h += `
     <div class="cg">
       <button class="cbtn ${rData.reporterType==='victim'?'sel':''}" onclick="rd('reporterType','victim');selCbtn(this)">
-        <span class="ci">😟</span><div class="ct"><h4>Je suis victime</h4><p>C'est moi qui subis le harcèlement</p></div>
+        <span class="ci">😟</span><div class="ct"><h4>${t('iAmVictim')}</h4><p>${t('victimDesc')}</p></div>
       </button>
       <button class="cbtn ${rData.reporterType==='witness'?'sel':''}" onclick="rd('reporterType','witness');selCbtn(this)">
-        <span class="ci">👀</span><div class="ct"><h4>Je suis témoin</h4><p>J'ai vu une situation préoccupante</p></div>
+        <span class="ci">👀</span><div class="ct"><h4>${t('iAmWitness')}</h4><p>${t('witnessDesc')}</p></div>
       </button>
       <button class="cbtn ${rData.reporterType==='parent'?'sel':''}" onclick="rd('reporterType','parent');selCbtn(this)">
-        <span class="ci">👨‍👩‍👧</span><div class="ct"><h4>Je suis parent</h4><p>Mon enfant est concerné(e)</p></div>
+        <span class="ci">👨‍👩‍👧</span><div class="ct"><h4>${t('iAmParent')}</h4><p>${t('parentDesc')}</p></div>
       </button>
       <button class="cbtn ${rData.reporterType==='staff'?'sel':''}" onclick="rd('reporterType','staff');selCbtn(this)">
-        <span class="ci">👩‍🏫</span><div class="ct"><h4>Personnel éducatif</h4><p>Je suis un membre du personnel</p></div>
+        <span class="ci">👩‍🏫</span><div class="ct"><h4>${t('iAmStaff')}</h4><p>${t('staffDesc')}</p></div>
       </button>
     </div>`;
 
   if (rStep===2) {
-    const types=[{k:'physical',i:'👊',l:'Physique'},{k:'verbal',i:'💬',l:'Verbal'},{k:'cyber',i:'📱',l:'Cyber'},{k:'exclusion',i:'🚪',l:'Exclusion'},{k:'other',i:'❓',l:'Autre',d:'Autre'}];
+    const types=[{k:'exclusion',i:'🚪',l:t('exclusion')},{k:'physical',i:'👊',l:t('physical')},{k:'verbal',i:'💬',l:t('verbal')},{k:'cyber',i:'📱',l:t('cyber')},{k:'other',i:'❓',l:t('other')}];
     h += `<div class="cgrid">${types.map(t=>`<button class="cbtn ${rData.harassmentType===t.k?'sel':''}" onclick="rd('harassmentType','${t.k}');selCbtn(this,'.cgrid')"><span class="ci">${t.i}</span><div class="ct"><h4>${t.l}</h4></div></button>`).join('')}</div>`;
   }
 
   if (rStep===3) h += `
     <div class="fg">
-      <label class="fl">Décris ce qui se passe</label>
-      <textarea class="fta" id="r-desc" placeholder="Décris la situation avec le plus de détails possible. Qui, quoi, quand…" style="min-height:130px">${rData.description||''}</textarea>
-      <p class="fhint">20 caractères minimum</p>
+      <label class="fl">${t('describeWhat')}</label>
+      <textarea class="fta" id="r-desc" placeholder="${t('describePlaceholder')}" style="min-height:130px">${rData.description||''}</textarea>
+      <p class="fhint">${t('minChars')}</p>
     </div>
     <div class="fg" style="margin-bottom:0">
-      <label class="fl">📎 Preuves <span style="font-weight:400;color:var(--ts)">(optionnel)</span></label>
+      <label class="fl">📎 ${t('proofs')} <span style="font-weight:400;color:var(--ts)">(${t('optional')})</span></label>
       <div onclick="document.getElementById('r-files').click()" style="border:2px dashed var(--border);border-radius:var(--r12);padding:20px;text-align:center;background:#fff;cursor:pointer">
         <div style="font-size:2rem;margin-bottom:7px">📸</div>
-        <p style="font-size:.83rem">Photos, captures d'écran, vidéos<br><span style="font-size:.77rem">Max 5 fichiers · 10MB chacun</span></p>
+        <p style="font-size:.83rem">${t('proofDesc')}<br><span style="font-size:.77rem">${t('maxFiles')}</span></p>
       </div>
       <input type="file" id="r-files" accept="image/*,video/*" multiple style="display:none" onchange="handleFiles(this)">
       <div id="r-flist" style="margin-top:7px"></div>
@@ -1303,33 +1739,33 @@ function renderRStep() {
 
   if (rStep===4) h += `
     <div class="fg">
-      <label class="fl">📍 Lieu</label>
-      <input type="text" class="fi" id="r-loc" placeholder="Ex: Cour de récréation, couloir du 1er…" value="${rData.location||''}">
+      <label class="fl">📍 ${t('location')}</label>
+      <input type="text" class="fi" id="r-loc" placeholder="${t('locationPlaceholder')}" value="${rData.location||''}">
     </div>
     <div class="fg">
-      <label class="fl">🔁 Fréquence</label>
+      <label class="fl">🔁 ${t('frequency')}</label>
       <select class="fsel" id="r-freq">
-        <option value="">Sélectionne une fréquence</option>
-        <option value="once" ${rData.frequency==='once'?'selected':''}>Une seule fois</option>
-        <option value="several" ${rData.frequency==='several'?'selected':''}>Plusieurs fois</option>
-        <option value="weekly" ${rData.frequency==='weekly'?'selected':''}>Chaque semaine</option>
-        <option value="daily" ${rData.frequency==='daily'?'selected':''}>Chaque jour</option>
+        <option value="">${t('selectFreq')}</option>
+        <option value="once" ${rData.frequency==='once'?'selected':''}>${t('once')}</option>
+        <option value="several" ${rData.frequency==='several'?'selected':''}>${t('several')}</option>
+        <option value="weekly" ${rData.frequency==='weekly'?'selected':''}>${t('weekly')}</option>
+        <option value="daily" ${rData.frequency==='daily'?'selected':''}>${t('daily')}</option>
       </select>
     </div>
     <div class="fg">
-      <label class="fl">🚨 Niveau d'urgence</label>
+      <label class="fl">🚨 ${t('urgencyLevel')}</label>
       <div class="ug">
-        <button class="ub u1 ${rData.urgency===1?'sel':''}" onclick="setUrg(1,this)"><span class="ui">🟢</span><span class="ul">Normal</span></button>
-        <button class="ub u2 ${rData.urgency===2?'sel':''}" onclick="setUrg(2,this)"><span class="ui">🟡</span><span class="ul">Sérieux</span></button>
-        <button class="ub u3 ${rData.urgency===3?'sel':''}" onclick="setUrg(3,this)"><span class="ui">🔴</span><span class="ul">Urgent</span></button>
+        <button class="ub u1 ${rData.urgency===1?'sel':''}" onclick="setUrg(1,this)"><span class="ui">🟢</span><span class="ul">${t('normal')}</span></button>
+        <button class="ub u2 ${rData.urgency===2?'sel':''}" onclick="setUrg(2,this)"><span class="ui">🟡</span><span class="ul">${t('serious')}</span></button>
+        <button class="ub u3 ${rData.urgency===3?'sel':''}" onclick="setUrg(3,this)"><span class="ui">🔴</span><span class="ul">${t('urgent')}</span></button>
       </div>
     </div>
     <div style="margin-top:8px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)">
-      <p style="font-size:.82rem;color:var(--p);font-weight:600;margin-bottom:10px">📊 Informations complémentaires <span style="font-weight:400;color:var(--ts)">(facultatif — aide aux statistiques)</span></p>
+      <p style="font-size:.82rem;color:var(--p);font-weight:600;margin-bottom:10px">📊 ${t('additionalInfo')} <span style="font-weight:400;color:var(--ts)">(${t('optionalStats')})</span></p>
       <div class="fg" style="margin-bottom:10px">
-        <label class="fl" style="font-size:.82rem">Niveau scolaire</label>
+        <label class="fl" style="font-size:.82rem">${t('schoolLevel')}</label>
         <select class="fsel" id="r-niveau" style="font-size:.88rem">
-          <option value="">Préfère ne pas répondre</option>
+          <option value="">${t('preferNotSay')}</option>
           <option value="6eme" ${rData.niveau==='6eme'?'selected':''}>6ème</option>
           <option value="5eme" ${rData.niveau==='5eme'?'selected':''}>5ème</option>
           <option value="4eme" ${rData.niveau==='4eme'?'selected':''}>4ème</option>
@@ -1343,13 +1779,13 @@ function renderRStep() {
         </select>
       </div>
       <div class="fg" style="margin-bottom:10px">
-        <label class="fl" style="font-size:.82rem">Classe <span style="font-weight:400;color:var(--ts)">(ex: 3eB, Term S2)</span></label>
-        <input type="text" class="fi" id="r-classe" placeholder="Facultatif" value="${rData.classe||''}" style="font-size:.88rem">
+        <label class="fl" style="font-size:.82rem">${t('classLabel')} <span style="font-weight:400;color:var(--ts)">(ex: 3eB, Term S2)</span></label>
+        <input type="text" class="fi" id="r-classe" placeholder="${t('classPlaceholder')}" value="${rData.classe||''}" style="font-size:.88rem">
       </div>
       <div class="fg" style="margin-bottom:10px">
-        <label class="fl" style="font-size:.82rem">Tranche d'âge</label>
+        <label class="fl" style="font-size:.82rem">${t('ageRange')}</label>
         <select class="fsel" id="r-age-range" style="font-size:.88rem">
-          <option value="">Préfère ne pas répondre</option>
+          <option value="">${t('preferNotSay')}</option>
           <option value="10-12" ${rData.ageRange==='10-12'?'selected':''}>10–12 ans</option>
           <option value="13-14" ${rData.ageRange==='13-14'?'selected':''}>13–14 ans</option>
           <option value="15-16" ${rData.ageRange==='15-16'?'selected':''}>15–16 ans</option>
@@ -1358,73 +1794,73 @@ function renderRStep() {
         </select>
       </div>
       <div class="fg" style="margin-bottom:10px">
-        <label class="fl" style="font-size:.82rem">Genre</label>
+        <label class="fl" style="font-size:.82rem">${t('gender')}</label>
         <select class="fsel" id="r-genre" style="font-size:.88rem">
-          <option value="">Préfère ne pas répondre</option>
-          <option value="masculin" ${rData.genre==='masculin'?'selected':''}>Masculin</option>
-          <option value="feminin" ${rData.genre==='feminin'?'selected':''}>Féminin</option>
-          <option value="non-binaire" ${rData.genre==='non-binaire'?'selected':''}>Non-binaire</option>
-          <option value="autre" ${rData.genre==='autre'?'selected':''}>Autre</option>
+          <option value="">${t('preferNotSay')}</option>
+          <option value="masculin" ${rData.genre==='masculin'?'selected':''}>${t('male')}</option>
+          <option value="feminin" ${rData.genre==='feminin'?'selected':''}>${t('female')}</option>
+          <option value="non-binaire" ${rData.genre==='non-binaire'?'selected':''}>${t('nonBinary')}</option>
+          <option value="autre" ${rData.genre==='autre'?'selected':''}>${t('other')}</option>
         </select>
       </div>
       <div class="fg" style="margin-bottom:0">
-        <label class="fl" style="font-size:.82rem">Depuis quand cette situation dure ?</label>
+        <label class="fl" style="font-size:.82rem">${t('sinceWhen')}</label>
         <select class="fsel" id="r-duree" style="font-size:.88rem">
-          <option value="">Préfère ne pas répondre</option>
-          <option value="recent" ${rData.duree==='recent'?'selected':''}>Moins d'une semaine</option>
-          <option value="1mois" ${rData.duree==='1mois'?'selected':''}>Moins d'un mois</option>
-          <option value="1-3mois" ${rData.duree==='1-3mois'?'selected':''}>1 à 3 mois</option>
-          <option value="3-6mois" ${rData.duree==='3-6mois'?'selected':''}>3 à 6 mois</option>
-          <option value="6mois+" ${rData.duree==='6mois+'?'selected':''}>Plus de 6 mois</option>
-          <option value="1an+" ${rData.duree==='1an+'?'selected':''}>Plus d'un an</option>
+          <option value="">${t('preferNotSay')}</option>
+          <option value="recent" ${rData.duree==='recent'?'selected':''}>${t('lessThanWeek')}</option>
+          <option value="1mois" ${rData.duree==='1mois'?'selected':''}>${t('lessThanMonth')}</option>
+          <option value="1-3mois" ${rData.duree==='1-3mois'?'selected':''}>${t('oneToThreeMonths')}</option>
+          <option value="3-6mois" ${rData.duree==='3-6mois'?'selected':''}>${t('threeToSixMonths')}</option>
+          <option value="6mois+" ${rData.duree==='6mois+'?'selected':''}>${t('moreThanSix')}</option>
+          <option value="1an+" ${rData.duree==='1an+'?'selected':''}>${t('moreThanYear')}</option>
         </select>
       </div>
-      <p style="font-size:.72rem;color:var(--ts);margin-top:8px">Ces informations sont anonymes et servent uniquement à améliorer la prévention. Aucune réponse n'est obligatoire.</p>
+      <p style="font-size:.72rem;color:var(--ts);margin-top:8px">${t('anonymousInfoNote')}</p>
     </div>`;
 
   if (rStep===5) h += `
     <div style="background:var(--gbg);border:1.5px solid rgba(5,150,105,.22);border-radius:var(--r12);padding:14px;margin-bottom:18px">
-      <p style="font-size:.84rem;color:#065f46;font-weight:500">🔒 <strong>Signalement anonyme recommandé.</strong> Personne ne saura qui tu es. Un code de suivi et un numéro de dossier te permettront de suivre la réponse.</p>
+      <p style="font-size:.84rem;color:#065f46;font-weight:500">🔒 <strong>${t('anonymousRecommended')}</strong> ${t('anonymousDesc')}</p>
     </div>
     <div class="cg">
       <button class="cbtn ${rData.isAnonymous!==false?'sel':''}" onclick="setAnon(true)">
         <span class="ci">🎭</span>
-        <div class="ct"><h4>Anonyme <span style="background:var(--g);color:#fff;font-size:.68rem;padding:2px 8px;border-radius:10px;margin-left:5px;font-weight:600">RECOMMANDÉ</span></h4><p>Je reçois un code de suivi sans révéler mon identité</p></div>
+        <div class="ct"><h4>${t('anonymous')} <span style="background:var(--g);color:#fff;font-size:.68rem;padding:2px 8px;border-radius:10px;margin-left:5px;font-weight:600">${t('recommended')}</span></h4><p>${t('anonymousCodeDesc')}</p></div>
       </button>
       <button class="cbtn ${rData.isAnonymous===false?'sel':''}" onclick="setAnon(false)">
         <span class="ci">👤</span>
-        <div class="ct"><h4>Identifié(e)</h4><p>Je donne mes coordonnées pour être recontacté(e)</p></div>
+        <div class="ct"><h4>${t('identified')}</h4><p>${t('identifiedDesc')}</p></div>
       </button>
     </div>
     <div id="r-idfields" style="margin-top:14px;${rData.isAnonymous===false?'':'display:none'}">
-      <div class="fg"><label class="fl">Prénom et Nom</label><input type="text" class="fi" id="r-name" value="${rData.reporterName||''}" placeholder="Prénom Nom"></div>
-      <div class="fg"><label class="fl">Classe</label><input type="text" class="fi" id="r-class" value="${rData.reporterClass||''}" placeholder="Ex: Terminale B"></div>
-      <div class="fg"><label class="fl">Email <span style="font-weight:400;color:var(--ts)">(optionnel)</span></label><input type="email" class="fi" id="r-email" value="${rData.reporterEmail||''}" placeholder="prenom@lycee.fr"></div>
+      <div class="fg"><label class="fl">${t('firstName')}</label><input type="text" class="fi" id="r-name" value="${rData.reporterName||''}" placeholder="${t('firstName')}"></div>
+      <div class="fg"><label class="fl">${t('classLabel')}</label><input type="text" class="fi" id="r-class" value="${rData.reporterClass||''}" placeholder="Ex: Terminale B"></div>
+      <div class="fg"><label class="fl">${t('emailOptional')} <span style="font-weight:400;color:var(--ts)">(${t('optional')})</span></label><input type="email" class="fi" id="r-email" value="${rData.reporterEmail||''}" placeholder="prenom@lycee.fr"></div>
       <label style="display:flex;gap:10px;align-items:flex-start;margin-top:-4px;font-size:.82rem;color:var(--tm)">
         <input type="checkbox" id="r-email-optin" ${rData.followupEmailOptIn?'checked':''} style="margin-top:3px">
-        <span>Je souhaite recevoir par email les mises à jour non sensibles de mon dossier.</span>
+        <span>${t('emailOptinLabel')}</span>
       </label>
     </div>
     <div style="background:var(--pbg);border:1.5px solid rgba(79,70,229,.15);border-radius:var(--r12);padding:14px;margin-top:14px;margin-bottom:14px">
-      <p style="font-size:.84rem;color:var(--p);font-weight:600;margin-bottom:8px">📍 Vérification de l'établissement</p>
-      <p style="font-size:.82rem;color:var(--tm);margin-bottom:8px">Tu fais ce signalement pour : <strong style="color:var(--t)">${currentEtab?currentEtab.name:'—'}</strong></p>
+      <p style="font-size:.84rem;color:var(--p);font-weight:600;margin-bottom:8px">📍 ${t('confirmEtabLabel')}</p>
+      <p style="font-size:.82rem;color:var(--tm);margin-bottom:8px">${currentLang==='en'?'You are reporting for':'Tu fais ce signalement pour'} : <strong style="color:var(--t)">${currentEtab?currentEtab.name:'—'}</strong></p>
       <label style="display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--tm)">
         <input type="checkbox" id="r-confirm-etab" ${rData.confirmEtab?'checked':''} style="margin-top:3px">
-        <span>Je confirme que je suis bien inscrit(e) ou que je fais partie de cet établissement.</span>
+        <span>${t('confirmEtabQ')}</span>
       </label>
-      <p style="font-size:.74rem;color:var(--ts);margin-top:6px">Si ce n'est pas le bon établissement, <a href="#" onclick="event.preventDefault();go('home');showEtabSelector()" style="color:var(--p)">change d'établissement ici</a>.</p>
+      <p style="font-size:.74rem;color:var(--ts);margin-top:6px">${t('wrongSchool')} <a href="#" onclick="event.preventDefault();go('home');showEtabSelector()" style="color:var(--p)">${t('changeHere')}</a>.</p>
     </div>
     <div class="fg" style="margin-bottom:0">
       <label style="display:flex;gap:10px;align-items:flex-start;font-size:.82rem;color:var(--tm)">
         <input type="checkbox" id="r-consent" ${rData.consentAccepted?'checked':''} style="margin-top:3px">
-        <span>J'accepte les <a href="#" onclick="event.preventDefault();showTermsModal()" style="color:var(--p);text-decoration:underline">conditions d'utilisation</a> et la politique de confidentialité. Je comprends que le signalement peut être conservé pendant une durée limitée avant anonymisation pour le suivi et les statistiques.</span>
+        <span>${t('consentLabel')}</span>
       </label>
     </div>`;
 
   h += `</div>
   <div style="padding:16px 20px;display:flex;gap:10px;margin-top:6px">
-    ${rStep>1?`<button class="btn btn-ghost" onclick="rPrev()">← Retour</button>`:`<button class="btn btn-ghost" onclick="go('home')">Annuler</button>`}
-    ${rStep<5?`<button class="btn btn-p" style="flex:1" onclick="rNext()">Continuer →</button>`:`<button class="btn btn-r" style="flex:1" onclick="submitReport()">🚀 Envoyer le signalement</button>`}
+    ${rStep>1?`<button class="btn btn-ghost" onclick="rPrev()">${t('back')}</button>`:`<button class="btn btn-ghost" onclick="go('home')">${t('cancel')}</button>`}
+    ${rStep<5?`<button class="btn btn-p" style="flex:1" onclick="rNext()">${t('continue')}</button>`:`<button class="btn btn-r" style="flex:1" onclick="submitReport()">🚀 ${t('send')}</button>`}
   </div>`;
 
   document.getElementById('report-container').innerHTML = h;
@@ -1456,6 +1892,31 @@ async function submitReport(){
     var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
     if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
 
+    // Always call ensure-uuid to guarantee school exists in Supabase with a valid UUID
+    try {
+      const resolveRes = await fetch('/api/establishments/ensure-uuid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blob_id: currentEtab?.blobId || currentEtab?.apiId || schoolId, slug: currentEtab?.slug })
+      });
+      if (resolveRes.ok) {
+        const d = await resolveRes.json();
+        const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (d.uuid && uuidRx.test(d.uuid)) {
+          schoolId = d.uuid;
+          if (currentEtab) currentEtab.id = schoolId;
+        }
+      } else {
+        console.warn('ensure-uuid returned:', resolveRes.status);
+      }
+    } catch(e) { console.warn('UUID resolution failed:', e); }
+
+    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRx.test(schoolId)) {
+      toast("Erreur d'identifiant établissement. Veuillez recharger la page et réessayer.", 'err');
+      return;
+    }
+
     if(rData.isAnonymous===false){
       rData.reporterName=document.getElementById('r-name')?.value.trim()||'';
       rData.reporterClass=document.getElementById('r-class')?.value.trim()||'';
@@ -1481,7 +1942,7 @@ async function submitReport(){
       description: rData.description || '',
       location: rData.location || null,
       frequency: rData.frequency || null,
-      urgency: urgencyMap[String(rData.urgency)] || 'faible',
+      urgence: urgencyMap[String(rData.urgency)] || 'faible',
       is_anonymous: rData.isAnonymous !== false,
       reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
       reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
@@ -1504,7 +1965,42 @@ async function submitReport(){
       .select('*')
       .single();
 
-    if(error) throw error;
+    if(error) {
+      console.error('Supabase insert error:', JSON.stringify(error));
+      if (error.message && error.message.includes('uuid')) {
+        toast("Erreur technique (ID établissement). Rechargez la page et réessayez.", 'err');
+      } else if (error.message && error.message.includes('foreign key')) {
+        toast("L'établissement n'est pas encore synchronisé. Rechargez la page et réessayez.", 'err');
+      } else {
+        throw error;
+      }
+      return;
+    }
+
+    // Upload photos if any
+    if (rData.files && rData.files.length > 0 && data.id) {
+      try {
+        const photoPromises = rData.files.map(file => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = reader.result.split(',')[1];
+              resolve({ name: file.name, data: base64, type: file.type });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        });
+        const photos = await Promise.all(photoPromises);
+        await fetch('/api/photos/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_id: data.id, photos })
+        });
+      } catch(photoErr) {
+        console.warn('Photo upload failed:', photoErr);
+      }
+    }
 
     var report={
       id:data.id,
@@ -1518,7 +2014,7 @@ async function submitReport(){
       type:data.type,
       description:data.description,
       location:data.location,
-      urgency:data.urgency,
+      urgency:data.urgence || data.urgency,
       reporterEmail:data.reporter_email
     };
 
@@ -1667,10 +2163,10 @@ function switchTab(tab,btn){
 function initQuiz(){if(document.getElementById('quiz-wrap')?.innerHTML==='')renderQQ()}
 
 const Qs=[
-  {q:"Le harcèlement, c'est uniquement de la violence physique ?",opts:["Oui, uniquement physique","Non, il existe plein d'autres formes","Seulement si ça fait des blessures visibles","Ça dépend des personnes"],ok:1,exp:"Le harcèlement peut être verbal, cyber, d'exclusion… La violence physique n'est qu'une forme parmi d'autres."},
+  {q:"Le harcèlement, c'est uniquement de la violence physique ?",opts:["Oui, uniquement physique","Non, il existe plein d'autres formes","Seulement si ça fait des blessures visibles","Ça dépend des personnes"],ok:1,exp:"Le harcèlement peut être verbal, cyber, ou prendre la forme d'une mise à l'écart… La violence physique n'est qu'une forme parmi d'autres."},
   {q:"Si quelqu'un me harcèle sur Instagram, c'est moins grave ?",opts:["Oui, c'est juste Internet","Non, c'est aussi grave voire pire","Seulement si les messages sont publics","Ça dépend du nombre d'abonnés"],ok:1,exp:"Le cyberharcèlement peut toucher la victime 24h/24, même à la maison. Il laisse des traces et peut atteindre une large audience."},
   {q:"Quel numéro appeler pour du harcèlement scolaire en France ?",opts:["15","17","3018","119"],ok:2,exp:"Le 3018 est la ligne nationale dédiée au harcèlement scolaire et au cyberharcèlement. Gratuit du lundi au samedi."},
-  {q:"Ignorer systématiquement un(e) camarade, c'est du harcèlement ?",opts:["Non, c'est juste ne pas s'entendre","Oui, c'est du harcèlement par exclusion","Seulement si ça dure plus d'un mois","Non si on ne lui dit rien"],ok:1,exp:"L'exclusion répétée et délibérée est une forme de harcèlement reconnue. Elle cause de réels dommages psychologiques."},
+  {q:"Ignorer systématiquement un(e) camarade, c'est du harcèlement ?",opts:["Non, c'est juste ne pas s'entendre","Oui, c'est du harcèlement par mise à l'écart","Seulement si ça dure plus d'un mois","Non si on ne lui dit rien"],ok:1,exp:"La mise à l'écart répétée et délibérée est une forme de harcèlement reconnue. Elle cause de réels dommages psychologiques."},
   {q:"En tant que témoin, que dois-je faire ?",opts:["Ne rien faire, c'est pas mon problème","Encourager le harceleur","Signaler à un adulte ou via cette application","Attendre que ça se règle tout seul"],ok:2,exp:"Les témoins ont un rôle crucial. Signaler peut vraiment changer les choses."},
   {q:"Le harcèlement est-il un délit en France ?",opts:["Non, si c'est 'pour rire'","Oui, il peut être puni par la loi","Seulement s'il est physique","Seulement à partir de 18 ans"],ok:1,exp:"Le harcèlement scolaire est un délit en France depuis 2022 (loi n°2022-299)."},
   {q:"Est-ce normal de se sentir responsable d'être harcelé(e) ?",opts:["Oui, il y a souvent une raison","Ça dépend de comment on s'habille","Non, jamais. La victime n'est jamais responsable","Un peu, si on les a provoqués"],ok:2,exp:"La victime n'est JAMAIS responsable du harcèlement. La responsabilité appartient toujours aux auteurs."},
@@ -1761,11 +2257,11 @@ const bResp=[
    r:"Ce que tu décris touche ton **rapport au corps et à l'alimentation**. C'est un sujet sérieux qui mérite attention. 💙\n\nLe harcèlement peut impacter notre relation à notre corps. Sache que :\n\n• Tu **n'es pas** ce que les autres disent de toi\n• L'infirmier(e) scolaire peut t'aider en toute **confidentialité**\n• **Fil Santé Jeunes : 0 800 235 236** — des professionnels qui comprennent\n• **Anorexie Boulimie Info : 0 800 505 354** si tu penses avoir un trouble alimentaire\n\nTu veux m'en parler plus ?",
    cat:'sante_physique', severity: 2},
   {kw:['seul','seule','personne','isolé','isolée','aucun ami','pas d\'ami','rejeté','rejetée','invisible','n\'existe pas','personne m\'aime'],
-   r:"Se sentir seul(e) est **douloureux**, et c'est souvent aggravé par le harcèlement. 💙\n\nMais je veux que tu saches quelque chose d'important : **tu n'es pas invisible**. Le fait que tu me parles montre du courage.\n\nVoici ce que tu peux faire :\n• **Signale ta situation** ici — l'équipe éducative peut agir pour t'intégrer dans un groupe\n• Parle à un **adulte de confiance** : CPE, prof, parent, infirmier(e)\n• **Appelle le 3018** pour parler à quelqu'un qui comprend\n\nEst-ce que cette exclusion, c'est depuis longtemps ? Quelqu'un t'empêche de parler aux autres ?",
+   r:"Se sentir seul(e) est **douloureux**, et c'est souvent aggravé par le harcèlement. 💙\n\nMais je veux que tu saches quelque chose d'important : **tu n'es pas invisible**. Le fait que tu me parles montre du courage.\n\nVoici ce que tu peux faire :\n• **Signale ta situation** ici — l'équipe éducative peut agir pour t'intégrer dans un groupe\n• Parle à un **adulte de confiance** : CPE, prof, parent, infirmier(e)\n• **Appelle le 3018** pour parler à quelqu'un qui comprend\n\nEst-ce que cette mise à l'écart, c'est depuis longtemps ? Quelqu'un t'empêche de parler aux autres ?",
    cat:'isolement', severity: 2},
   // === HARASSMENT TYPES ===
   {kw:['harcelé','harcèlement','victime','m\'en prendre','m\'embêter','s\'acharnent','acharnement'],
-   r:"Je t'entends, et **ce n'est pas de ta faute**. 💙\n\nPeux-tu me dire :\n• Depuis combien de temps ça dure ?\n• C'est **physique** (coups, bousculades), **verbal** (insultes), **en ligne** (messages, photos) ou **exclusion** (mise à l'écart) ?\n• Est-ce que ça se passe toujours au même endroit ?\n\nTu peux **signaler anonymement** dans cette application — l'équipe éducative agira. C'est confidentiel et sécurisé.",
+   r:"Je t'entends, et **ce n'est pas de ta faute**. 💙\n\nPeux-tu me dire :\n• Depuis combien de temps ça dure ?\n• C'est **physique** (coups, bousculades), **verbal** (insultes), **en ligne** (messages, photos) ou **mise à l'écart** (isolement forcé) ?\n• Est-ce que ça se passe toujours au même endroit ?\n\nTu peux **signaler anonymement** dans cette application — l'équipe éducative agira. C'est confidentiel et sécurisé.",
    cat:'harcelement', severity: 2},
   {kw:['frappé','frapper','tapé','taper','coup','coups','bousculé','bousculade','poussé','pousser','battu','violence'],
    r:"⚠️ Les **violences physiques** sont un délit, même entre mineurs.\n\nSi tu as des **blessures**, va voir l'infirmier(e) scolaire immédiatement — il/elle pourra te soigner et consigner les faits.\n\n**Ce que tu peux faire :**\n• Note les dates, lieux, et témoins\n• Prends des photos de tes blessures si possible\n• **Signale ici anonymement** pour que l'équipe agisse\n• En cas de danger : appelle le **17** (police)\n\nTu es en sécurité en ce moment ?",
@@ -1957,7 +2453,7 @@ function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeig
 // ═══════════════════════════════════════════
 function roleLabel(r){return{cpe:'CPE',dir:'Direction',inf:'Infirmier(e)',ref:'Référent harcèlement',psy:'Psychologue',autre:'Autre'}[r]||r||'Autre'}
 function roleColor(r){return{cpe:'sr-cpe',dir:'sr-dir',inf:'sr-inf',ref:'sr-ref',psy:'sr-psy'}[r]||'sr-cpe'}
-function tlabel(t){return{physical:'Physique',verbal:'Verbal',cyber:'Cyber',exclusion:'Exclusion',other:'Autre'}[t]||t||'Autre'}
+function tlabel(t){return{physical:'Physique',verbal:'Verbal',cyber:'Cyber',exclusion:'Mise à l\'écart',other:'Autre'}[t]||t||'Autre'}
 function renderSchoolContacts(){
   const staff=S.staff().filter(s=>s.active);
   const el=document.getElementById('school-contacts-section');
@@ -2064,24 +2560,40 @@ function showAdminLogin(){
   const etabEmail = schoolCreds?.email || (currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr');
   document.body.insertAdjacentHTML('beforeend',`
   <div id="admin-overlay" class="admin-wrap">
-    <div class="admin-card">
-      <div class="admin-logo">🔐</div>
-      <h2 style="text-align:center;margin-bottom:5px">Administration</h2>
-      <p style="text-align:center;margin-bottom:8px;font-size:.88rem">Réservé au personnel éducatif</p>
-      ${currentEtab?`<p style="text-align:center;margin-bottom:8px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}
+    <div class="admin-card" style="animation:scaleIn .25s ease">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="width:56px;height:56px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 16px rgba(79,70,229,.25)">
+          <span style="font-size:1.5rem;filter:brightness(100)">🔐</span>
+        </div>
+        <h2 style="font-size:1.15rem;margin-bottom:4px;color:var(--t)">Espace Administration</h2>
+        <p style="font-size:.82rem;color:var(--tm)">Réservé au personnel éducatif</p>
+      </div>
+      ${currentEtab?`<div style="background:var(--pbg);border:1.5px solid rgba(79,70,229,.12);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:1.3rem">${etabTypeIcons[currentEtab.type]||'🏫'}</span><div><p style="font-size:.88rem;font-weight:700;color:var(--p)">${currentEtab.name}</p><p style="font-size:.75rem;color:var(--tm)">${etabTypeLabels[currentEtab.type]||'Établissement'}${currentEtab.city?' · '+currentEtab.city:''}</p></div></div>`:''}
       ${schoolCreds?`<p style="text-align:center;margin-bottom:14px;font-size:.76rem;color:var(--tm)">Email conseillé : <strong>${schoolCreds.email}</strong></p>`:''}
       <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="${schoolCreds?.email || ''}" placeholder="${etabEmail}"></div>
-      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="••••••••"></div>
-      <button class="btn btn-p btn-full btn-lg" onclick="tryLogin()" style="margin-bottom:10px">Se connecter</button>
+      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="Code admin ou mot de passe"></div>
+      <button class="btn btn-p btn-full btn-lg" id="al-submit-btn" onclick="tryLogin()" style="margin-bottom:10px">
+        <span id="al-btn-text">Se connecter</span>
+        <span id="al-btn-loading" style="display:none">Connexion...</span>
+      </button>
       <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>
     </div>
   </div>`);
   document.getElementById('al-pass').addEventListener('keydown',e=>e.key==='Enter'&&tryLogin());
+  document.getElementById('al-email').focus();
 }
 async function tryLogin(){
   const e=document.getElementById('al-email').value.trim().toLowerCase();
   const p=document.getElementById('al-pass').value;
   if (!currentEtab) { toast('Aucun établissement sélectionné','err'); return; }
+
+  // Show loading state
+  const btn = document.getElementById('al-submit-btn');
+  const btnText = document.getElementById('al-btn-text');
+  const btnLoading = document.getElementById('al-btn-loading');
+  if(btn) btn.disabled = true;
+  if(btnText) btnText.style.display = 'none';
+  if(btnLoading) btnLoading.style.display = '';
 
   const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
   const schoolCreds = creds[currentEtab.id];
@@ -2090,6 +2602,7 @@ async function tryLogin(){
   if (schoolCreds && e === (schoolCreds.email || '').toLowerCase() && p === schoolCreds.password) {
     adminIn = true;
     document.getElementById('admin-overlay')?.remove();
+    document.getElementById('ni-dashboard').style.display = '';
     document.getElementById('pg-dashboard').style.display='flex';
     await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
     go('dashboard');
@@ -2098,34 +2611,42 @@ async function tryLogin(){
   }
 
   // Check against API (admin-login endpoint)
-  try {
-    const r = await fetch('/api/establishments/admin-login/' + (currentEtab.slug || ''), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: e, password: p })
-    });
-    if (r.ok) {
-      const ct = r.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        const apiRes = await r.json();
-        if (apiRes.ok) {
-          // Save creds locally for future logins
-          creds[currentEtab.id] = { email: e, password: p };
-          localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
-          // Store the plan for subscription-based features
-          localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || 'starter');
-          adminIn = true;
-          document.getElementById('admin-overlay')?.remove();
-          document.getElementById('pg-dashboard').style.display='flex';
-          await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-          go('dashboard');
-          toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
-          return;
+  const slug = currentEtab.slug || '';
+  if (slug) {
+    try {
+      const r = await fetch('/api/establishments/admin-login/' + slug, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: e, password: p })
+      });
+      if (r.ok) {
+        const ct = r.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const apiRes = await r.json();
+          if (apiRes.ok) {
+            // Save creds locally for future logins
+            creds[currentEtab.id] = { email: e, password: p };
+            localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
+            // Store the plan for subscription-based features
+            localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || currentEtab.plan || 'starter');
+            adminIn = true;
+            document.getElementById('admin-overlay')?.remove();
+            document.getElementById('ni-dashboard').style.display = '';
+            document.getElementById('pg-dashboard').style.display='flex';
+            await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+            go('dashboard');
+            toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
+            return;
+          }
         }
       }
-    }
-  } catch(err) { console.warn('API auth check failed:', err); }
+    } catch(err) { console.warn('API auth check failed:', err); }
+  }
 
+  // Reset button state
+  if(btn) btn.disabled = false;
+  if(btnText) btnText.style.display = '';
+  if(btnLoading) btnLoading.style.display = 'none';
   toast('Identifiants incorrects. Utilisez le compte admin créé avec cet établissement.','err');
 }
 
@@ -2140,6 +2661,33 @@ function renderDashboardV3(){
   const rs=reps.filter(r=>r.status==='resolved').length;
   const plan = localStorage.getItem('ss_plan_' + (currentEtab?.id || '')) || currentEtab?.plan || 'starter';
   const isPremium = plan === 'pro' || plan === 'enterprise';
+
+  // School info card for newly created establishments
+  const schoolInfoHtml = currentEtab ? `
+  <div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:var(--r16);padding:18px;margin:10px 20px 14px;color:#fff">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <span style="font-size:1.6rem">${etabTypeIcons[currentEtab.type]||'🏫'}</span>
+      <div style="flex:1">
+        <h3 style="font-size:1rem;color:#fff;margin-bottom:2px">${currentEtab.name}</h3>
+        <p style="font-size:.78rem;opacity:.8">${etabTypeLabels[currentEtab.type]||'Établissement'}${currentEtab.city?' · '+currentEtab.city:''}</p>
+      </div>
+      <span style="background:rgba(255,255,255,.2);padding:4px 12px;border-radius:10px;font-size:.75rem;font-weight:700">${plan.toUpperCase()}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:800">${reps.length}</div>
+        <div style="font-size:.68rem;opacity:.8">Signalements</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:800">${S.staff().length}</div>
+        <div style="font-size:.68rem;opacity:.8">Membres</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:800">${rs}</div>
+        <div style="font-size:.68rem;opacity:.8">Résolus</div>
+      </div>
+    </div>
+  </div>` : '';
 
   // Premium: Advanced statistics
   let statsHtml = '';
@@ -2202,17 +2750,31 @@ function renderDashboardV3(){
     : `<span style="background:rgba(255,255,255,.1);padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600;margin-left:8px;opacity:.7">STARTER</span>`;
 
   document.getElementById('dashboard-body').innerHTML=`
-  <div class="dash-top">
-    <div><h1>Dashboard${planBadge}</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
-    <div style="display:flex;align-items:center;gap:8px">
-      ${urg>0?`<div style="background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.3);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
-      <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+  <div class="dash-top" style="padding:18px 20px 16px;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4f46e5 100%);position:relative;overflow:hidden">
+    <div style="position:absolute;right:-40px;top:-40px;width:140px;height:140px;background:rgba(255,255,255,.06);border-radius:50%"></div>
+    <div style="position:absolute;left:50%;bottom:-20px;width:80px;height:80px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+    <div style="position:relative;z-index:1">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <h1 style="color:#fff;font-size:1.3rem">Dashboard</h1>
+            ${planBadge}
+          </div>
+          <p style="color:rgba(255,255,255,.6);font-size:.8rem">${currentEtab?currentEtab.name:'Gestion des signalements'}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${urg>0?`<div style="background:rgba(220,38,38,.25);border:1px solid rgba(220,38,38,.4);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
+          <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+        </div>
+      </div>
     </div>
   </div>
+  ${schoolInfoHtml}
   <div style="padding:8px 20px 0;display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn btn-xs btn-soft" onclick="exportCSV()">📥 Export CSV</button>
     <button class="btn btn-xs btn-soft" onclick="printReport()">🖨️ Imprimer rapport</button>
     <button class="btn btn-xs btn-soft" onclick="S.reloadReports().then(()=>{S.reloadStaff().then(()=>{S.reloadLogs().then(renderDashboardV3)})})" title="Actualiser les données">🔄 Actualiser</button>
+    ${reps.length===0?`<button class="btn btn-xs btn-soft" onclick="loadDemoData()" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none">📊 Démo</button>`:`<button class="btn btn-xs btn-ghost" onclick="if(confirm('Effacer les données de démonstration ?'))clearDemoData()" style="font-size:.68rem">Effacer démo</button>`}
   </div>
   <div class="kpi-row">
     <div class="kpi ku" onclick="setFilter('all')"><div class="kpi-n">${urg}</div><div class="kpi-l">⚡ Urgents</div></div>
@@ -2250,7 +2812,7 @@ function renderReportsList(){
   if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
 
   const cards=filtered.length===0
-    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><p>Aucun signalement trouvé.</p></div>`
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
     :filtered.map((r,i)=>{
       const idx=reps.indexOf(r);
       const sc={new:{l:'Nouveau',c:'bn'},in_progress:{l:'En cours',c:'bi'},resolved:{l:'Résolu',c:'br'},archived:{l:'Archivé',c:'ba'}};
@@ -2278,6 +2840,7 @@ function renderReportsList(){
         <div class="ri-expand" id="re-${idx}">
           <h5>Description</h5>
           <p>${r.description||'Non renseignée'}</p>
+          <div id="inline-photos-${r.id}" class="rpt-photos-container"></div>
           ${r.location?`<h5>Lieu</h5><p>${r.location}</p>`:''}
           ${r.frequency?`<h5>Fréquence</h5><p>${{once:'Une fois',several:'Plusieurs fois',weekly:'Chaque semaine',daily:'Chaque jour'}[r.frequency]||r.frequency}</p>`:''}
           ${r.isAnonymous===false&&r.reporterName?`<h5>Déclarant</h5><p>${r.reporterName}${r.reporterClass?' · '+r.reporterClass:''}${r.reporterEmail?' · '+r.reporterEmail:''}</p>`:`<h5>Code de suivi</h5><p style="font-family:'Nunito',monospace;font-weight:900;letter-spacing:.1em;font-size:1.1rem;color:var(--p)">${r.code||'—'}</p>`}
@@ -2316,7 +2879,37 @@ function renderReportsList(){
 
 function refreshReports(){document.getElementById('dt-reports').innerHTML=renderReportsList()}
 function setFilter(s){filterStatus=s;refreshReports()}
-function toggleRI(idx){document.getElementById('ri-'+idx)?.classList.toggle('open')}
+function toggleRI(idx){
+  const el = document.getElementById('ri-'+idx);
+  if (!el) return;
+  el.classList.toggle('open');
+  // Load photos when expanding
+  if (el.classList.contains('open')) {
+    const reps = S.reports();
+    const r = reps[idx];
+    if (r && r.id) loadReportPhotos(r.id);
+  }
+}
+async function loadReportPhotos(reportId) {
+  const container = document.getElementById('inline-photos-' + reportId);
+  if (!container || container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+  try {
+    const res = await fetch('/api/photos/list/' + reportId);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.photos || data.photos.length === 0) return;
+    let html = '<h5 style="margin-top:10px">📎 Pièces jointes (' + data.photos.length + ')</h5><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">';
+    data.photos.forEach(function(p) {
+      const url = '/api/photos/get/' + encodeURIComponent(p.key);
+      html += '<a href="' + url + '" target="_blank" style="display:block;width:72px;height:72px;border-radius:8px;overflow:hidden;border:2px solid var(--border)">'
+        + '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover" alt="' + (p.name || 'photo') + '">'
+        + '</a>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch(e) { console.warn('Photos load failed:', e); }
+}
 function assignReport(idx,staffId){
   const reps=S.reports();
   const prev=reps[idx].assignedTo;
@@ -2356,12 +2949,19 @@ function setStatus(idx,status){
 // ── STAFF TAB ──
 function renderStaffTab(){
   const staff=S.staff();
+  const emptyMsg = staff.length === 0 ? `
+    <div style="text-align:center;padding:24px 16px;color:var(--ts)">
+      <div style="font-size:2rem;margin-bottom:8px">👥</div>
+      <h4 style="color:var(--t);font-size:.92rem;margin-bottom:6px">Aucun membre dans l'équipe</h4>
+      <p style="font-size:.82rem;max-width:280px;margin:0 auto">Ajoutez les membres du personnel éducatif qui traiteront les signalements (CPE, infirmier(e), référent harcèlement…)</p>
+    </div>` : '';
   return `
   <div style="display:flex;flex-direction:column;gap:10px">
     <button class="btn btn-p btn-full" onclick="openStaffModal(null)" style="margin-bottom:4px">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Ajouter un membre
     </button>
+    ${emptyMsg}
     ${staff.map(s=>`
     <div class="staff-card">
       <div class="staff-av" style="background:${roleBg(s.role)}">${s.emoji}</div>
@@ -2465,7 +3065,7 @@ function deleteStaff(id){
 // ── LOGS TAB ──
 function renderLogsTab(){
   const logs=S.logs();
-  if(!logs.length)return`<p style="text-align:center;padding:32px;color:var(--ts)">Aucune activité enregistrée.</p>`;
+  if(!logs.length)return`<div style="text-align:center;padding:32px;color:var(--ts)"><div style="font-size:1.8rem;margin-bottom:8px">📜</div><p style="font-size:.86rem">Aucune activité enregistrée pour le moment.</p><p style="font-size:.78rem;margin-top:4px">Les actions (signalements, réponses, modifications) seront consignées ici automatiquement.</p></div>`;
   return`<div>${logs.map(l=>`
   <div class="alog-item">
     <div class="alog-dot"></div>
@@ -2566,7 +3166,48 @@ function saveToReportHistory(code, caseNumber) {
   localStorage.setItem('ss_my_reports', JSON.stringify(history.slice(0, 20)));
 }
 
-function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
+function adminLogout(){adminIn=false;document.getElementById('ni-dashboard').style.display='none';go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
+
+// ═══════════════════════════════════════════
+// DEMO DATA FOR PRESENTATION
+// ═══════════════════════════════════════════
+function loadDemoData(){
+  const now = new Date();
+  const demoReports = [
+    {id:'demo-1',code:'SS-XK9T2M',trackingCode:'SS-XK9T2M',description:'Un élève de ma classe se fait insulter tous les jours à la récréation. Il est traité de noms et personne ne veut lui parler. Je l\'ai vu pleurer plusieurs fois.',location:'Cour de récréation',frequency:'daily',harassmentType:'verbal',urgency:3,status:'new',isAnonymous:true,reporterClass:'3ème B',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*60*2).toISOString(),history:[]},
+    {id:'demo-2',code:'SS-PQ7RN3',trackingCode:'SS-PQ7RN3',description:'Des élèves de terminale poussent et bousculent régulièrement un camarade dans les couloirs entre les cours.',location:'Couloir bâtiment B',frequency:'weekly',harassmentType:'physical',urgency:3,status:'in_progress',isAnonymous:false,reporterName:'Marie L.',reporterClass:'1ère S2',reporterEmail:'marie.l@eleve.fr',staffReply:'Merci pour ton signalement courageux. Nous avons identifié la situation et pris des mesures.',staffNotes:'Convocation des élèves concernés prévue lundi. Parents informés.',createdAt:new Date(now-1000*60*60*24).toISOString(),history:[{s:'in_progress',t:new Date(now-1000*60*60*12).toISOString(),by:'Mme Martin',note:'Prise en charge du dossier'}]},
+    {id:'demo-3',code:'SS-LM4VB8',trackingCode:'SS-LM4VB8',description:'Un groupe crée des faux comptes sur les réseaux sociaux pour se moquer d\'une élève. Ils publient des photos modifiées et des commentaires méchants.',location:'En ligne / réseaux sociaux',frequency:'several',harassmentType:'cyber',urgency:2,status:'in_progress',isAnonymous:true,reporterClass:'2nde 4',staffReply:'Nous prenons cette situation très au sérieux. Un signalement a été fait aux plateformes concernées.',staffNotes:'Capture d\'écran récupérées. Signalement Pharos en cours. Entretien prévu avec la famille.',createdAt:new Date(now-1000*60*60*48).toISOString(),history:[]},
+    {id:'demo-4',code:'SS-RT6WK1',trackingCode:'SS-RT6WK1',description:'Depuis la rentrée, un groupe d\'élèves refuse systématiquement de travailler ou de s\'asseoir à côté d\'un camarade. Il se retrouve toujours seul.',location:'Salle de classe 204',frequency:'daily',harassmentType:'exclusion',urgency:2,status:'new',isAnonymous:true,reporterClass:'4ème C',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*60*6).toISOString(),history:[]},
+    {id:'demo-5',code:'SS-YH2NF5',trackingCode:'SS-YH2NF5',description:'Un élève reçoit des messages de menaces par SMS d\'un numéro inconnu. Il a peur de venir à l\'école.',location:'Hors établissement / SMS',frequency:'several',harassmentType:'cyber',urgency:3,status:'resolved',isAnonymous:false,reporterName:'Thomas R.',reporterClass:'3ème A',staffReply:'La situation a été résolue. L\'auteur a été identifié et sanctionné. Tu peux revenir en toute sécurité.',staffNotes:'Auteur identifié: élève de 3ème D. Conseil de discipline prévu. Parents rencontrés. Suivi psy mis en place.',createdAt:new Date(now-1000*60*60*72).toISOString(),history:[{s:'in_progress',t:new Date(now-1000*60*60*60).toISOString(),by:'M. Dupont',note:'Enquête lancée'},{s:'resolved',t:new Date(now-1000*60*60*24).toISOString(),by:'Mme Martin',note:'Résolu — mesures prises'}]},
+    {id:'demo-6',code:'SS-GN8JC4',trackingCode:'SS-GN8JC4',description:'Je suis victime de moqueries sur mon physique tous les jours à la cantine. Plusieurs élèves participent et ça me rend très triste.',location:'Cantine',frequency:'daily',harassmentType:'verbal',urgency:2,status:'in_progress',isAnonymous:true,reporterClass:'5ème B',staffReply:'Tu as eu raison de nous écrire. Personne ne mérite d\'être traité ainsi. Nous agissons.',staffNotes:'Surveillance renforcée à la cantine. Médiation programmée jeudi.',createdAt:new Date(now-1000*60*60*36).toISOString(),history:[]},
+    {id:'demo-7',code:'SS-BW5TP9',trackingCode:'SS-BW5TP9',description:'Des élèves cachent les affaires d\'un camarade et lui volent son goûter régulièrement.',location:'Vestiaires EPS',frequency:'weekly',harassmentType:'physical',urgency:1,status:'resolved',isAnonymous:true,reporterClass:'6ème A',staffReply:'Merci pour ton signalement. La situation a été réglée avec les élèves concernés.',staffNotes:'Entretien avec les 3 élèves. Parents informés. Situation apaisée.',createdAt:new Date(now-1000*60*60*120).toISOString(),history:[{s:'resolved',t:new Date(now-1000*60*60*96).toISOString(),by:'M. CPE',note:'Résolu'}]},
+    {id:'demo-8',code:'SS-MK3QR7',trackingCode:'SS-MK3QR7',description:'Un élève menace régulièrement un autre de le frapper à la sortie de l\'école.',location:'Devant l\'établissement',frequency:'several',harassmentType:'physical',urgency:3,status:'new',isAnonymous:false,reporterName:'Prof. de math',reporterEmail:'prof.math@lycee.fr',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*30).toISOString(),history:[]},
+  ];
+  const demoStaff = [
+    {id:'staff-1',name:'Sophie Martin',email:'s.martin@lycee.fr',phone:'06 12 34 56 78',role:'cpe',active:true,emoji:'👩‍🏫',createdAt:new Date(now-1000*60*60*24*30).toISOString()},
+    {id:'staff-2',name:'Jean Dupont',email:'j.dupont@lycee.fr',phone:'06 98 76 54 32',role:'dir',active:true,emoji:'👨‍🏫',createdAt:new Date(now-1000*60*60*24*30).toISOString()},
+    {id:'staff-3',name:'Claire Leroy',email:'c.leroy@lycee.fr',phone:'06 55 44 33 22',role:'ref',active:true,emoji:'🛡️',createdAt:new Date(now-1000*60*60*24*15).toISOString()},
+    {id:'staff-4',name:'Dr. Bénard',email:'d.benard@lycee.fr',phone:'06 11 22 33 44',role:'psy',active:true,emoji:'🧑‍⚕️',createdAt:new Date(now-1000*60*60*24*10).toISOString()},
+  ];
+  cachedReports = demoReports;
+  cachedStaff = demoStaff;
+  cachedLogs = [
+    {id:'log-1',msg:'Dossier #demo-2 → en_cours',rid:'demo-2',t:new Date(now-1000*60*60*12).toISOString(),actor:'admin',action:'status_change'},
+    {id:'log-2',msg:'Réponse sauvegardée pour #demo-5',rid:'demo-5',t:new Date(now-1000*60*60*24).toISOString(),actor:'admin',action:'reply'},
+    {id:'log-3',msg:'Dossier #demo-5 → résolu',rid:'demo-5',t:new Date(now-1000*60*60*24).toISOString(),actor:'admin',action:'status_change'},
+    {id:'log-4',msg:'Nouveau signalement #demo-1',rid:'demo-1',t:new Date(now-1000*60*60*2).toISOString(),actor:'system',action:'new_report'},
+    {id:'log-5',msg:'Nouveau signalement #demo-8 (urgent)',rid:'demo-8',t:new Date(now-1000*60*30).toISOString(),actor:'system',action:'new_report'},
+  ];
+  renderDashboardV3();
+  toast('Données de démonstration chargées','ok');
+}
+function clearDemoData(){
+  cachedReports = [];
+  cachedStaff = [];
+  cachedLogs = [];
+  renderDashboardV3();
+  toast('Données de démonstration effacées');
+}
 
 // ═══════════════════════════════════════════
 // CSV EXPORT
@@ -2654,6 +3295,11 @@ function printReport(){
 // INIT
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+  // Apply saved language
+  document.documentElement.lang = currentLang;
+  renderHomePage();
+  applyLanguage();
+
   // Hide main app, show establishment selector first
   document.querySelector('.ebar').style.display = 'none';
   document.querySelector('.bnav').style.display = 'none';
@@ -2686,12 +3332,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
                 creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || '' };
                 localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
-                localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || 'starter');
+                localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || etab.plan || 'starter');
                 adminIn = true;
+                document.getElementById('ni-dashboard').style.display = '';
                 document.getElementById('pg-dashboard').style.display = 'flex';
                 await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
                 go('dashboard');
-                toast('Mode admin (acces superadmin)', 'ok');
+                toast('Mode admin (accès superadmin)', 'ok');
               }
             }
           }
