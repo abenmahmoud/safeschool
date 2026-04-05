@@ -34,6 +34,12 @@
   to = "/api/:splat"
   status = 200
 
+# GDPR API route
+[[redirects]]
+  from = "/api/gdpr/*"
+  to = "/.netlify/functions/api-gdpr"
+  status = 200
+
 # SPA fallback (must be last)
 [[redirects]]
   from = "/*"
@@ -50,7 +56,7 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     X-XSS-Protection = "1; mode=block"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 
 # HTML — no cache (always fresh)
 [[headers]]

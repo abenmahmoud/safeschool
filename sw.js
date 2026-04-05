@@ -3,7 +3,7 @@
 // Offline-first, Push Notifications, Background Sync, Smart Cache
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'ss-v9-fix-02';
+const CACHE_VERSION = 'ss-v9-i18n-01';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -15,6 +15,7 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/pricing.html',
   '/dashboard-v3.js',
+  '/i18n-translations.js',
   '/offline.html'
 ];
 
