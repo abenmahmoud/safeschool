@@ -1892,26 +1892,26 @@ async function submitReport(){
     var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
     if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
 
-    // Validate that schoolId is a proper UUID
-    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRx.test(schoolId)) {
-      // Try to resolve to a valid UUID
-      try {
-        const resolveRes = await fetch('/api/establishments/ensure-uuid', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ blob_id: currentEtab?.blobId || currentEtab?.apiId || schoolId, slug: currentEtab?.slug })
-        });
-        if (resolveRes.ok) {
-          const d = await resolveRes.json();
-          if (d.uuid && uuidRx.test(d.uuid)) {
-            schoolId = d.uuid;
-            if (currentEtab) currentEtab.id = schoolId;
-          }
+    // Always call ensure-uuid to guarantee school exists in Supabase with a valid UUID
+    try {
+      const resolveRes = await fetch('/api/establishments/ensure-uuid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blob_id: currentEtab?.blobId || currentEtab?.apiId || schoolId, slug: currentEtab?.slug })
+      });
+      if (resolveRes.ok) {
+        const d = await resolveRes.json();
+        const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (d.uuid && uuidRx.test(d.uuid)) {
+          schoolId = d.uuid;
+          if (currentEtab) currentEtab.id = schoolId;
         }
-      } catch(e) { console.warn('UUID resolution failed:', e); }
-    }
+      } else {
+        console.warn('ensure-uuid returned:', resolveRes.status);
+      }
+    } catch(e) { console.warn('UUID resolution failed:', e); }
 
+    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRx.test(schoolId)) {
       toast("Erreur d'identifiant établissement. Veuillez recharger la page et réessayer.", 'err');
       return;
@@ -1965,7 +1965,17 @@ async function submitReport(){
       .select('*')
       .single();
 
-    if(error) throw error;
+    if(error) {
+      console.error('Supabase insert error:', JSON.stringify(error));
+      if (error.message && error.message.includes('uuid')) {
+        toast("Erreur technique (ID établissement). Rechargez la page et réessayez.", 'err');
+      } else if (error.message && error.message.includes('foreign key')) {
+        toast("L'établissement n'est pas encore synchronisé. Rechargez la page et réessayez.", 'err');
+      } else {
+        throw error;
+      }
+      return;
+    }
 
     // Upload photos if any
     if (rData.files && rData.files.length > 0 && data.id) {
