@@ -460,7 +460,12 @@ async function api(method, path, body) {
   var opts = { method: method, headers: { 'Content-Type': 'application/json', 'x-sa-token': TOKEN } };
   if (body) opts.body = JSON.stringify(body);
   var r = await fetch(API_BASE + path, opts);
-  var data = await r.json();
+  var ct = r.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    throw new Error('Erreur serveur (reponse non-JSON, status ' + r.status + ')');
+  }
+  var data;
+  try { data = await r.json(); } catch(e) { throw new Error('Reponse invalide du serveur'); }
   if (!r.ok) throw new Error(data.error || 'Erreur API');
   return data;
 }
@@ -542,7 +547,9 @@ async function loadDashboard() {
         + '<div style="flex:1"><div style="color:#e2e8f0;font-weight:600;font-size:.85rem">'+x.name+'</div>'
         + '<div style="font-size:.75rem;color:#64748b">'+x.slug+'.safeschool.fr &middot; '+x.plan.toUpperCase()+' &middot; Admin: '+(x.admin_email||'-')+'</div></div>'
         + '<div style="text-align:right"><div style="font-size:.78rem;color:#94a3b8">'+(x.report_count||0)+' signalements</div>'
-        + '<div style="font-size:.68rem;color:#64748b">Code: <span style="color:#fbbf24;font-family:monospace">'+(x.admin_code||'-')+'</span></div></div></div>';
+        + '<div style="font-size:.68rem;color:#64748b">Code: <span style="color:#fbbf24;font-family:monospace">'+(x.admin_code||'-')+'</span></div>'
+        + '<a href="/?school='+x.slug+'&admin=1" target="_blank" style="font-size:.68rem;color:#a5b4fc;text-decoration:none">&rarr; Voir le dashboard admin</a>'
+        + '</div></div>';
     }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun etablissement. Creez-en un depuis le menu.</p>';
   } catch(e) {
     document.getElementById('gst').innerHTML = '<div class="sc" style="--c:#dc2626"><div class="sl">Erreur</div><div class="sn">!</div><div class="ss">'+e.message+'</div></div>';
@@ -566,6 +573,7 @@ async function loadSchools() {
         + '<td style="font-size:.8rem;color:'+dc+'">'+fmtD(x.expires_at)+' ('+dl+'j)</td>'
         + '<td><div class="tda">'
         + '<button class="btn bs bsm" onclick="opEd(\''+x.id+'\')">Modifier</button>'
+        + '<a href="/?school='+x.slug+'&admin=1" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff;font-size:.75rem">Admin</a>'
         + '<button class="btn bw bsm" onclick="regenAdmin(\''+x.id+'\')">Regen Code</button>'
         + '<button class="btn bd bsm" onclick="delSch(\''+x.id+'\')">Suppr.</button>'
         + '</div></td></tr>';
@@ -625,25 +633,6 @@ async function createSch() {
       name: name, slug: slug, city: city, email: email, type: type,
       plan: ST.plan, admin_email: adminEmail, admin_password: adminPass || undefined
     });
-
-    // Also create in Supabase for the app
-    try {
-      var planLimits = PL[ST.plan] || PL.starter;
-      var expDate = new Date();
-      expDate.setMonth(expDate.getMonth() + planLimits.mo);
-      await supa.from('schools').insert([{
-        name: name,
-        slug: slug,
-        ville: city || null,
-        email_contact: email || null,
-        plan: ST.plan,
-        status: ST.plan === 'starter' ? 'trial' : 'active',
-        max_students: planLimits.ms,
-        max_reports_month: planLimits.mr,
-        max_admins: planLimits.ma,
-        expires_at: expDate.toISOString()
-      }]);
-    } catch(e) { console.warn('Supabase school creation skipped:', e); }
 
     showSucc(school);
     shTst('Etablissement cree !');
@@ -768,6 +757,7 @@ async function loadSavData() {
   // Show school info + load reports from Supabase
   var html = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">'
     + '<a href="/?school='+school.slug+'" target="_blank" class="btn bsm bg" style="text-decoration:none">&#127760; Ouvrir l\'app eleve</a>'
+    + '<a href="/?school='+school.slug+'&admin=1" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff">&#128187; Dashboard Admin</a>'
     + '<button class="btn bsm" onclick="cpTxt(\''+(school.admin_code||'')+'\')">&#128203; Copier code admin</button>'
     + '<button class="btn bsm bw" onclick="regenAdmin(\''+id+'\');setTimeout(function(){loadSavData()},1500)">&#128260; Regenerer code</button>'
     + '</div>'
@@ -1308,8 +1298,8 @@ async function loadNotifStats() {
   try {
     var data = await api('GET', '/notify/stats');
     kpi.innerHTML =
-      stc('Total', data.total||0, 'Notifications envoyees', '#6366f1') +
-      stc('Aujourd\'hui', data.today||0, 'Notifications du jour', '#3b82f6') +
+      stc('Total', data.total||0, 'Notifications du jour', '#6366f1') +
+      stc('Envoyees', data.sent||0, 'Queued/Sent', '#3b82f6') +
       stc('Echouees', data.failed||0, 'A surveiller', (data.failed||0)>0?'#dc2626':'#16a34a') +
       stc('Types', Object.keys(data.by_type||{}).length, 'Canaux actifs', '#8b5cf6');
 
@@ -1365,7 +1355,7 @@ async function loadPushStats() {
   var configEl = document.getElementById('push-config');
   kpiEl.innerHTML = '<div class="loading"><div class="spin"></div></div>';
   try {
-    var res = await api('GET', '/../api/push/stats');
+    var res = await api('GET', '/push/stats');
     kpiEl.innerHTML =
       stc('Abonnes push', res.total || 0, 'Total enregistres', '#6366f1') +
       stc('Actifs', res.active || 0, 'Abonnements actifs', '#16a34a') +
@@ -1413,7 +1403,7 @@ async function sendPushNotif() {
   var school = document.getElementById('push-school').value.trim();
   if (!title || !msg) { shTst('Titre et message requis', true); return; }
   try {
-    var res = await api('POST', '/../api/push/send', { title: title, message: msg, type: type, schoolId: school || undefined, urgent: type === 'urgent' });
+    var res = await api('POST', '/push/send', { title: title, message: msg, type: type, schoolId: school || undefined, urgent: type === 'urgent' });
     shTst(res.message || ('Envoye a ' + (res.sent || 0) + ' abonne(s)'));
     document.getElementById('push-title').value = '';
     document.getElementById('push-msg').value = '';
@@ -1422,7 +1412,7 @@ async function sendPushNotif() {
 
 async function sendTestPush() {
   try {
-    var res = await api('POST', '/../api/push/send', { title: 'Test SafeSchool', message: 'Ceci est une notification de test envoyee depuis le panneau superadmin.', type: 'general' });
+    var res = await api('POST', '/push/send', { title: 'Test SafeSchool', message: 'Ceci est une notification de test envoyee depuis le panneau superadmin.', type: 'general' });
     shTst(res.message || 'Test envoye');
   } catch(e) { shTst('Erreur test: ' + (e.message || e), true); }
 }
