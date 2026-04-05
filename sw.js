@@ -3,7 +3,7 @@
 // Offline-first, Push Notifications, Background Sync, Smart Cache
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'ss-v9-fix-01';
+const CACHE_VERSION = 'ss-v9-fix-02';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
