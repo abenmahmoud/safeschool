@@ -1373,6 +1373,24 @@ async function loadEstablishments() {
       isActive: true,
       apiId: s.id
     }));
+
+    // Resolve non-UUID IDs in background (for old establishments)
+    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const etab of etabList) {
+      if (!uuidRx.test(etab.id)) {
+        try {
+          const r = await fetch('/api/establishments/ensure-uuid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blob_id: etab.blobId || etab.apiId, slug: etab.slug })
+          });
+          if (r.ok) {
+            const d = await r.json();
+            if (d.uuid) { etab.id = d.uuid; }
+          }
+        } catch(e) { console.warn('UUID resolve failed for', etab.name, e); }
+      }
+    }
   } catch (e) {
     console.error('Failed to load establishments', e);
     etabList = [];
@@ -1873,6 +1891,31 @@ async function submitReport(){
   try {
     var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
     if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
+
+    // Validate that schoolId is a proper UUID
+    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRx.test(schoolId)) {
+      // Try to resolve to a valid UUID
+      try {
+        const resolveRes = await fetch('/api/establishments/ensure-uuid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blob_id: currentEtab?.blobId || currentEtab?.apiId || schoolId, slug: currentEtab?.slug })
+        });
+        if (resolveRes.ok) {
+          const d = await resolveRes.json();
+          if (d.uuid && uuidRx.test(d.uuid)) {
+            schoolId = d.uuid;
+            if (currentEtab) currentEtab.id = schoolId;
+          }
+        }
+      } catch(e) { console.warn('UUID resolution failed:', e); }
+    }
+
+    if (!uuidRx.test(schoolId)) {
+      toast("Erreur d'identifiant établissement. Veuillez recharger la page et réessayer.", 'err');
+      return;
+    }
 
     if(rData.isAnonymous===false){
       rData.reporterName=document.getElementById('r-name')?.value.trim()||'';

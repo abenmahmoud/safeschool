@@ -313,6 +313,115 @@ export default async (req: Request, context: Context) => {
     return cors({ deleted: true });
   }
 
+  // POST /api/establishments/ensure-uuid - Resolve a school to a valid Supabase UUID
+  if (req.method === 'POST' && path === '/ensure-uuid') {
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
+
+    const blobId = body.blob_id || body.id;
+    const slug = body.slug;
+    if (!blobId && !slug) return cors({ error: 'blob_id ou slug requis' }, 400);
+
+    // Find the school in blobs
+    let schoolData: any = null;
+    if (blobId) {
+      schoolData = await store.get(`school_${blobId}`, { type: 'json' });
+    }
+    if (!schoolData && slug) {
+      const index = await store.get('_index', { type: 'json' }) as any[] || [];
+      const entry = index.find((e: any) => e.slug === slug);
+      if (entry) {
+        schoolData = await store.get(`school_${entry.id}`, { type: 'json' });
+      }
+    }
+    if (!schoolData) return cors({ error: 'École non trouvée' }, 404);
+
+    // Check if ID is already a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isValidUUID = uuidRegex.test(schoolData.id);
+
+    // If school already has a valid supabase_id, return it
+    if (schoolData.supabase_id && uuidRegex.test(schoolData.supabase_id)) {
+      return cors({ uuid: schoolData.supabase_id, source: 'cached' });
+    }
+
+    // If blob ID is already a valid UUID, ensure it's in Supabase
+    if (isValidUUID) {
+      // Try to sync to Supabase if env vars are available
+      if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+        await syncToSupabase(schoolData, store).catch(() => {});
+      }
+      return cors({ uuid: schoolData.id, source: 'blob_uuid' });
+    }
+
+    // Old-format ID: need to create a proper UUID
+    const newUUID = randomUUID();
+
+    // Try to insert/update in Supabase with the new UUID
+    if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=representation'
+          },
+          body: JSON.stringify({
+            id: newUUID,
+            name: schoolData.name,
+            slug: schoolData.slug,
+            ville: schoolData.city || null,
+            email_contact: schoolData.email || null,
+            plan: schoolData.plan || 'starter',
+            status: schoolData.status || 'trial',
+            max_students: schoolData.max_students || 200,
+            max_reports_month: schoolData.max_reports || 50,
+            max_admins: schoolData.max_admins || 1,
+            expires_at: schoolData.expires_at
+          })
+        });
+        if (res.ok) {
+          const supaData = await res.json();
+          const finalUUID = (Array.isArray(supaData) && supaData.length > 0) ? supaData[0].id : newUUID;
+          // Save the UUID back into blob
+          schoolData.supabase_id = finalUUID;
+          await store.setJSON(`school_${schoolData.id}`, schoolData);
+          return cors({ uuid: finalUUID, source: 'created' });
+        }
+      } catch (e) {
+        console.warn('Supabase ensure-uuid error:', e);
+      }
+    }
+
+    // Fallback: try to look up by slug in Supabase (maybe it was synced before)
+    if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/schools?slug=eq.${encodeURIComponent(schoolData.slug)}&select=id`, {
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+          }
+        });
+        if (res.ok) {
+          const rows = await res.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            schoolData.supabase_id = rows[0].id;
+            await store.setJSON(`school_${schoolData.id}`, schoolData);
+            return cors({ uuid: rows[0].id, source: 'lookup' });
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Last resort: return the newUUID but warn that Supabase sync was unavailable
+    // Save it as supabase_id anyway for future use
+    schoolData.supabase_id = newUUID;
+    await store.setJSON(`school_${schoolData.id}`, schoolData);
+    return cors({ uuid: newUUID, source: 'generated', warning: 'Supabase sync unavailable, UUID generated locally' });
+  }
+
   // POST /api/establishments/:id/staff-codes - Generate staff codes
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/staff-codes$/)) {
     const id = path.split('/')[1];
