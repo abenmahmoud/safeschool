@@ -228,10 +228,10 @@ window.chgSt = async function(id, status, sid) {
   document.getElementById("rpt-modal").remove();
   if (typeof toast === "function") toast("Statut mis a jour");
   var el = document.querySelector("[data-dash-content]");
-  if (el) window.renderDashboardV3(el);
+  if (el) window.renderDashboardV3External(el);
 };
 
-window.renderDashboardV3 = async function(el) {
+window.renderDashboardV3External = async function(el) {
   if (!el) { el = document.querySelector("[data-dash-content]") || document.querySelector(".admin-content-area") || document.querySelector("#dash-content"); if (!el) return; }
   var sid = localStorage.getItem("ss_current_etab") || "demo";
   var etabs = JSON.parse(localStorage.getItem("ss_etabs") || "[]");

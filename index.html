@@ -64,6 +64,8 @@ a{text-decoration:none}
 .ni svg{transition:.2s}
 .ni.active{color:var(--p)}
 .ni.active svg{transform:translateY(-2px)}
+#ni-dashboard{color:#7c3aed}
+#ni-dashboard.active{color:#4f46e5;font-weight:800}
 .ni-pip{position:absolute;top:3px;width:30px;height:30px;background:var(--pbg);border-radius:9px;z-index:-1;opacity:0;transition:.2s}
 .ni.active .ni-pip{opacity:1}
 .ni-report{flex:1.2;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border-radius:14px;margin:-8px 3px 0;box-shadow:0 4px 16px rgba(79,70,229,.35)}
@@ -754,6 +756,11 @@ html.dark .dm-switch::after { left:25px; }
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span>Profil</span>
+  </button>
+  <button class="ni" id="ni-dashboard" onclick="go('dashboard')" style="display:none">
+    <div class="ni-pip"></div>
+    <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>Admin</span>
   </button>
 </nav>
 
@@ -1482,6 +1489,7 @@ async function selectEstablishment(etabId) {
 function showEtabSelector() {
   adminIn = false;
   document.getElementById('pg-dashboard').style.display = 'none';
+  document.getElementById('ni-dashboard').style.display = 'none';
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.getElementById('pg-select-etab').style.display = 'flex';
   document.getElementById('etab-current-bar').style.display = 'none';
@@ -2474,24 +2482,40 @@ function showAdminLogin(){
   const etabEmail = schoolCreds?.email || (currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr');
   document.body.insertAdjacentHTML('beforeend',`
   <div id="admin-overlay" class="admin-wrap">
-    <div class="admin-card">
-      <div class="admin-logo">🔐</div>
-      <h2 style="text-align:center;margin-bottom:5px">Administration</h2>
-      <p style="text-align:center;margin-bottom:8px;font-size:.88rem">Réservé au personnel éducatif</p>
-      ${currentEtab?`<p style="text-align:center;margin-bottom:8px;font-size:.82rem;color:var(--p);font-weight:600">${currentEtab.name}</p>`:''}
+    <div class="admin-card" style="animation:scaleIn .25s ease">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="width:56px;height:56px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 16px rgba(79,70,229,.25)">
+          <span style="font-size:1.5rem;filter:brightness(100)">🔐</span>
+        </div>
+        <h2 style="font-size:1.15rem;margin-bottom:4px;color:var(--t)">Espace Administration</h2>
+        <p style="font-size:.82rem;color:var(--tm)">Réservé au personnel éducatif</p>
+      </div>
+      ${currentEtab?`<div style="background:var(--pbg);border:1.5px solid rgba(79,70,229,.12);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:1.3rem">${etabTypeIcons[currentEtab.type]||'🏫'}</span><div><p style="font-size:.88rem;font-weight:700;color:var(--p)">${currentEtab.name}</p><p style="font-size:.75rem;color:var(--tm)">${etabTypeLabels[currentEtab.type]||'Établissement'}${currentEtab.city?' · '+currentEtab.city:''}</p></div></div>`:''}
       ${schoolCreds?`<p style="text-align:center;margin-bottom:14px;font-size:.76rem;color:var(--tm)">Email conseillé : <strong>${schoolCreds.email}</strong></p>`:''}
       <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="${schoolCreds?.email || ''}" placeholder="${etabEmail}"></div>
-      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="••••••••"></div>
-      <button class="btn btn-p btn-full btn-lg" onclick="tryLogin()" style="margin-bottom:10px">Se connecter</button>
+      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="Code admin ou mot de passe"></div>
+      <button class="btn btn-p btn-full btn-lg" id="al-submit-btn" onclick="tryLogin()" style="margin-bottom:10px">
+        <span id="al-btn-text">Se connecter</span>
+        <span id="al-btn-loading" style="display:none">Connexion...</span>
+      </button>
       <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>
     </div>
   </div>`);
   document.getElementById('al-pass').addEventListener('keydown',e=>e.key==='Enter'&&tryLogin());
+  document.getElementById('al-email').focus();
 }
 async function tryLogin(){
   const e=document.getElementById('al-email').value.trim().toLowerCase();
   const p=document.getElementById('al-pass').value;
   if (!currentEtab) { toast('Aucun établissement sélectionné','err'); return; }
+
+  // Show loading state
+  const btn = document.getElementById('al-submit-btn');
+  const btnText = document.getElementById('al-btn-text');
+  const btnLoading = document.getElementById('al-btn-loading');
+  if(btn) btn.disabled = true;
+  if(btnText) btnText.style.display = 'none';
+  if(btnLoading) btnLoading.style.display = '';
 
   const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
   const schoolCreds = creds[currentEtab.id];
@@ -2500,6 +2524,7 @@ async function tryLogin(){
   if (schoolCreds && e === (schoolCreds.email || '').toLowerCase() && p === schoolCreds.password) {
     adminIn = true;
     document.getElementById('admin-overlay')?.remove();
+    document.getElementById('ni-dashboard').style.display = '';
     document.getElementById('pg-dashboard').style.display='flex';
     await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
     go('dashboard');
@@ -2528,6 +2553,7 @@ async function tryLogin(){
             localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || currentEtab.plan || 'starter');
             adminIn = true;
             document.getElementById('admin-overlay')?.remove();
+            document.getElementById('ni-dashboard').style.display = '';
             document.getElementById('pg-dashboard').style.display='flex';
             await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
             go('dashboard');
@@ -2539,6 +2565,10 @@ async function tryLogin(){
     } catch(err) { console.warn('API auth check failed:', err); }
   }
 
+  // Reset button state
+  if(btn) btn.disabled = false;
+  if(btnText) btnText.style.display = '';
+  if(btnLoading) btnLoading.style.display = 'none';
   toast('Identifiants incorrects. Utilisez le compte admin créé avec cet établissement.','err');
 }
 
@@ -2642,11 +2672,23 @@ function renderDashboardV3(){
     : `<span style="background:rgba(255,255,255,.1);padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600;margin-left:8px;opacity:.7">STARTER</span>`;
 
   document.getElementById('dashboard-body').innerHTML=`
-  <div class="dash-top">
-    <div><h1>Dashboard${planBadge}</h1><p>${currentEtab?currentEtab.name:'Gestion des signalements'}</p></div>
-    <div style="display:flex;align-items:center;gap:8px">
-      ${urg>0?`<div style="background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.3);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
-      <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+  <div class="dash-top" style="padding:18px 20px 16px;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4f46e5 100%);position:relative;overflow:hidden">
+    <div style="position:absolute;right:-40px;top:-40px;width:140px;height:140px;background:rgba(255,255,255,.06);border-radius:50%"></div>
+    <div style="position:absolute;left:50%;bottom:-20px;width:80px;height:80px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+    <div style="position:relative;z-index:1">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <h1 style="color:#fff;font-size:1.3rem">Dashboard</h1>
+            ${planBadge}
+          </div>
+          <p style="color:rgba(255,255,255,.6);font-size:.8rem">${currentEtab?currentEtab.name:'Gestion des signalements'}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${urg>0?`<div style="background:rgba(220,38,38,.25);border:1px solid rgba(220,38,38,.4);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
+          <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
+        </div>
+      </div>
     </div>
   </div>
   ${schoolInfoHtml}
@@ -2654,6 +2696,7 @@ function renderDashboardV3(){
     <button class="btn btn-xs btn-soft" onclick="exportCSV()">📥 Export CSV</button>
     <button class="btn btn-xs btn-soft" onclick="printReport()">🖨️ Imprimer rapport</button>
     <button class="btn btn-xs btn-soft" onclick="S.reloadReports().then(()=>{S.reloadStaff().then(()=>{S.reloadLogs().then(renderDashboardV3)})})" title="Actualiser les données">🔄 Actualiser</button>
+    ${reps.length===0?`<button class="btn btn-xs btn-soft" onclick="loadDemoData()" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none">📊 Démo</button>`:`<button class="btn btn-xs btn-ghost" onclick="if(confirm('Effacer les données de démonstration ?'))clearDemoData()" style="font-size:.68rem">Effacer démo</button>`}
   </div>
   <div class="kpi-row">
     <div class="kpi ku" onclick="setFilter('all')"><div class="kpi-n">${urg}</div><div class="kpi-l">⚡ Urgents</div></div>
@@ -2691,7 +2734,7 @@ function renderReportsList(){
   if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
 
   const cards=filtered.length===0
-    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}</div>`
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
     :filtered.map((r,i)=>{
       const idx=reps.indexOf(r);
       const sc={new:{l:'Nouveau',c:'bn'},in_progress:{l:'En cours',c:'bi'},resolved:{l:'Résolu',c:'br'},archived:{l:'Archivé',c:'ba'}};
@@ -3014,7 +3057,48 @@ function saveToReportHistory(code, caseNumber) {
   localStorage.setItem('ss_my_reports', JSON.stringify(history.slice(0, 20)));
 }
 
-function adminLogout(){adminIn=false;go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
+function adminLogout(){adminIn=false;document.getElementById('ni-dashboard').style.display='none';go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
+
+// ═══════════════════════════════════════════
+// DEMO DATA FOR PRESENTATION
+// ═══════════════════════════════════════════
+function loadDemoData(){
+  const now = new Date();
+  const demoReports = [
+    {id:'demo-1',code:'SS-XK9T2M',trackingCode:'SS-XK9T2M',description:'Un élève de ma classe se fait insulter tous les jours à la récréation. Il est traité de noms et personne ne veut lui parler. Je l\'ai vu pleurer plusieurs fois.',location:'Cour de récréation',frequency:'daily',harassmentType:'verbal',urgency:3,status:'new',isAnonymous:true,reporterClass:'3ème B',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*60*2).toISOString(),history:[]},
+    {id:'demo-2',code:'SS-PQ7RN3',trackingCode:'SS-PQ7RN3',description:'Des élèves de terminale poussent et bousculent régulièrement un camarade dans les couloirs entre les cours.',location:'Couloir bâtiment B',frequency:'weekly',harassmentType:'physical',urgency:3,status:'in_progress',isAnonymous:false,reporterName:'Marie L.',reporterClass:'1ère S2',reporterEmail:'marie.l@eleve.fr',staffReply:'Merci pour ton signalement courageux. Nous avons identifié la situation et pris des mesures.',staffNotes:'Convocation des élèves concernés prévue lundi. Parents informés.',createdAt:new Date(now-1000*60*60*24).toISOString(),history:[{s:'in_progress',t:new Date(now-1000*60*60*12).toISOString(),by:'Mme Martin',note:'Prise en charge du dossier'}]},
+    {id:'demo-3',code:'SS-LM4VB8',trackingCode:'SS-LM4VB8',description:'Un groupe crée des faux comptes sur les réseaux sociaux pour se moquer d\'une élève. Ils publient des photos modifiées et des commentaires méchants.',location:'En ligne / réseaux sociaux',frequency:'several',harassmentType:'cyber',urgency:2,status:'in_progress',isAnonymous:true,reporterClass:'2nde 4',staffReply:'Nous prenons cette situation très au sérieux. Un signalement a été fait aux plateformes concernées.',staffNotes:'Capture d\'écran récupérées. Signalement Pharos en cours. Entretien prévu avec la famille.',createdAt:new Date(now-1000*60*60*48).toISOString(),history:[]},
+    {id:'demo-4',code:'SS-RT6WK1',trackingCode:'SS-RT6WK1',description:'Depuis la rentrée, un groupe d\'élèves refuse systématiquement de travailler ou de s\'asseoir à côté d\'un camarade. Il se retrouve toujours seul.',location:'Salle de classe 204',frequency:'daily',harassmentType:'exclusion',urgency:2,status:'new',isAnonymous:true,reporterClass:'4ème C',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*60*6).toISOString(),history:[]},
+    {id:'demo-5',code:'SS-YH2NF5',trackingCode:'SS-YH2NF5',description:'Un élève reçoit des messages de menaces par SMS d\'un numéro inconnu. Il a peur de venir à l\'école.',location:'Hors établissement / SMS',frequency:'several',harassmentType:'cyber',urgency:3,status:'resolved',isAnonymous:false,reporterName:'Thomas R.',reporterClass:'3ème A',staffReply:'La situation a été résolue. L\'auteur a été identifié et sanctionné. Tu peux revenir en toute sécurité.',staffNotes:'Auteur identifié: élève de 3ème D. Conseil de discipline prévu. Parents rencontrés. Suivi psy mis en place.',createdAt:new Date(now-1000*60*60*72).toISOString(),history:[{s:'in_progress',t:new Date(now-1000*60*60*60).toISOString(),by:'M. Dupont',note:'Enquête lancée'},{s:'resolved',t:new Date(now-1000*60*60*24).toISOString(),by:'Mme Martin',note:'Résolu — mesures prises'}]},
+    {id:'demo-6',code:'SS-GN8JC4',trackingCode:'SS-GN8JC4',description:'Je suis victime de moqueries sur mon physique tous les jours à la cantine. Plusieurs élèves participent et ça me rend très triste.',location:'Cantine',frequency:'daily',harassmentType:'verbal',urgency:2,status:'in_progress',isAnonymous:true,reporterClass:'5ème B',staffReply:'Tu as eu raison de nous écrire. Personne ne mérite d\'être traité ainsi. Nous agissons.',staffNotes:'Surveillance renforcée à la cantine. Médiation programmée jeudi.',createdAt:new Date(now-1000*60*60*36).toISOString(),history:[]},
+    {id:'demo-7',code:'SS-BW5TP9',trackingCode:'SS-BW5TP9',description:'Des élèves cachent les affaires d\'un camarade et lui volent son goûter régulièrement.',location:'Vestiaires EPS',frequency:'weekly',harassmentType:'physical',urgency:1,status:'resolved',isAnonymous:true,reporterClass:'6ème A',staffReply:'Merci pour ton signalement. La situation a été réglée avec les élèves concernés.',staffNotes:'Entretien avec les 3 élèves. Parents informés. Situation apaisée.',createdAt:new Date(now-1000*60*60*120).toISOString(),history:[{s:'resolved',t:new Date(now-1000*60*60*96).toISOString(),by:'M. CPE',note:'Résolu'}]},
+    {id:'demo-8',code:'SS-MK3QR7',trackingCode:'SS-MK3QR7',description:'Un élève menace régulièrement un autre de le frapper à la sortie de l\'école.',location:'Devant l\'établissement',frequency:'several',harassmentType:'physical',urgency:3,status:'new',isAnonymous:false,reporterName:'Prof. de math',reporterEmail:'prof.math@lycee.fr',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*30).toISOString(),history:[]},
+  ];
+  const demoStaff = [
+    {id:'staff-1',name:'Sophie Martin',email:'s.martin@lycee.fr',phone:'06 12 34 56 78',role:'cpe',active:true,emoji:'👩‍🏫',createdAt:new Date(now-1000*60*60*24*30).toISOString()},
+    {id:'staff-2',name:'Jean Dupont',email:'j.dupont@lycee.fr',phone:'06 98 76 54 32',role:'dir',active:true,emoji:'👨‍🏫',createdAt:new Date(now-1000*60*60*24*30).toISOString()},
+    {id:'staff-3',name:'Claire Leroy',email:'c.leroy@lycee.fr',phone:'06 55 44 33 22',role:'ref',active:true,emoji:'🛡️',createdAt:new Date(now-1000*60*60*24*15).toISOString()},
+    {id:'staff-4',name:'Dr. Bénard',email:'d.benard@lycee.fr',phone:'06 11 22 33 44',role:'psy',active:true,emoji:'🧑‍⚕️',createdAt:new Date(now-1000*60*60*24*10).toISOString()},
+  ];
+  cachedReports = demoReports;
+  cachedStaff = demoStaff;
+  cachedLogs = [
+    {id:'log-1',msg:'Dossier #demo-2 → en_cours',rid:'demo-2',t:new Date(now-1000*60*60*12).toISOString(),actor:'admin',action:'status_change'},
+    {id:'log-2',msg:'Réponse sauvegardée pour #demo-5',rid:'demo-5',t:new Date(now-1000*60*60*24).toISOString(),actor:'admin',action:'reply'},
+    {id:'log-3',msg:'Dossier #demo-5 → résolu',rid:'demo-5',t:new Date(now-1000*60*60*24).toISOString(),actor:'admin',action:'status_change'},
+    {id:'log-4',msg:'Nouveau signalement #demo-1',rid:'demo-1',t:new Date(now-1000*60*60*2).toISOString(),actor:'system',action:'new_report'},
+    {id:'log-5',msg:'Nouveau signalement #demo-8 (urgent)',rid:'demo-8',t:new Date(now-1000*60*30).toISOString(),actor:'system',action:'new_report'},
+  ];
+  renderDashboardV3();
+  toast('Données de démonstration chargées','ok');
+}
+function clearDemoData(){
+  cachedReports = [];
+  cachedStaff = [];
+  cachedLogs = [];
+  renderDashboardV3();
+  toast('Données de démonstration effacées');
+}
 
 // ═══════════════════════════════════════════
 // CSV EXPORT
@@ -3141,6 +3225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
                 localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || etab.plan || 'starter');
                 adminIn = true;
+                document.getElementById('ni-dashboard').style.display = '';
                 document.getElementById('pg-dashboard').style.display = 'flex';
                 await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
                 go('dashboard');
