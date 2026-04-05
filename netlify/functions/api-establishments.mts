@@ -1,7 +1,7 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
-// ── V8 Pro — Environment-driven auth with no hardcoded fallbacks ──
+// ── V8 Extra Pro — Environment-driven auth with no hardcoded fallbacks ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
 const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
 
@@ -162,7 +162,7 @@ export default async (req: Request, context: Context) => {
       admin_password: body.admin_password || adminCode,
       max_students: { starter: 200, pro: 9999, enterprise: 99999 }[plan] || 200,
       max_reports: { starter: 50, pro: 9999, enterprise: 99999 }[plan] || 50,
-      max_admins: { starter: 1, pro: 3, enterprise: 99 }[plan] || 1,
+      max_admins: { starter: 1, pro: 1, enterprise: 99 }[plan] || 1,
       created_at: now,
       expires_at: expDate.toISOString(),
       report_count: 0,

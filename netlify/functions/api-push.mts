@@ -5,7 +5,7 @@ import type { Context, Config } from '@netlify/functions';
 // Auth & helpers
 // ---------------------------------------------------------------------------
 
-// ── V8 Pro — Environment-driven auth ──
+// ── V8 Extra Pro — Environment-driven auth ──
 const SA_EMAIL = () => Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
 const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || 'SafeSchool2026!';
 const VAPID_PUBLIC  = () => Netlify.env.get('VAPID_PUBLIC_KEY')  || '';

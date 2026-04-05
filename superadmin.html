@@ -130,7 +130,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
 </div>
 <div id="app">
   <nav class="sb">
-    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span><div style="margin-top:6px;font-size:.65rem;color:#475569;background:#0f172a;padding:3px 8px;border-radius:6px;display:inline-block">v8.0 Pro PWA</div></div>
+    <div class="sbl"><h2>SafeSchool</h2><span>Super Admin &middot; Fondateur</span><div style="margin-top:6px;font-size:.65rem;color:#475569;background:#0f172a;padding:3px 8px;border-radius:6px;display:inline-block">v8.0 Extra Pro PWA</div></div>
     <div class="ni on" id="n-db" onclick="showPage('db')"><span class="ni-icon">&#128200;</span> Tableau de bord</div>
     <div class="ni" id="n-sc" onclick="showPage('sc')"><span class="ni-icon">&#127979;</span> Etablissements</div>
     <div class="ni" id="n-cr" onclick="showPage('cr')"><span class="ni-icon">&#10133;</span> Nouvel etablissement</div>
@@ -213,8 +213,8 @@ tr:hover td{background:rgba(99,102,241,.03)}
           <div class="f"><label>Plan d'abonnement</label>
             <div class="pg" id="pgr">
               <div class="pc on" data-plan="starter" onclick="onPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div><div class="pf">200 eleves<br>50 signalements/mois<br>1 admin<br>3 mois</div></div>
-              <div class="pc" data-plan="pro" onclick="onPl(this)"><div class="pn">Pro</div><div class="pp">49 EUR/mois</div><div class="pf">Illimite<br>3 admins<br>Stats avancees<br>12 mois</div></div>
-              <div class="pc" data-plan="enterprise" onclick="onPl(this)"><div class="pn">Enterprise</div><div class="pp">Sur devis</div><div class="pf">Multi-sites<br>API / SLA 99.9%<br>24 mois</div></div>
+              <div class="pc" data-plan="pro" onclick="onPl(this)"><div class="pn">Pro</div><div class="pp">49 EUR/mois</div><div class="pf">Illimite<br>1 admin<br>Stats avancees<br>12 mois</div></div>
+              <div class="pc" data-plan="enterprise" onclick="onPl(this)"><div class="pn">Enterprise</div><div class="pp">Sur devis</div><div class="pf">Multi-sites<br>Admins selon devis<br>Stats + API / SLA 99.9%<br>24 mois</div></div>
             </div>
           </div>
           <div class="f"><label>Quotas</label><div class="qg" id="qdi"></div></div>
@@ -447,7 +447,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
 var API_BASE = '/api';
 var TOKEN = '';
 var SCHOOLS = [];
-var PL = {starter:{pr:0,ms:200,mr:50,ma:1,mo:3},pro:{pr:49,ms:9999,mr:9999,ma:3,mo:12},enterprise:{pr:199,ms:99999,mr:99999,ma:99,mo:24}};
+var PL = {starter:{pr:0,ms:200,mr:50,ma:1,mo:3},pro:{pr:49,ms:9999,mr:9999,ma:1,mo:12},enterprise:{pr:0,ms:99999,mr:99999,ma:99,mo:24}};
 var ST = {plan:'starter', ePlan:'starter'};
 
 // Supabase for direct data access (SAV)
@@ -628,8 +628,20 @@ async function createSch() {
 
     // Also create in Supabase for the app
     try {
+      var planLimits = PL[ST.plan] || PL.starter;
+      var expDate = new Date();
+      expDate.setMonth(expDate.getMonth() + planLimits.mo);
       await supa.from('schools').insert([{
-        name: name, slug: slug, city: city || null, is_active: true
+        name: name,
+        slug: slug,
+        ville: city || null,
+        email_contact: email || null,
+        plan: ST.plan,
+        status: ST.plan === 'starter' ? 'trial' : 'active',
+        max_students: planLimits.ms,
+        max_reports_month: planLimits.mr,
+        max_admins: planLimits.ma,
+        expires_at: expDate.toISOString()
       }]);
     } catch(e) { console.warn('Supabase school creation skipped:', e); }
 
