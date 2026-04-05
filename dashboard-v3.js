@@ -40,13 +40,27 @@ window.DB = {
     return r;
   },
   getReports: async function(sid) {
+    var allReports = [];
     if (this._ok()) {
       try {
         var r = await fetch(SUPABASE_URL + "/rest/v1/reports?school_id=eq." + sid + "&order=created_at.desc", { headers: this._h() });
-        if (r.ok) return await r.json();
+        if (r.ok) allReports = await r.json();
       } catch(e) { console.warn("Supabase fallback:", e); }
     }
-    return JSON.parse(localStorage.getItem("ss_rpt_" + sid) || "[]");
+    // Merge with localStorage reports (backup from student submissions)
+    var lsReports = JSON.parse(localStorage.getItem("ss_rpt_" + sid) || "[]");
+    if (lsReports.length > 0) {
+      var existingIds = {};
+      var existingCodes = {};
+      allReports.forEach(function(r) { if (r.id) existingIds[r.id] = true; if (r.tracking_code) existingCodes[r.tracking_code] = true; });
+      lsReports.forEach(function(r) {
+        if (r.id && !existingIds[r.id] && (!r.tracking_code || !existingCodes[r.tracking_code])) {
+          allReports.push(r);
+        }
+      });
+      allReports.sort(function(a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+    }
+    return allReports;
   },
   saveReport: async function(rpt) {
     var sid = rpt.school_id || localStorage.getItem("ss_current_etab") || "demo";

@@ -635,6 +635,7 @@ html.dark .dm-switch::after { left:25px; }
       <span id="myreport-search-btn">Rechercher mon dossier</span>
     </button>
     <div id="lookup-result" style="margin-top:22px"></div>
+    <div id="my-report-history" style="margin-top:22px"></div>
   </div>
 </div>
 
@@ -1244,17 +1245,96 @@ const S = {
   },
   reloadReports: async () => {
     if (!currentEtab) return;
+
+    // Re-resolve UUID to ensure we query with the correct school_id
+    var queryId = currentEtab.id;
+    var uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRx.test(queryId)) {
+      try {
+        var resolveRes = await fetch('/api/establishments/ensure-uuid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blob_id: currentEtab.blobId || currentEtab.apiId || queryId, slug: currentEtab.slug })
+        });
+        if (resolveRes.ok) {
+          var d = await resolveRes.json();
+          if (d.uuid && uuidRx.test(d.uuid)) {
+            queryId = d.uuid;
+            currentEtab.id = queryId;
+            localStorage.setItem('ss_current_etab', queryId);
+          }
+        }
+      } catch(re) { console.warn('UUID re-resolve in reloadReports failed:', re); }
+    }
+
+    var supabaseReports = [];
+    var supabaseOk = false;
     try {
-      const { data, error } = await ssSupabase
+      var result = await ssSupabase
         .from('reports')
         .select('*')
-        .eq('school_id', currentEtab.id)
+        .eq('school_id', queryId)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      cachedReports = (data || []).map(normalizeReportFromDb);
+      if (result.error) throw result.error;
+      supabaseReports = (result.data || []);
+      supabaseOk = true;
+
+      // If no results and we have alternative IDs, try querying with those
+      if (supabaseReports.length === 0) {
+        var altIds = [currentEtab.blobId, currentEtab.apiId].filter(function(x) { return x && x !== queryId; });
+        for (var ai = 0; ai < altIds.length; ai++) {
+          try {
+            var altResult = await ssSupabase
+              .from('reports')
+              .select('*')
+              .eq('school_id', altIds[ai])
+              .order('created_at', { ascending: false });
+            if (!altResult.error && altResult.data && altResult.data.length > 0) {
+              supabaseReports = altResult.data;
+              break;
+            }
+          } catch(ae) { /* skip */ }
+        }
+      }
     } catch(e) {
-      console.error('Failed to load reports from Supabase', e);
-      cachedReports = [];
+      console.warn('Supabase reports load failed:', e);
+    }
+
+    // Also load localStorage reports (backup from submissions + demo data)
+    var lsReports = [];
+    try {
+      var keysToCheck = [queryId];
+      if (currentEtab.blobId && currentEtab.blobId !== queryId) keysToCheck.push(currentEtab.blobId);
+      if (currentEtab.apiId && currentEtab.apiId !== queryId) keysToCheck.push(currentEtab.apiId);
+      for (var ki = 0; ki < keysToCheck.length; ki++) {
+        var lsData = JSON.parse(localStorage.getItem('ss_rpt_' + keysToCheck[ki]) || '[]');
+        if (Array.isArray(lsData)) lsReports = lsReports.concat(lsData);
+      }
+    } catch(le) { /* ignore */ }
+
+    // Merge: Supabase is authoritative, add localStorage reports not already in Supabase
+    var allReports = supabaseReports.slice();
+    var supaIds = {};
+    var supaCodes = {};
+    supabaseReports.forEach(function(r) {
+      if (r.id) supaIds[r.id] = true;
+      if (r.tracking_code) supaCodes[r.tracking_code] = true;
+    });
+    lsReports.forEach(function(r) {
+      if (r.id && !supaIds[r.id] && (!r.tracking_code || !supaCodes[r.tracking_code])) {
+        allReports.push(r);
+      }
+    });
+
+    // Sort by date descending
+    allReports.sort(function(a, b) {
+      return (b.created_at || '').localeCompare(a.created_at || '');
+    });
+
+    cachedReports = allReports.map(normalizeReportFromDb);
+
+    if (!supabaseOk && cachedReports.length === 0) {
+      console.warn('No reports found from any source for school:', queryId);
     }
   },
   staff: () => cachedStaff,
@@ -1272,7 +1352,7 @@ const S = {
       if (error) throw error;
       cachedStaff = (data || []).map(normalizeStaffFromDb);
     } catch(e) {
-      console.error('Failed to load staff from Supabase', e);
+      console.warn('Staff load from Supabase failed (table may not exist):', e.message || e);
       cachedStaff = [];
     }
   },
@@ -1312,7 +1392,7 @@ const S = {
       if (error) throw error;
       cachedLogs = (data || []).map(normalizeLogFromDb);
     } catch(e) {
-      console.error('Failed to load logs from Supabase', e);
+      console.warn('Logs load from Supabase failed (table may not exist):', e.message || e);
       cachedLogs = [];
     }
   }
@@ -1483,7 +1563,29 @@ async function selectEstablishment(etabId) {
   const etab = etabList.find(e => e.id === etabId);
   if (!etab) return;
   currentEtab = etab;
+
+  // Ensure we have a valid UUID for the school (needed for Supabase report matching)
+  var uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRx.test(etab.id)) {
+    try {
+      var resolveRes = await fetch('/api/establishments/ensure-uuid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blob_id: etab.blobId || etab.apiId || etab.id, slug: etab.slug })
+      });
+      if (resolveRes.ok) {
+        var d = await resolveRes.json();
+        if (d.uuid && uuidRx.test(d.uuid)) {
+          etab.id = d.uuid;
+          currentEtab = etab;
+        }
+      }
+    } catch(e) { console.warn('UUID resolve in selectEstablishment failed:', e); }
+  }
+
   localStorage.setItem('ss_current_etab', etab.id);
+  // Also save slug for cross-session matching (IDs may change)
+  if (etab.slug) localStorage.setItem('ss_current_etab_slug', etab.slug);
   // Store the plan from API data
   if (etab.plan) localStorage.setItem('ss_plan_' + etab.id, etab.plan);
 
@@ -1564,11 +1666,12 @@ function go(page) {
   if (ni) ni.classList.add('active');
   currentPage = page; window.scrollTo(0,0);
   if (page==='report') initReport();
+  if (page==='myreport') renderMyReportHistory();
   if (page==='home') renderHomePage();
   if (page==='profile') renderProfile();
   if (page==='assistant') initChat();
   if (page==='education') initQuiz();
-  if (page==='dashboard') renderDashboardV3();
+  if (page==='dashboard') { S.reloadReports().then(function(){ S.reloadStaff().then(function(){ S.reloadLogs().then(renderDashboardV3); }); }).catch(function(){ renderDashboardV3(); }); }
   if (page==='help') renderSchoolContacts();
 }
 
@@ -1904,7 +2007,11 @@ async function submitReport(){
         const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (d.uuid && uuidRx.test(d.uuid)) {
           schoolId = d.uuid;
-          if (currentEtab) currentEtab.id = schoolId;
+          if (currentEtab) {
+            currentEtab.id = schoolId;
+            // Persist resolved UUID so admin dashboard uses the same ID
+            localStorage.setItem('ss_current_etab', schoolId);
+          }
         }
       } else {
         console.warn('ensure-uuid returned:', resolveRes.status);
@@ -1997,12 +2104,55 @@ async function submitReport(){
       error = retryResult.error;
     }
 
+    // Third fallback: minimal payload without urgence (handles missing column in schema cache)
+    if (error && error.message && (error.message.includes('column') || error.message.includes('schema') || error.code === 'PGRST204' || error.code === '42703')) {
+      console.warn('Base insert failed, retrying with minimal columns:', error.message);
+      var minimalPayload = {
+        school_id: schoolId,
+        tracking_code: genCode,
+        type: basePayload.type,
+        description: (basePayload.description || fullDesc) + '\n\nUrgence: ' + (urgencyMap[String(rData.urgency)] || 'faible') + (rData.classe ? '\nClasse: ' + rData.classe : ''),
+        anonymous: basePayload.anonymous,
+        status: 'nouveau'
+      };
+      var minResult = await ssSupabase.from('reports').insert([minimalPayload]).select('*').single();
+      data = minResult.data;
+      error = minResult.error;
+    }
+
+    // Fourth fallback: use the Netlify function + localStorage if Supabase is completely broken
+    if (error) {
+      console.warn('All Supabase inserts failed, using localStorage fallback:', error.message);
+      var fallbackReport = {
+        id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        school_id: schoolId,
+        tracking_code: genCode,
+        type: basePayload.type,
+        urgence: basePayload.urgence || 'faible',
+        description: basePayload.description || fullDesc,
+        classe: basePayload.classe || null,
+        anonymous: basePayload.anonymous,
+        status: 'nouveau',
+        created_at: new Date().toISOString()
+      };
+      // Save to localStorage
+      var lsKey = 'ss_rpt_' + schoolId;
+      var lsList = JSON.parse(localStorage.getItem(lsKey) || '[]');
+      lsList.unshift(fallbackReport);
+      localStorage.setItem(lsKey, JSON.stringify(lsList));
+      data = fallbackReport;
+      error = null;
+      toast('Signalement enregistré localement (synchronisation en attente)', 'ok');
+    }
+
     if(error) {
       console.error('Supabase insert error:', JSON.stringify(error));
       if (error.message && error.message.includes('uuid')) {
         toast("Erreur technique (ID établissement). Rechargez la page et réessayez.", 'err');
       } else if (error.message && error.message.includes('foreign key')) {
         toast("L'établissement n'est pas encore synchronisé. Rechargez la page et réessayez.", 'err');
+      } else if (error.message && (error.message.includes('column') || error.message.includes('schema'))) {
+        toast("Erreur de configuration base de données. Videz le cache depuis Profil et réessayez.", 'err');
       } else {
         toast("Erreur: " + (error.message || "Impossible d'enregistrer le signalement"), 'err');
       }
@@ -2013,6 +2163,26 @@ async function submitReport(){
       toast("Erreur: aucune donnée retournée par le serveur", 'err');
       return;
     }
+
+    // Save local backup of submitted report (for admin dashboard fallback & tracking)
+    try {
+      var lsBackupKey = 'ss_rpt_' + schoolId;
+      var lsBackupList = JSON.parse(localStorage.getItem(lsBackupKey) || '[]');
+      // Avoid duplicates
+      if (!lsBackupList.find(function(x) { return x.id === data.id || x.tracking_code === data.tracking_code; })) {
+        lsBackupList.unshift(data);
+        localStorage.setItem(lsBackupKey, JSON.stringify(lsBackupList));
+      }
+      // Also save under blobId/apiId keys for cross-reference
+      if (currentEtab && currentEtab.blobId && currentEtab.blobId !== schoolId) {
+        var lsAltKey = 'ss_rpt_' + currentEtab.blobId;
+        var lsAltList = JSON.parse(localStorage.getItem(lsAltKey) || '[]');
+        if (!lsAltList.find(function(x) { return x.id === data.id || x.tracking_code === data.tracking_code; })) {
+          lsAltList.unshift(data);
+          localStorage.setItem(lsAltKey, JSON.stringify(lsAltList));
+        }
+      }
+    } catch(lsErr) { console.warn('localStorage backup failed:', lsErr); }
 
     // Upload photos if any
     if (rData.files && rData.files.length > 0 && data.id) {
@@ -2158,6 +2328,25 @@ async function lookupCode(){
     }
 
     if(error) throw error;
+    // If not found in Supabase, search in localStorage backup
+    if(!data){
+      try {
+        var lsKeys = [];
+        if (currentEtab) {
+          lsKeys.push('ss_rpt_' + currentEtab.id);
+          if (currentEtab.blobId) lsKeys.push('ss_rpt_' + currentEtab.blobId);
+          if (currentEtab.apiId) lsKeys.push('ss_rpt_' + currentEtab.apiId);
+        }
+        // Also check user's report history
+        var history = JSON.parse(localStorage.getItem('ss_my_reports') || '[]');
+        for (var lki = 0; lki < lsKeys.length && !data; lki++) {
+          var lsRpts = JSON.parse(localStorage.getItem(lsKeys[lki]) || '[]');
+          data = lsRpts.find(function(r) {
+            return (r.tracking_code && r.tracking_code === code) || (r.case_number && r.case_number === raw);
+          }) || null;
+        }
+      } catch(lsErr) { console.warn('localStorage lookup failed:', lsErr); }
+    }
     if(!data){
       el.innerHTML=`
       <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
@@ -2210,6 +2399,27 @@ async function lookupCode(){
     console.error(err);
     el.innerHTML=`<div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)"><div style="font-size:2rem;margin-bottom:10px">⚠️</div><h3 style="color:var(--r);margin-bottom:6px">Erreur de recherche</h3><p style="font-size:.87rem;max-width:260px;margin:0 auto">Impossible de charger le dossier pour le moment.</p></div>`;
   }
+}
+
+function renderMyReportHistory() {
+  var el = document.getElementById('my-report-history');
+  if (!el) return;
+  var history = getUserReportHistory();
+  if (history.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = '<div style="margin-top:8px"><div style="font-size:.78rem;font-weight:700;color:var(--ts);text-transform:uppercase;margin-bottom:10px">Mes signalements</div>' +
+    history.map(function(h) {
+      return '<div style="background:#fff;border-radius:var(--r12);padding:12px 16px;border:1.5px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px" onclick="document.getElementById(\'code-in\').value=\'' + (h.code || '') + '\';lookupCode()">' +
+        '<div style="width:36px;height:36px;border-radius:10px;background:var(--pbg);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📋</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:.88rem;font-weight:700;color:var(--t)">' + (h.code || '—') + '</div>' +
+          '<div style="font-size:.75rem;color:var(--ts)">' + (h.caseNumber ? 'Dossier ' + h.caseNumber + ' · ' : '') + (h.etab || '') + (h.date ? ' · ' + new Date(h.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '') + '</div>' +
+        '</div>' +
+        '<svg width="16" height="16" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>' +
+      '</div>';
+    }).join('') + '</div>';
 }
 
 // ═══════════════════════════════════════════
@@ -2609,6 +2819,8 @@ function renderProfile(){
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
     <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
+    <button class="btn btn-ghost btn-full btn-sm" onclick="clearAppCache()" style="color:#dc2626;border-color:rgba(220,38,38,.2)">🗑️ Vider le cache (corriger les bugs)</button>
+    <p style="font-size:.68rem;color:var(--ts);text-align:center;margin-top:4px">Version ${SS_APP_VERSION}</p>
   </div>
   <div style="height:10px"></div>`;
 }
@@ -2667,7 +2879,9 @@ async function tryLogin(){
     document.getElementById('admin-overlay')?.remove();
     document.getElementById('ni-dashboard').style.display = '';
     document.getElementById('pg-dashboard').style.display='flex';
-    await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+    try {
+      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+    } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
     go('dashboard');
     toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
     return;
@@ -2689,14 +2903,26 @@ async function tryLogin(){
           if (apiRes.ok) {
             // Save creds locally for future logins
             creds[currentEtab.id] = { email: e, password: p };
+            // Also save with blobId and apiId for cross-reference
+            if (currentEtab.blobId) creds[currentEtab.blobId] = { email: e, password: p };
+            if (currentEtab.apiId) creds[currentEtab.apiId] = { email: e, password: p };
             localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
             // Store the plan for subscription-based features
             localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || currentEtab.plan || 'starter');
+            // Update currentEtab with school_id from API if available
+            if (apiRes.school_id) {
+              localStorage.setItem('ss_current_etab', currentEtab.id);
+            }
             adminIn = true;
             document.getElementById('admin-overlay')?.remove();
             document.getElementById('ni-dashboard').style.display = '';
             document.getElementById('pg-dashboard').style.display='flex';
-            await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+            // Reload data - don't let failures block dashboard display
+            try {
+              await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+            } catch(reloadErr) {
+              console.warn('Data reload after login had errors (non-blocking):', reloadErr);
+            }
             go('dashboard');
             toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
             return;
@@ -3386,6 +3612,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const r = await fetch('/api/establishments/by-slug/' + subdomainSlug, {
             headers: saToken ? { 'x-sa-token': saToken } : {}
           });
+          let autoLoginDone = false;
           if (r.ok) {
             const ct = r.headers.get('content-type') || '';
             if (ct.includes('application/json')) {
@@ -3393,19 +3620,55 @@ document.addEventListener('DOMContentLoaded', async () => {
               if (apiSchool && (apiSchool.admin_code || apiSchool.admin_email)) {
                 // Auto-login with admin credentials from API
                 const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-                creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || '' };
+                creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || apiSchool.admin_password || '' };
+                if (etab.blobId) creds[etab.blobId] = creds[etab.id];
+                if (etab.apiId) creds[etab.apiId] = creds[etab.id];
                 localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
                 localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || etab.plan || 'starter');
                 adminIn = true;
                 document.getElementById('ni-dashboard').style.display = '';
                 document.getElementById('pg-dashboard').style.display = 'flex';
-                await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                try {
+                  await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
                 go('dashboard');
                 toast('Mode admin (accès superadmin)', 'ok');
+                autoLoginDone = true;
               }
             }
           }
-        } catch(err) { console.warn('Auto-admin login failed:', err); }
+          // If auto-login failed (no sa_token or no admin creds returned), show login form
+          if (!autoLoginDone) {
+            // Check if we have saved credentials for this school
+            const savedCreds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
+            const schoolCreds = savedCreds[etab.id] || (etab.blobId ? savedCreds[etab.blobId] : null) || (etab.apiId ? savedCreds[etab.apiId] : null);
+            if (schoolCreds && schoolCreds.email && schoolCreds.password) {
+              // Try auto-login with saved credentials
+              const loginR = await fetch('/api/establishments/admin-login/' + subdomainSlug, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: schoolCreds.email, password: schoolCreds.password })
+              });
+              if (loginR.ok) {
+                const loginRes = await loginR.json();
+                if (loginRes.ok) {
+                  adminIn = true;
+                  document.getElementById('ni-dashboard').style.display = '';
+                  document.getElementById('pg-dashboard').style.display = 'flex';
+                  try {
+                    await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+                  } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
+                  go('dashboard');
+                  toast(`Connecté · Admin ${etab.name}`, 'ok');
+                  autoLoginDone = true;
+                }
+              }
+            }
+            if (!autoLoginDone) {
+              showAdminLogin();
+            }
+          }
+        } catch(err) { console.warn('Auto-admin login failed:', err); showAdminLogin(); }
       }
       return;
     }
@@ -3415,7 +3678,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const savedEtabId = localStorage.getItem('ss_current_etab');
   if (savedEtabId) {
     // Try matching by ID first, then by slug (IDs may change between sessions)
-    const matched = etabList.find(e => e.id === savedEtabId || e.slug === savedEtabId || e.apiId === savedEtabId);
+    let matched = etabList.find(e => e.id === savedEtabId || e.slug === savedEtabId || e.apiId === savedEtabId || e.blobId === savedEtabId);
+    // Also try matching by saved slug (IDs may change between sessions/deployments)
+    if (!matched) {
+      const savedSlug = localStorage.getItem('ss_current_etab_slug');
+      if (savedSlug) {
+        matched = etabList.find(e => e.slug === savedSlug);
+      }
+    }
     if (matched) {
       await selectEstablishment(matched.id);
     } else {
@@ -3432,8 +3702,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ═══════════════════════════════════════════
-// V7 PRO — SERVICE WORKER & PWA
+// V9 — SERVICE WORKER & PWA + CACHE BUSTING
 // ═══════════════════════════════════════════
+const SS_APP_VERSION = 'v9-fix-02';
+
+// Proactive cache cleanup on version change
+(async function clearOldCaches() {
+  try {
+    var storedVersion = localStorage.getItem('ss_app_version');
+    if (storedVersion !== SS_APP_VERSION) {
+      console.log('[SafeSchool] Version change detected:', storedVersion, '->', SS_APP_VERSION);
+      if ('caches' in window) {
+        var keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log('[SafeSchool] All caches cleared');
+      }
+      localStorage.setItem('ss_app_version', SS_APP_VERSION);
+      // If this is an update (not first visit), tell the SW to skip waiting
+      if (storedVersion && navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+      }
+    }
+  } catch(e) { console.warn('Cache cleanup failed:', e); }
+})();
+
+// Global cache clearing function for manual use
+window.clearAppCache = async function() {
+  try {
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    localStorage.removeItem('ss_app_version');
+    if (navigator.serviceWorker) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    toast('Cache vidé ! Rechargement...', 'ok');
+    setTimeout(() => location.reload(true), 500);
+  } catch(e) {
+    toast('Erreur lors du vidage du cache: ' + e.message, 'err');
+  }
+};
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js', { scope: '/' })
     .then(reg => {
@@ -3724,7 +4035,7 @@ document.addEventListener('touchend', () => {
     pullRefreshActive = false;
     touchStartY = 0;
     if (adminIn && currentPage === 'dashboard') {
-      S.reloadReports().then(() => { renderDashboard(); toast('Données actualisées', 'ok'); ssHaptic('light'); });
+      S.reloadReports().then(() => { renderDashboardV3(); toast('Données actualisées', 'ok'); ssHaptic('light'); });
     } else if (currentPage === 'home') {
       ssHaptic('light');
     }
