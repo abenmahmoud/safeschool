@@ -9,6 +9,27 @@ const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
 const SUPABASE_KEY = Netlify.env.get('SUPABASE_ANON_KEY') || '';
 
+// ---------------------------------------------------------------------------
+// Rate limiting — 30 requests per IP per minute for stats push
+// ---------------------------------------------------------------------------
+const STATS_RATE_LIMIT = 30;
+const STATS_RATE_WINDOW_MS = 60 * 1000;
+
+async function checkStatsRateLimit(ip: string): Promise<boolean> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `stats_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < STATS_RATE_WINDOW_MS) || [];
+  if (recent.length >= STATS_RATE_LIMIT) return true;
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+  return false;
+}
+
 function cors(body: any, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -78,8 +99,14 @@ export default async (req: Request, context: Context) => {
   const path = url.pathname.replace('/api/lea-stats', '');
   const store = getStore({ name: 'lea-stats', consistency: 'strong' });
 
-  // POST /api/lea-stats — Push stats or alerts from client (anonymous but rate-limited)
+  // POST /api/lea-stats — Push stats or alerts from client (rate-limited)
   if (req.method === 'POST' && (path === '' || path === '/')) {
+    // Rate limit
+    const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+    if (await checkStatsRateLimit(clientIp)) {
+      return cors({ error: 'Too many requests' }, 429);
+    }
+
     try {
       const body = await req.json() as any;
 
