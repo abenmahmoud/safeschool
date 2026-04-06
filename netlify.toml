@@ -40,6 +40,12 @@
   to = "/.netlify/functions/api-gdpr"
   status = 200
 
+# Export API route
+[[redirects]]
+  from = "/api/export/*"
+  to = "/.netlify/functions/api-export"
+  status = 200
+
 # SPA fallback (must be last)
 [[redirects]]
   from = "/*"
@@ -53,28 +59,31 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
     X-XSS-Protection = "1; mode=block"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Resource-Policy = "same-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
 
 # HTML — no cache (always fresh)
 [[headers]]
   for = "/*.html"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
 
-# JS — short cache (filenames not hashed)
+# JS — moderate cache with revalidation
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=3600, must-revalidate"
+    Cache-Control = "public, max-age=7200, must-revalidate"
 
-# CSS — short cache (filenames not hashed)
+# CSS — moderate cache with revalidation
 [[headers]]
   for = "/*.css"
   [headers.values]
-    Cache-Control = "public, max-age=3600, must-revalidate"
+    Cache-Control = "public, max-age=7200, must-revalidate"
 
 # Service Worker — always fresh
 [[headers]]
@@ -90,12 +99,31 @@
     Cache-Control = "public, max-age=86400"
     Content-Type = "application/manifest+json"
 
-# SVG icons — long cache
+# SVG icons — immutable long cache
 [[headers]]
   for = "/icons/*.svg"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
     Content-Type = "image/svg+xml"
+
+# Fonts — long cache
+[[headers]]
+  for = "/*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# i18n translations — moderate cache
+[[headers]]
+  for = "/i18n-translations.js"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, must-revalidate"
+
+# API responses — no cache
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+    Pragma = "no-cache"
 
 # Offline page — cache
 [[headers]]

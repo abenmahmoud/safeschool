@@ -4,6 +4,27 @@ import type { Context, Config } from '@netlify/functions';
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
 
+// ---------------------------------------------------------------------------
+// Rate limiting — 10 requests per IP per 15 minutes for GDPR endpoints
+// ---------------------------------------------------------------------------
+const GDPR_RATE_LIMIT = 10;
+const GDPR_RATE_WINDOW_MS = 15 * 60 * 1000;
+
+async function checkGdprRateLimit(ip: string): Promise<boolean> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `gdpr_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < GDPR_RATE_WINDOW_MS) || [];
+  if (recent.length >= GDPR_RATE_LIMIT) return true;
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+  return false;
+}
+
 function cors(body: any, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -36,6 +57,12 @@ export default async function handler(req: Request, context: Context) {
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/gdpr', '').replace(/^\//, '');
+
+  // Rate limit all GDPR endpoints
+  const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  if (await checkGdprRateLimit(clientIp)) {
+    return cors({ error: 'Too many requests. Please try again later.' }, 429);
+  }
 
   // GET /api/gdpr/export?code=SS-XXXXXX — export all data for a tracking code
   if (req.method === 'GET' && path === 'export') {
