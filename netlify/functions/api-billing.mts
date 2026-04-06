@@ -110,8 +110,8 @@ const PLANS: Record<string, PlanDef> = {
 // ---------------------------------------------------------------------------
 
 // ── V8 Extra Pro — Environment-driven auth ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
-const SUPERADMIN_PASS  = Netlify.env.get('SUPERADMIN_PASS')  || 'SafeSchool2026!';
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SUPERADMIN_PASS  = Netlify.env.get('SUPERADMIN_PASS')  || '';
 
 function authCheck(req: Request): boolean {
   const auth = req.headers.get('x-sa-token');

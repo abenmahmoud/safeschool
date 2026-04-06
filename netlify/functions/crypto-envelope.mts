@@ -1,12 +1,13 @@
-import { getStore } from "@netlify/blobs";
-
 // AES-256-GCM envelope encryption for RGPD-sensitive fields
 // Key is stored in env: REPORTS_ENCRYPTION_KEY (hex, 32 bytes)
 // Key ID for rotation: REPORTS_ENCRYPTION_KEY_ID
 
+// Default export required by Netlify Functions runtime
+export default async () => new Response('Not a public endpoint', { status: 404 });
+
 function getEncryptionKey(): { key: Uint8Array; keyId: string } {
-  const hexKey = process.env.REPORTS_ENCRYPTION_KEY || '';
-  const keyId = process.env.REPORTS_ENCRYPTION_KEY_ID || 'v1';
+  const hexKey = Netlify.env.get('REPORTS_ENCRYPTION_KEY') || '';
+  const keyId = Netlify.env.get('REPORTS_ENCRYPTION_KEY_ID') || 'v1';
   if (!hexKey || hexKey.length < 64) {
     throw new Error('REPORTS_ENCRYPTION_KEY must be a 64-char hex string (32 bytes)');
   }

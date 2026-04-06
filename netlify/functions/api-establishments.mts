@@ -1,6 +1,5 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
-import { randomUUID } from 'crypto';
 
 // ── V10 EU — Environment-driven auth — NO hardcoded fallbacks ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
@@ -316,7 +315,7 @@ export default async (req: Request, context: Context) => {
     }
 
     // Create a new UUID and insert into Supabase
-    const newUUID = randomUUID();
+    const newUUID = crypto.randomUUID();
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
@@ -411,7 +410,7 @@ export default async (req: Request, context: Context) => {
       return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
     }
 
-    const id = randomUUID();
+    const id = crypto.randomUUID();
     const adminCode = genAdminCode();
     const now = new Date().toISOString();
     const plan = body.plan || 'starter';

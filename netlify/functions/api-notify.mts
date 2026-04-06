@@ -6,8 +6,8 @@ import type { Context, Config } from '@netlify/functions';
 // ---------------------------------------------------------------------------
 
 // ── V8 Extra Pro — Environment-driven auth ──
-const SA_EMAIL = () => Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
-const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || 'SafeSchool2026!';
+const SA_EMAIL = () => Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || '';
 
 function cors(body: any, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {

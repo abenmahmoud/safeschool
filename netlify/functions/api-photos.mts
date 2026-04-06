@@ -58,7 +58,7 @@ export default async (req: Request, context: Context) => {
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/photos', '');
-  const store = getStore('report-photos');
+  const store = getStore({ name: 'report-photos', consistency: 'strong' });
 
   // POST /api/photos/upload - Upload photos for a report
   if (req.method === 'POST' && path === '/upload') {

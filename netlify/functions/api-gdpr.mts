@@ -96,7 +96,7 @@ export default async function handler(req: Request, context: Context) {
 
     // Also check Netlify Blobs for any stored data
     try {
-      const reportStore = getStore('report-photos');
+      const reportStore = getStore({ name: 'report-photos', consistency: 'strong' });
       const { blobs } = await reportStore.list({ prefix: `${code}/` });
       if (blobs.length > 0) {
         exportData.attachments = blobs.map(b => ({ key: b.key }));

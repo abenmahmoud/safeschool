@@ -58,8 +58,8 @@ interface HealthCheck {
 // --- Auth & CORS ---
 
 // ── V8 Extra Pro — Environment-driven auth ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
-const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 
 function cors(body: any, status = 200): Response {
   return new Response(JSON.stringify(body), {

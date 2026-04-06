@@ -2,8 +2,8 @@ import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
 // ── V8 Extra Pro — Environment-driven auth ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
-const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
