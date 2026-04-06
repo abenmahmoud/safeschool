@@ -365,11 +365,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-/* ── V9 — LANGUAGE PICKER ── */
-.lang-picker { display: flex; gap: 3px; background: rgba(37,99,235,.06); border: 1.5px solid rgba(37,99,235,.12); border-radius: 20px; padding: 2px; flex-wrap: wrap; }
-.lang-picker button { padding: 4px 10px; border-radius: 16px; border: none; font-size: .7rem; font-weight: 700; cursor: pointer; transition: .2s; background: transparent; color: var(--tm); white-space: nowrap; min-height: 28px; }
-.lang-picker button.active { background: var(--p); color: #fff; }
-.lang-picker button:hover:not(.active) { background: rgba(37,99,235,.08); }
+/* ── V10 — LANGUAGE PICKER DROPDOWN ── */
+.lang-dropdown { position: relative; display: inline-block; }
+.lang-dropdown-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 22px; border: 1.5px solid rgba(37,99,235,.15); background: rgba(255,255,255,.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-size: .8rem; font-weight: 600; color: var(--t); cursor: pointer; transition: all .25s cubic-bezier(.4,0,.2,1); box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.lang-dropdown-btn:hover { border-color: var(--p); box-shadow: 0 2px 8px rgba(37,99,235,.12); }
+.lang-dropdown-btn .lang-flag { font-size: 1rem; line-height: 1; }
+.lang-dropdown-btn .lang-arrow { transition: transform .2s; font-size: .6rem; color: var(--tm); margin-left: 2px; }
+.lang-dropdown.open .lang-dropdown-btn { border-color: var(--p); background: var(--pbg); }
+.lang-dropdown.open .lang-arrow { transform: rotate(180deg); }
+.lang-dropdown-list { position: absolute; top: calc(100% + 6px); right: 0; min-width: 170px; max-height: 240px; overflow-y: auto; background: #fff; border: 1.5px solid rgba(37,99,235,.12); border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.1), 0 2px 8px rgba(0,0,0,.04); z-index: 300; opacity: 0; visibility: hidden; transform: translateY(-6px) scale(.97); transition: all .2s cubic-bezier(.4,0,.2,1); padding: 6px; scrollbar-width: thin; scrollbar-color: rgba(37,99,235,.2) transparent; }
+.lang-dropdown.open .lang-dropdown-list { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+.lang-dropdown-list::-webkit-scrollbar { width: 4px; }
+.lang-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+.lang-dropdown-list::-webkit-scrollbar-thumb { background: rgba(37,99,235,.18); border-radius: 4px; }
+.lang-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; border: none; width: 100%; background: transparent; font-size: .84rem; font-weight: 500; color: var(--t); cursor: pointer; transition: all .15s; text-align: left; }
+.lang-dropdown-item:hover { background: rgba(37,99,235,.06); }
+.lang-dropdown-item.active { background: var(--pbg); color: var(--p); font-weight: 700; }
+.lang-dropdown-item .ldi-flag { font-size: 1.15rem; flex-shrink: 0; }
+.lang-dropdown-item .ldi-label { flex: 1; }
+.lang-dropdown-item .ldi-check { font-size: .7rem; color: var(--p); opacity: 0; transition: .15s; }
+.lang-dropdown-item.active .ldi-check { opacity: 1; }
+html.dark .lang-dropdown-btn { background: rgba(30,27,75,.5); border-color: rgba(165,180,252,.15); }
+html.dark .lang-dropdown-list { background: #1e1b4b; border-color: rgba(165,180,252,.12); }
 
 /* ── V9 — RGPD/COMPLIANCE PAGES ── */
 .compliance-page { padding: 24px 20px 80px; max-width: 600px; margin: 0 auto; }
@@ -618,7 +635,7 @@ html.dark .dm-switch::after { left:25px; }
   <div class="etab-header">
     <div class="wbadge">🛡️ SafeSchool · Multi-établissements</div>
     <div style="display:flex;justify-content:center;margin-bottom:10px">
-      <div class="lang-picker" id="etab-lang-picker"></div>
+      <div id="etab-lang-picker"></div>
     </div>
     <h1 id="etab-title"></h1>
     <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto" id="etab-subtitle"></p>
@@ -1164,15 +1181,32 @@ function setLang(lang) {
   currentLang = lang;
   localStorage.setItem('ss_lang', lang);
   document.documentElement.lang = lang;
+  // Close all dropdowns
+  document.querySelectorAll('.lang-dropdown.open').forEach(d => d.classList.remove('open'));
   applyLanguage();
 }
 
 function renderLangPicker(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = SS_LANGS.map(lang =>
-    `<button onclick="setLang('${lang}')" class="${currentLang===lang?'active':''}" aria-label="${SS_LANG_LABELS[lang]}">${lang.toUpperCase()}</button>`
-  ).join('');
+  const flag = SS_LANG_FLAGS[currentLang] || '🌐';
+  const label = SS_LANG_LABELS[currentLang] || currentLang.toUpperCase();
+  el.className = 'lang-dropdown';
+  el.innerHTML = `
+    <button class="lang-dropdown-btn" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">
+      <span class="lang-flag">${flag}</span>
+      <span>${label}</span>
+      <span class="lang-arrow">▼</span>
+    </button>
+    <div class="lang-dropdown-list">
+      ${SS_LANGS.map(lang => `
+        <button class="lang-dropdown-item ${currentLang===lang?'active':''}" onclick="event.stopPropagation();setLang('${lang}')">
+          <span class="ldi-flag">${SS_LANG_FLAGS[lang]}</span>
+          <span class="ldi-label">${SS_LANG_LABELS[lang]}</span>
+          <span class="ldi-check">✓</span>
+        </button>
+      `).join('')}
+    </div>`;
 }
 
 function applyLanguage() {
@@ -1318,6 +1352,25 @@ const S = {
   updateReport: async (report) => {
     if (!currentEtab || !report || !report.id) return;
     try {
+      // Ensure we have a UUID for school_id
+      var queryId = currentEtab.id;
+      var uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRx.test(queryId)) {
+        try {
+          var resolveRes = await fetch('/api/establishments/ensure-uuid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blob_id: currentEtab.blobId || currentEtab.apiId || queryId, slug: currentEtab.slug })
+          });
+          if (resolveRes.ok) {
+            var d = await resolveRes.json();
+            if (d.uuid && uuidRx.test(d.uuid)) {
+              queryId = d.uuid;
+              currentEtab.id = queryId;
+            }
+          }
+        } catch(re) { console.warn('UUID resolve in updateReport failed:', re); }
+      }
       const payload = {
         status: uiStatusToDb(report.status),
         admin_note: report.staffNotes || report.adminNote || null,
@@ -1325,11 +1378,38 @@ const S = {
         assigned_staff_id: report.assignedTo || null,
         updated_at: new Date().toISOString()
       };
-      const { error } = await ssSupabase.from('reports').update(payload).eq('id', report.id).eq('school_id', currentEtab.id);
+      const { error } = await ssSupabase.from('reports').update(payload).eq('id', report.id).eq('school_id', queryId);
       if (error) throw error;
+      // Also update localStorage backup
+      try {
+        var lsKey = 'ss_rpt_' + queryId;
+        var lsRpts = JSON.parse(localStorage.getItem(lsKey) || '[]');
+        var lsIdx = lsRpts.findIndex(function(r) { return r.id === report.id || (r.tracking_code && r.tracking_code === report.code); });
+        if (lsIdx >= 0) {
+          lsRpts[lsIdx].staff_reply = report.staffReply || null;
+          lsRpts[lsIdx].admin_note = report.staffNotes || null;
+          lsRpts[lsIdx].status = uiStatusToDb(report.status);
+          localStorage.setItem(lsKey, JSON.stringify(lsRpts));
+        }
+      } catch(lsErr) { /* silent */ }
       await S.reloadReports();
     } catch(e) {
       console.error('Failed to update report in Supabase', e);
+      // Fallback: update localStorage even if Supabase fails
+      try {
+        var fallbackKeys = ['ss_rpt_' + currentEtab.id];
+        if (currentEtab.blobId) fallbackKeys.push('ss_rpt_' + currentEtab.blobId);
+        for (var fk = 0; fk < fallbackKeys.length; fk++) {
+          var fbRpts = JSON.parse(localStorage.getItem(fallbackKeys[fk]) || '[]');
+          var fbIdx = fbRpts.findIndex(function(r) { return r.id === report.id || (r.tracking_code && r.tracking_code === (report.code || report.trackingCode)); });
+          if (fbIdx >= 0) {
+            fbRpts[fbIdx].staff_reply = report.staffReply || null;
+            fbRpts[fbIdx].admin_note = report.staffNotes || null;
+            fbRpts[fbIdx].status = uiStatusToDb(report.status);
+            localStorage.setItem(fallbackKeys[fk], JSON.stringify(fbRpts));
+          }
+        }
+      } catch(lsFb) { /* silent */ }
     }
   },
   reloadReports: async () => {
@@ -1782,7 +1862,7 @@ function renderHomePage() {
     <p>${t('homeDesc')}</p>
   </div>
   <div style="padding:8px 20px 0;display:flex;justify-content:flex-end">
-    <div class="lang-picker" id="home-lang-picker"></div>
+    <div id="home-lang-picker"></div>
   </div>
   <div class="stitle">${t('whatToDo')}</div>
   <div class="agrid">
@@ -2443,6 +2523,27 @@ async function lookupCode(){
         }
       } catch(lsErr) { console.warn('localStorage lookup failed:', lsErr); }
     }
+    // Merge localStorage staff_reply if Supabase data is missing it
+    if(data && !data.staff_reply) {
+      try {
+        var mergeKeys = [];
+        if (currentEtab) {
+          mergeKeys.push('ss_rpt_' + currentEtab.id);
+          if (currentEtab.blobId) mergeKeys.push('ss_rpt_' + currentEtab.blobId);
+        }
+        for (var mk = 0; mk < mergeKeys.length; mk++) {
+          var mergeRpts = JSON.parse(localStorage.getItem(mergeKeys[mk]) || '[]');
+          var mergeMatch = mergeRpts.find(function(r) {
+            return (r.tracking_code && r.tracking_code === (data.tracking_code || code)) || (r.id === data.id);
+          });
+          if (mergeMatch && mergeMatch.staff_reply) {
+            data.staff_reply = mergeMatch.staff_reply;
+            if (mergeMatch.admin_note && !data.admin_note) data.admin_note = mergeMatch.admin_note;
+            break;
+          }
+        }
+      } catch(mergeErr) { /* silent */ }
+    }
     if(!data){
       el.innerHTML=`
       <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
@@ -2527,9 +2628,16 @@ function switchTab(tab,btn){
   btn.classList.add('active');
   document.querySelectorAll('.tc').forEach(c=>c.classList.remove('active'));
   document.getElementById('tc-'+tab).classList.add('active');
-  if(tab==='quiz')initQuiz();
+  if(tab==='quiz'){
+    initQuiz();
+    // Scroll quiz into view
+    setTimeout(()=>{
+      const qw=document.getElementById('quiz-wrap');
+      if(qw)qw.scrollIntoView({behavior:'smooth',block:'start'});
+    },100);
+  }
 }
-function initQuiz(){if(document.getElementById('quiz-wrap')?.innerHTML==='')renderQQ()}
+function initQuiz(){const qw=document.getElementById('quiz-wrap');if(qw&&qw.innerHTML==='')renderQQ()}
 
 const Qs=[
   {q:"Le harcèlement, c'est uniquement de la violence physique ?",opts:["Oui, uniquement physique","Non, il existe plein d'autres formes","Seulement si ça fait des blessures visibles","Ça dépend des personnes"],ok:1,exp:"Le harcèlement peut être verbal, cyber, ou prendre la forme d'une mise à l'écart… La violence physique n'est qu'une forme parmi d'autres."},
@@ -2610,59 +2718,110 @@ function renderQResult(){
 // ═══════════════════════════════════════════
 const bResp=[
   // === PSYCHOLOGICAL / EMOTIONAL DETECTION ===
-  {kw:['suicide','me tuer','plus envie','mourir','en finir','mal à moi','me faire du mal','automutilation','scarification','couper'],
-   r:"Je prends ce que tu me dis **très au sérieux**. ❤️\n\nS'il te plaît, appelle le **3114** maintenant — c'est le numéro national de prévention du suicide, gratuit, 24h/24.\n\nTu peux aussi aller aux urgences les plus proches ou appeler le **15** (SAMU).\n\nTu n'es pas seul(e) et ce que tu ressens peut changer avec le bon accompagnement. Je suis là si tu veux continuer à parler.",
+  {kw:['suicide','me tuer','plus envie','mourir','en finir','mal à moi','me faire du mal','automutilation','scarification','couper','kill myself','end my life','want to die','self harm','hurt myself'],
+   r:{
+     fr:"Je prends ce que tu me dis **très au sérieux**. ❤️\n\nS'il te plaît, appelle le **3114** maintenant — c'est le numéro national de prévention du suicide, gratuit, 24h/24.\n\nTu peux aussi aller aux urgences les plus proches ou appeler le **15** (SAMU).\n\nTu n'es pas seul(e) et ce que tu ressens peut changer avec le bon accompagnement. Je suis là si tu veux continuer à parler.",
+     en:"I take what you're saying **very seriously**. ❤️\n\nPlease call **3114** right now — it's the national suicide prevention line, free, 24/7.\n\nYou can also go to the nearest emergency room or call **15** (SAMU).\n\nYou're not alone, and how you feel right now can change with the right support. I'm here if you want to keep talking."
+   },
    cat:'urgence_psy', severity: 3},
-  {kw:['déprimé','dépression','triste','je pleure','pleurer','mal-être','mal être','plus de force','plus d\'énergie','fatigue','épuisé'],
-   r:"Ce que tu décris ressemble à une **souffrance psychologique réelle**. 💙\n\nC'est normal de se sentir submergé(e) parfois, surtout quand on vit du harcèlement. Mais tu mérites de l'aide :\n\n• **Parle à l'infirmier(e) scolaire** — il/elle peut t'écouter en toute confidentialité\n• **Appelle le 3114** (prévention du suicide) ou le **Fil Santé Jeunes au 0 800 235 236** (gratuit, anonyme)\n• Tu peux aussi **signaler ta situation** ici pour que l'équipe éducative puisse agir\n\nDepuis combien de temps tu te sens comme ça ?",
+  {kw:['déprimé','dépression','triste','je pleure','pleurer','mal-être','mal être','plus de force','plus d\'énergie','fatigue','épuisé','depressed','depression','sad','crying','exhausted','no energy','feeling down','hopeless'],
+   r:{
+     fr:"Ce que tu décris ressemble à une **souffrance psychologique réelle**. 💙\n\nC'est normal de se sentir submergé(e) parfois. Tu mérites de l'aide :\n\n• **Parle à l'infirmier(e) scolaire** — écoute confidentielle\n• **3114** ou **Fil Santé Jeunes : 0 800 235 236** (gratuit, anonyme)\n• Tu peux aussi **signaler ta situation** ici\n\nDepuis combien de temps tu te sens comme ça ?",
+     en:"What you're describing sounds like **real emotional pain**. 💙\n\nIt's okay to feel overwhelmed sometimes. You deserve help:\n\n• **Talk to the school nurse** — confidential support\n• **Call 3114** or **Fil Santé Jeunes: 0 800 235 236** (free, anonymous)\n• You can also **report your situation** here\n\nHow long have you been feeling this way?"
+   },
    cat:'sante_mentale', severity: 2},
-  {kw:['anxiété','angoisse','panique','crise','stressé','stress','j\'ai peur','terrorisé','trembler','je tremble','respirer','respire pas','souffle'],
-   r:"Ce que tu décris ressemble à de l'**anxiété** ou une **crise d'angoisse**. C'est une réaction du corps au stress. 💙\n\n**Essaie cet exercice maintenant :**\n1. Inspire lentement pendant 4 secondes 🌬️\n2. Retiens ta respiration 4 secondes\n3. Expire lentement 4 secondes\n4. Recommence 3 fois\n\nSi ces crises reviennent souvent, parle-en à l'**infirmier(e) scolaire** ou au **psychologue** de ton établissement. Tu peux aussi appeler le **Fil Santé Jeunes : 0 800 235 236** (gratuit, anonyme).\n\nTu veux m'en dire plus sur ce qui te stresse ?",
+  {kw:['anxiété','angoisse','panique','crise','stressé','stress','j\'ai peur','terrorisé','trembler','je tremble','respirer','respire pas','souffle','anxiety','panic','stressed','scared','can\'t breathe','shaking','panic attack'],
+   r:{
+     fr:"Ça ressemble à de l'**anxiété** ou une **crise d'angoisse**. C'est ton corps qui réagit au stress. 💙\n\n**Essaie ça maintenant :**\n1. Inspire 4 secondes 🌬️\n2. Retiens 4 secondes\n3. Expire 4 secondes\n4. Recommence 3 fois\n\nSi ça revient souvent, parle à l'**infirmier(e) scolaire** ou appelle le **Fil Santé Jeunes : 0 800 235 236**.\n\nTu veux m'en dire plus ?",
+     en:"This sounds like **anxiety** or a **panic attack**. It's your body reacting to stress. 💙\n\n**Try this right now:**\n1. Breathe in for 4 seconds 🌬️\n2. Hold for 4 seconds\n3. Breathe out for 4 seconds\n4. Repeat 3 times\n\nIf this keeps happening, talk to the **school nurse** or call **Fil Santé Jeunes: 0 800 235 236**.\n\nWant to tell me more about what's going on?"
+   },
    cat:'sante_mentale', severity: 2},
-  {kw:['dormir','insomnie','cauchemar','cauchemars','nuit','sommeil','réveille','pas dormi'],
-   r:"Les troubles du sommeil sont souvent un **signal d'alerte** que quelque chose ne va pas. 🌙\n\nQuand on vit du stress ou du harcèlement, le sommeil est le premier touché. C'est **normal** mais ça ne doit pas durer :\n\n• Parle-en à l'**infirmier(e) scolaire** dès demain\n• Limite les écrans 1h avant de dormir\n• Note ce qui t'inquiète sur un papier pour \"vider\" ta tête\n\nDepuis combien de temps tu dors mal ? Est-ce que c'est lié à ce qui se passe à l'école ?",
+  {kw:['dormir','insomnie','cauchemar','cauchemars','nuit','sommeil','réveille','pas dormi','can\'t sleep','nightmare','insomnia','sleep'],
+   r:{
+     fr:"Les troubles du sommeil sont souvent un **signal d'alerte**. 🌙\n\nLe stress ou le harcèlement impacte le sommeil en premier :\n\n• Parle-en à l'**infirmier(e) scolaire** dès demain\n• Limite les écrans 1h avant de dormir\n• Note ce qui t'inquiète sur un papier pour \"vider\" ta tête\n\nDepuis combien de temps tu dors mal ? C'est lié à l'école ?",
+     en:"Sleep problems are often a **warning sign**. 🌙\n\nStress or bullying hits sleep first:\n\n• Talk to the **school nurse** tomorrow\n• Cut screens 1 hour before bed\n• Write down what worries you to \"empty\" your mind\n\nHow long has this been going on? Is it related to school?"
+   },
    cat:'sante_physique', severity: 1},
-  {kw:['manger','mange pas','mange plus','vomi','vomir','maigri','grossi','corps','laid','laide','gros','grosse','moche','anorexie','boulimie'],
-   r:"Ce que tu décris touche ton **rapport au corps et à l'alimentation**. C'est un sujet sérieux qui mérite attention. 💙\n\nLe harcèlement peut impacter notre relation à notre corps. Sache que :\n\n• Tu **n'es pas** ce que les autres disent de toi\n• L'infirmier(e) scolaire peut t'aider en toute **confidentialité**\n• **Fil Santé Jeunes : 0 800 235 236** — des professionnels qui comprennent\n• **Anorexie Boulimie Info : 0 800 505 354** si tu penses avoir un trouble alimentaire\n\nTu veux m'en parler plus ?",
+  {kw:['manger','mange pas','mange plus','vomi','vomir','maigri','grossi','corps','laid','laide','gros','grosse','moche','anorexie','boulimie','eating','not eating','body','ugly','fat','thin','anorexia','bulimia'],
+   r:{
+     fr:"Ce que tu décris touche ton **rapport au corps**. C'est sérieux et ça mérite attention. 💙\n\nSache que :\n• Tu **n'es pas** ce que les autres disent de toi\n• L'infirmier(e) peut t'aider en **confidentialité**\n• **Fil Santé Jeunes : 0 800 235 236**\n• **Anorexie Boulimie Info : 0 800 505 354** si besoin\n\nTu veux m'en parler plus ?",
+     en:"What you're describing touches your **relationship with your body**. This is serious and deserves attention. 💙\n\nKnow that:\n• You are **not** what others say about you\n• The school nurse can help you **confidentially**\n• **Fil Santé Jeunes: 0 800 235 236**\n• **Anorexia Bulimia Info: 0 800 505 354** if needed\n\nWant to talk more about it?"
+   },
    cat:'sante_physique', severity: 2},
-  {kw:['seul','seule','personne','isolé','isolée','aucun ami','pas d\'ami','rejeté','rejetée','invisible','n\'existe pas','personne m\'aime'],
-   r:"Se sentir seul(e) est **douloureux**, et c'est souvent aggravé par le harcèlement. 💙\n\nMais je veux que tu saches quelque chose d'important : **tu n'es pas invisible**. Le fait que tu me parles montre du courage.\n\nVoici ce que tu peux faire :\n• **Signale ta situation** ici — l'équipe éducative peut agir pour t'intégrer dans un groupe\n• Parle à un **adulte de confiance** : CPE, prof, parent, infirmier(e)\n• **Appelle le 3018** pour parler à quelqu'un qui comprend\n\nEst-ce que cette mise à l'écart, c'est depuis longtemps ? Quelqu'un t'empêche de parler aux autres ?",
+  {kw:['seul','seule','personne','isolé','isolée','aucun ami','pas d\'ami','rejeté','rejetée','invisible','n\'existe pas','personne m\'aime','alone','lonely','no friends','rejected','invisible','nobody likes me','left out'],
+   r:{
+     fr:"Se sentir seul(e) est **douloureux**, et le harcèlement amplifie ça. 💙\n\nMais tu n'es pas invisible — le fait de me parler montre du courage.\n\n• **Signale ici** — l'équipe peut agir pour t'intégrer\n• Parle à un **adulte de confiance** : CPE, prof, infirmier(e)\n• **3018** pour parler à quelqu'un\n\nCette mise à l'écart, ça dure depuis longtemps ?",
+     en:"Feeling alone is **painful**, and bullying makes it worse. 💙\n\nBut you're not invisible — reaching out shows courage.\n\n• **Report here** — the team can help integrate you\n• Talk to a **trusted adult**: counselor, teacher, nurse\n• **Call 3018** to talk to someone\n\nHas this exclusion been going on for a while?"
+   },
    cat:'isolement', severity: 2},
   // === HARASSMENT TYPES ===
-  {kw:['harcelé','harcèlement','victime','m\'en prendre','m\'embêter','s\'acharnent','acharnement'],
-   r:"Je t'entends, et **ce n'est pas de ta faute**. 💙\n\nPeux-tu me dire :\n• Depuis combien de temps ça dure ?\n• C'est **physique** (coups, bousculades), **verbal** (insultes), **en ligne** (messages, photos) ou **mise à l'écart** (isolement forcé) ?\n• Est-ce que ça se passe toujours au même endroit ?\n\nTu peux **signaler anonymement** dans cette application — l'équipe éducative agira. C'est confidentiel et sécurisé.",
+  {kw:['harcelé','harcèlement','victime','m\'en prendre','m\'embêter','s\'acharnent','acharnement','bullied','bullying','harassed','picking on me','targeting me'],
+   r:{
+     fr:"Je t'entends, et **ce n'est pas de ta faute**. 💙\n\nPeux-tu me dire :\n• Depuis combien de temps ?\n• C'est **physique**, **verbal**, **en ligne** ou **mise à l'écart** ?\n• Toujours au même endroit ?\n\nTu peux **signaler anonymement** ici — c'est confidentiel et sécurisé.",
+     en:"I hear you, and **it's not your fault**. 💙\n\nCan you tell me:\n• How long has this been going on?\n• Is it **physical**, **verbal**, **online** or **social exclusion**?\n• Always the same place?\n\nYou can **report anonymously** here — it's confidential and secure."
+   },
    cat:'harcelement', severity: 2},
-  {kw:['frappé','frapper','tapé','taper','coup','coups','bousculé','bousculade','poussé','pousser','battu','violence'],
-   r:"⚠️ Les **violences physiques** sont un délit, même entre mineurs.\n\nSi tu as des **blessures**, va voir l'infirmier(e) scolaire immédiatement — il/elle pourra te soigner et consigner les faits.\n\n**Ce que tu peux faire :**\n• Note les dates, lieux, et témoins\n• Prends des photos de tes blessures si possible\n• **Signale ici anonymement** pour que l'équipe agisse\n• En cas de danger : appelle le **17** (police)\n\nTu es en sécurité en ce moment ?",
+  {kw:['frappé','frapper','tapé','taper','coup','coups','bousculé','bousculade','poussé','pousser','battu','violence','hit','punch','kicked','pushed','beaten','physical violence','slapped'],
+   r:{
+     fr:"⚠️ Les **violences physiques** sont un délit, même entre mineurs.\n\nSi tu as des **blessures**, va voir l'infirmier(e) tout de suite.\n\n• Note les dates, lieux et témoins\n• Prends des photos si possible\n• **Signale ici anonymement**\n• En danger : appelle le **17** (police)\n\nTu es en sécurité en ce moment ?",
+     en:"⚠️ **Physical violence** is a criminal offense, even among minors.\n\nIf you have **injuries**, see the nurse right away.\n\n• Note dates, places and witnesses\n• Take photos if possible\n• **Report anonymously here**\n• In danger: call **17** (police)\n\nAre you safe right now?"
+   },
    cat:'harcelement_physique', severity: 3},
-  {kw:['instagram','snapchat','tiktok','internet','message','photo','vidéo','réseaux','screenshot','capture','compte','profil fake','faux profil','nude','nudes','intime'],
-   r:"Le cyberharcèlement est **aussi grave** que le harcèlement en face à face — et souvent pire car il ne s'arrête pas. 📱\n\n**Ce que tu dois faire maintenant :**\n1. **Prends des captures d'écran** de TOUT (messages, profils, publications)\n2. **Ne supprime rien** — c'est ta preuve\n3. **Bloque les comptes** qui te harcèlent\n4. **Signale les contenus** sur la plateforme (Instagram, TikTok...)\n5. Appelle le **3018** — ils peuvent faire **supprimer les contenus** rapidement\n\n⚠️ Si des **photos intimes** ont été partagées, c'est un **délit grave**. Le 3018 peut agir en urgence.\n\nTu veux de l'aide pour une de ces étapes ?",
+  {kw:['instagram','snapchat','tiktok','internet','message','photo','vidéo','réseaux','screenshot','capture','compte','profil fake','faux profil','nude','nudes','intime','online','social media','posted','shared'],
+   r:{
+     fr:"Le cyberharcèlement est **aussi grave** que le harcèlement en personne — et souvent pire car il ne s'arrête pas. 📱\n\n**Ce que tu dois faire :**\n1. **Captures d'écran** de tout\n2. **Ne supprime rien** — c'est ta preuve\n3. **Bloque les comptes**\n4. **Signale sur la plateforme**\n5. Appelle le **3018** — ils peuvent faire supprimer les contenus\n\n⚠️ Photos intimes partagées = **délit grave**. Le 3018 agit en urgence.\n\nBesoin d'aide pour une étape ?",
+     en:"Cyberbullying is **just as serious** as in-person bullying — and often worse because it never stops. 📱\n\n**What you need to do:**\n1. **Screenshot** everything\n2. **Don't delete anything** — it's your evidence\n3. **Block the accounts**\n4. **Report on the platform**\n5. Call **3018** — they can get content removed\n\n⚠️ Intimate photos shared = **serious crime**. 3018 acts urgently.\n\nNeed help with any of these steps?"
+   },
    cat:'cyber', severity: 2},
-  {kw:['insulte','insulté','insultes','moquerie','moque','surnom','traiter de','nom d\'oiseau','humilié','humiliation'],
-   r:"Les insultes et moqueries répétées sont une forme de **harcèlement verbal** reconnue par la loi. 💙\n\nCe n'est PAS \"juste des mots\" — l'impact psychologique est **réel et documenté**.\n\n• Note les insultes exactes, les dates, et qui les dit\n• Y a-t-il des **témoins** ?\n• Parle-en à un **adulte** (CPE, prof, parent)\n• **Signale ici** pour que ça soit pris en charge officiellement\n\nDepuis combien de temps ça dure ?",
+  {kw:['insulte','insulté','insultes','moquerie','moque','surnom','traiter de','nom d\'oiseau','humilié','humiliation','insults','called names','made fun of','humiliated','nickname','mocking'],
+   r:{
+     fr:"Les insultes répétées sont du **harcèlement verbal** reconnu par la loi. 💙\n\nCe n'est PAS \"juste des mots\" — l'impact est **réel**.\n\n• Note les insultes exactes et les dates\n• Y a-t-il des **témoins** ?\n• Parle-en à un **adulte** (CPE, prof)\n• **Signale ici** officiellement\n\nDepuis combien de temps ça dure ?",
+     en:"Repeated insults are **verbal harassment** recognized by law. 💙\n\nIt's NOT \"just words\" — the impact is **real**.\n\n• Note the exact insults and dates\n• Are there **witnesses**?\n• Talk to an **adult** (counselor, teacher)\n• **Report here** officially\n\nHow long has this been going on?"
+   },
    cat:'harcelement_verbal', severity: 2},
-  {kw:['peur','j\'ai peur','menace','danger','dangereux','menacé'],
-   r:"⚠️ Si tu es en **danger immédiat**, appelle le **17** (police) ou le **15** (SAMU) maintenant.\n\nSi c'est une peur liée au harcèlement, **ta peur est légitime**. Personne ne devrait vivre dans la crainte à l'école.\n\n• Signale ici anonymement — l'équipe agira pour te protéger\n• Parle à un adulte de confiance **dès aujourd'hui**\n• Tu as le droit de **refuser** d'aller dans des endroits où tu te sens en danger\n\nTu es en sécurité en ce moment ?",
+  {kw:['peur','j\'ai peur','menace','danger','dangereux','menacé','afraid','threatened','in danger','scared','threatening'],
+   r:{
+     fr:"⚠️ En **danger immédiat** ? Appelle le **17** (police) ou le **15** (SAMU).\n\nSi c'est une peur liée au harcèlement, **ta peur est légitime**.\n\n• Signale ici anonymement\n• Parle à un adulte de confiance **aujourd'hui**\n• Tu as le droit de **refuser** d'aller dans des endroits où tu te sens en danger\n\nTu es en sécurité là ?",
+     en:"⚠️ In **immediate danger**? Call **17** (police) or **15** (SAMU).\n\nIf it's fear related to bullying, **your fear is valid**.\n\n• Report anonymously here\n• Talk to a trusted adult **today**\n• You have the right to **refuse** going to places where you feel unsafe\n\nAre you safe right now?"
+   },
    cat:'urgence', severity: 3},
   // === GUIDANCE / ORIENTATION ===
-  {kw:['signaler','comment faire','comment signaler','que faire','quoi faire','aide'],
-   r:"Tu peux signaler en moins de 3 minutes dans cette app 👆\n\n**Comment ça marche :**\n1. Clique sur **Signaler** dans le menu du bas\n2. Choisis ton rôle (victime, témoin, parent...)\n3. Décris la situation avec le plus de détails possible\n4. Tu peux rester **complètement anonyme**\n5. Tu recevras un **code de suivi** pour voir la réponse\n\nL'équipe éducative de ton établissement recevra le signalement et agira.\n\nTu veux que je t'aide à démarrer ?",
+  {kw:['signaler','comment faire','comment signaler','que faire','quoi faire','aide','how to report','what to do','how can I','help me','need help'],
+   r:{
+     fr:"Tu peux signaler en moins de 3 minutes ici 👆\n\n1. Clique sur **Signaler** en bas\n2. Choisis ton rôle\n3. Décris la situation\n4. Tu peux rester **anonyme**\n5. Tu recevras un **code de suivi**\n\nL'équipe de ton établissement agira. Tu veux démarrer ?",
+     en:"You can report in less than 3 minutes here 👆\n\n1. Click **Report** at the bottom\n2. Choose your role\n3. Describe the situation\n4. You can stay **anonymous**\n5. You'll get a **tracking code**\n\nYour school's team will take action. Want to start?"
+   },
    cat:'orientation', severity: 1},
-  {kw:['témoin','j\'ai vu','quelqu\'un d\'autre','camarade','copain','copine','ami'],
-   r:"C'est **courageux** de vouloir aider 👏\n\nLes témoins jouent un rôle **crucial**. En signalant, tu peux **changer les choses** pour cette personne.\n\n• Clique sur **Signaler** > choisis **Témoin**\n• Décris ce que tu as vu le plus précisément possible\n• Tu peux rester **anonyme**\n\n**Surtout :** ne te mets pas en danger toi-même. Si la situation est grave, parle à un adulte immédiatement.\n\nTu as plus d'infos sur la situation ?",
+  {kw:['témoin','j\'ai vu','quelqu\'un d\'autre','camarade','copain','copine','ami','witness','saw something','friend','classmate','someone else'],
+   r:{
+     fr:"C'est **courageux** de vouloir aider 👏\n\nLes témoins ont un rôle **crucial**.\n\n• Clique sur **Signaler** > choisis **Témoin**\n• Décris ce que tu as vu\n• Tu peux rester **anonyme**\n\nNe te mets pas en danger. Si c'est grave, parle à un adulte.\n\nTu as plus d'infos ?",
+     en:"It's **brave** of you to want to help 👏\n\nWitnesses play a **crucial** role.\n\n• Click **Report** > choose **Witness**\n• Describe what you saw\n• You can stay **anonymous**\n\nDon't put yourself in danger. If it's serious, talk to an adult.\n\nCan you tell me more?"
+   },
    cat:'orientation', severity: 1},
-  {kw:['parent','mon fils','ma fille','mon enfant','en tant que parent'],
-   r:"En tant que parent, votre inquiétude est tout à fait légitime. 💙\n\n**Signaux d'alerte** à surveiller :\n• Changement de comportement, repli sur soi\n• Refus d'aller à l'école\n• Troubles du sommeil ou de l'alimentation\n• Résultats scolaires en baisse\n• Affaires abîmées ou manquantes\n\n**Ce que vous pouvez faire :**\n1. **Écoutez** sans juger ni minimiser\n2. **Signalez** via cette app (vous pouvez choisir 'Parent')\n3. Contactez le **CPE** ou la **direction** de l'établissement\n4. Appelez le **3018** pour un accompagnement professionnel\n\nVoulez-vous signaler la situation ?",
+  {kw:['parent','mon fils','ma fille','mon enfant','en tant que parent','my child','my son','my daughter','as a parent'],
+   r:{
+     fr:"En tant que parent, votre inquiétude est légitime. 💙\n\n**Signaux d'alerte :**\n• Changement de comportement, repli\n• Refus d'aller à l'école\n• Troubles du sommeil/alimentation\n• Résultats en baisse\n\n**Ce que vous pouvez faire :**\n1. **Écoutez** sans juger\n2. **Signalez** ici (rôle 'Parent')\n3. Contactez le **CPE/direction**\n4. Appelez le **3018**\n\nVoulez-vous signaler ?",
+     en:"As a parent, your concern is completely valid. 💙\n\n**Warning signs:**\n• Behavior changes, withdrawal\n• Refusing to go to school\n• Sleep/eating problems\n• Declining grades\n\n**What you can do:**\n1. **Listen** without judgment\n2. **Report** here (role 'Parent')\n3. Contact the **school counselor**\n4. Call **3018**\n\nWould you like to report?"
+   },
    cat:'orientation', severity: 1},
   // === GENERAL / GREETINGS ===
-  {kw:['bonjour','salut','hello','coucou','bsr','bonsoir','hey'],
-   r:"Salut 👋 Je suis **Léa**, ton assistante confidentielle SafeSchool.\n\nJe suis là pour :\n• **T'écouter** en toute confidentialité\n• **T'orienter** vers les bonnes ressources\n• **T'accompagner** dans ta démarche de signalement\n\nTu peux me parler de ce que tu vis. Tout ce que tu me dis reste entre nous.\n\nComment est-ce que je peux t'aider ?",
+  {kw:['bonjour','salut','hello','coucou','bsr','bonsoir','hey','hi','good morning','good evening'],
+   r:{
+     fr:"Salut 👋 Je suis **Léa**, ton assistante confidentielle SafeSchool.\n\nJe suis là pour t'écouter, t'orienter et t'accompagner. Tout ce que tu me dis reste entre nous.\n\nComment je peux t'aider ?",
+     en:"Hi there 👋 I'm **Léa**, your confidential SafeSchool assistant.\n\nI'm here to listen, guide you, and support you. Everything you tell me stays between us.\n\nHow can I help you?"
+   },
    cat:'general', severity: 0},
-  {kw:['merci','super','cool','ok','parfait','d\'accord'],
-   r:"Avec plaisir 😊\n\nN'oublie pas :\n• Le **3018** est là si tu veux parler à un professionnel\n• Tu peux **signaler** anonymement à tout moment\n• L'**infirmier(e) scolaire** est aussi là pour toi\n\nJe suis disponible quand tu veux. Prends soin de toi. 💙",
+  {kw:['merci','super','cool','ok','parfait','d\'accord','thanks','thank you','great','perfect','okay','got it'],
+   r:{
+     fr:"Avec plaisir 😊\n\nN'oublie pas : le **3018** est là si tu veux parler à un pro, tu peux **signaler** anonymement à tout moment, et l'**infirmier(e) scolaire** est aussi là pour toi.\n\nPrends soin de toi. 💙",
+     en:"You're welcome 😊\n\nRemember: **3018** is there if you want to talk to a professional, you can **report** anonymously anytime, and the **school nurse** is also here for you.\n\nTake care. 💙"
+   },
    cat:'general', severity: 0},
-  {kw:['qui es tu','c\'est quoi','tu es qui','comment tu marches','tu fais quoi'],
-   r:"Je suis **Léa**, l'assistante IA de SafeSchool. 🤖\n\nJe suis conçue pour :\n• **Écouter** ce que tu vis sans te juger\n• **Détecter** si tu as besoin d'aide urgente\n• **T'orienter** vers les bons numéros et ressources\n• **T'encourager** à signaler si tu subis du harcèlement\n\n⚠️ Je suis une **IA**, pas un psychologue. Pour un vrai suivi, contacte l'infirmier(e) scolaire ou le **3018**.\n\nTout ce que tu me dis est **confidentiel**. Comment puis-je t'aider ?",
+  {kw:['qui es tu','c\'est quoi','tu es qui','comment tu marches','tu fais quoi','who are you','what are you','how do you work','what do you do'],
+   r:{
+     fr:"Je suis **Léa**, l'assistante IA de SafeSchool. 🤖\n\nJe suis conçue pour t'écouter, détecter si tu as besoin d'aide urgente, t'orienter vers les bons contacts et t'encourager à signaler.\n\n⚠️ Je suis une **IA**, pas un psychologue. Pour un vrai suivi : infirmier(e) scolaire ou **3018**.\n\nTout est **confidentiel**. Comment puis-je t'aider ?",
+     en:"I'm **Léa**, SafeSchool's AI assistant. 🤖\n\nI'm designed to listen, detect if you need urgent help, guide you to the right contacts, and encourage you to report.\n\n⚠️ I'm an **AI**, not a psychologist. For real follow-up: school nurse or **3018**.\n\nEverything is **confidential**. How can I help?"
+   },
    cat:'general', severity: 0},
 ];
 
@@ -2751,7 +2910,10 @@ const leaStats = {
 };
 function initChat(){
   const m=document.getElementById('chat-msgs');
-  if(m&&m.children.length===0)addBot("Salut 👋 Je suis **Léa**, ton assistante confidentielle SafeSchool.\n\nJe suis formée pour **t'écouter**, **t'orienter** et **t'accompagner** si tu vis une situation difficile.\n\n💙 Tout ce que tu me dis reste **confidentiel**.\n⚠️ En cas de danger immédiat, appelle le **17** ou le **15**.\n\nComment est-ce que je peux t'aider aujourd'hui ?");
+  const isEn = currentLang === 'en';
+  if(m&&m.children.length===0)addBot(isEn
+    ? "Hi 👋 I'm **Léa**, your confidential SafeSchool assistant.\n\nI'm here to **listen**, **guide you** and **support you** through difficult situations.\n\n💙 Everything you tell me stays **confidential**.\n⚠️ In case of immediate danger, call **17** or **15**.\n\nHow can I help you today?"
+    : "Salut 👋 Je suis **Léa**, ton assistante confidentielle SafeSchool.\n\nJe suis formée pour **t'écouter**, **t'orienter** et **t'accompagner** si tu vis une situation difficile.\n\n💙 Tout ce que tu me dis reste **confidentiel**.\n⚠️ En cas de danger immédiat, appelle le **17** ou le **15**.\n\nComment est-ce que je peux t'aider aujourd'hui ?");
 }
 function addBot(text){
   const m=document.getElementById('chat-msgs');
@@ -2775,6 +2937,7 @@ function showTyp(){
 }
 function getBotResp(text){
   const l=text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const lang = (currentLang === 'en') ? 'en' : 'fr';
   let matched = null;
   for(const r of bResp) {
     if(r.kw.some(k => l.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))) {
@@ -2783,18 +2946,25 @@ function getBotResp(text){
     }
   }
   if (matched) {
-    // If severity >= 2 and hasn't suggested report yet, add gentle nudge
-    let resp = matched.r;
+    const respText = (typeof matched.r === 'object') ? (matched.r[lang] || matched.r.fr) : matched.r;
+    let resp = respText;
     if (matched.severity >= 2 && !leaStats._session.suggestedReport && leaStats._session.messages > 1) {
-      resp += "\n\n💡 **Si tu te sens prêt(e)**, tu peux **signaler ta situation** anonymement dans l'onglet Signaler. Ça peut vraiment aider.";
+      resp += lang === 'en'
+        ? "\n\n💡 **When you're ready**, you can **report your situation** anonymously in the Report tab. It can really help."
+        : "\n\n💡 **Si tu te sens prêt(e)**, tu peux **signaler ta situation** anonymement dans l'onglet Signaler. Ça peut vraiment aider.";
       leaStats._session.suggestedReport = true;
     }
     return { text: resp, rule: matched };
   }
-  const defs=[
-    "Je t'écoute attentivement. 💙 Peux-tu m'en dire un peu plus ?\n\nPar exemple : depuis combien de temps ça se passe ? Est-ce que ça arrive à l'école, en ligne, ou les deux ?",
-    "Ce que tu décris semble difficile à vivre. **Tu n'es pas seul(e)**.\n\nSi tu penses vivre du harcèlement, tu peux :\n• **Signaler anonymement** dans cette application\n• Appeler le **3018** pour parler à un conseiller\n• En parler à un **adulte de confiance** (CPE, infirmier(e), parent)",
-    "Merci de me faire confiance. 💙\n\nN'hésite pas à en parler aussi à un adulte de confiance dans ton établissement — le CPE, l'infirmier(e), ou un professeur bienveillant.\n\nJe suis là si tu veux continuer à me parler.",
+  const defs = lang === 'en' ? [
+    "I'm listening carefully. 💙 Can you tell me a bit more?\n\nFor example: how long has this been going on? Is it happening at school, online, or both?",
+    "What you're describing sounds hard to deal with. **You're not alone**.\n\nIf you think you're being bullied, you can:\n• **Report anonymously** in this app\n• Call **3018** to talk to a counselor\n• Talk to a **trusted adult** (counselor, nurse, parent)",
+    "Thank you for trusting me. 💙\n\nDon't hesitate to also talk to a trusted adult at your school — the counselor, nurse, or a caring teacher.\n\nI'm here if you want to keep talking.",
+    "I want to make sure I understand you well. 💙\n\nCan you describe the situation in more detail? What's happening, with whom, and since when?\n\nThe more details you give me, the better I can guide you."
+  ] : [
+    "Je t'écoute attentivement. 💙 Peux-tu m'en dire un peu plus ?\n\nPar exemple : depuis combien de temps ça se passe ? C'est à l'école, en ligne, ou les deux ?",
+    "Ce que tu décris semble difficile à vivre. **Tu n'es pas seul(e)**.\n\nSi tu penses vivre du harcèlement :\n• **Signale anonymement** dans cette application\n• Appelle le **3018** pour parler à un conseiller\n• Parle à un **adulte de confiance** (CPE, infirmier(e), parent)",
+    "Merci de me faire confiance. 💙\n\nN'hésite pas à en parler aussi à un adulte de confiance — le CPE, l'infirmier(e), ou un professeur bienveillant.\n\nJe suis là si tu veux continuer.",
     "Je veux m'assurer de bien te comprendre. 💙\n\nPeux-tu me décrire la situation plus en détail ? Ce qui se passe, avec qui, et depuis quand ?\n\nPlus tu me donnes de détails, mieux je peux t'orienter."
   ];
   return { text: defs[Math.floor(Math.random()*defs.length)], rule: null };
@@ -2813,7 +2983,9 @@ function sendMsg(){
 function clearChat(){
   const m=document.getElementById('chat-msgs');if(m)m.innerHTML='';
   leaStats.endSession();
-  addBot("Chat effacé. Je suis toujours là si tu as besoin. 💙\n\nComment puis-je t'aider ?");
+  addBot(currentLang === 'en'
+    ? "Chat cleared. I'm still here if you need me. 💙\n\nHow can I help you?"
+    : "Chat effacé. Je suis toujours là si tu as besoin. 💙\n\nComment puis-je t'aider ?");
 }
 function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px'}
 
@@ -2827,13 +2999,21 @@ function renderSchoolContacts(){
   const staff=S.staff().filter(s=>s.active);
   const el=document.getElementById('school-contacts-section');
   if(!el)return;
+  if(staff.length===0){
+    el.innerHTML=`
+    <div class="stitle" style="padding-top:14px">${currentEtab?currentEtab.name:'Ton établissement'}</div>
+    <div style="text-align:center;padding:16px 20px;color:var(--ts)">
+      <p style="font-size:.84rem">${currentLang==='en'?'No school contacts configured yet.':'Aucun contact de l\'établissement configuré pour le moment.'}</p>
+    </div>`;
+    return;
+  }
   el.innerHTML=`
   <div class="stitle" style="padding-top:14px">${currentEtab?currentEtab.name:'Ton établissement'}</div>
   <div class="clist">
     ${staff.map(s=>`
-    <a href="tel:${s.phone}" class="ci-item">
-      <div class="ci-icon ci-i-p" style="font-size:1.3rem">${s.emoji}</div>
-      <div class="ci-info"><h4>${s.name}</h4><p>${roleLabel(s.role)}</p></div>
+    <a href="${s.phone?'tel:'+s.phone:(s.email?'mailto:'+s.email:'#')}" class="ci-item">
+      <div class="ci-icon ci-i-p" style="font-size:1.3rem">${s.emoji||'👤'}</div>
+      <div class="ci-info"><h4>${s.name}</h4><p>${roleLabel(s.role)}${s.phone?' · '+s.phone:''}${s.email?' · '+s.email:''}</p></div>
       <svg width="16" height="16" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </a>`).join('')}
   </div>`;
@@ -2893,7 +3073,7 @@ function renderProfile(){
   <div class="stitle">${currentLang==='fr'?'Paramètres':'Settings'}</div>
   <div style="padding:0 20px 6px">
     <div style="font-size:.8rem;font-weight:700;color:var(--ts);margin-bottom:8px;text-transform:uppercase">${t('language')}</div>
-    <div class="lang-picker" id="profile-lang-picker"></div>
+    <div id="profile-lang-picker"></div>
   </div>
   <div class="dm-toggle" onclick="toggleDarkMode()">
     <div style="display:flex;align-items:center;gap:10px">
@@ -3684,6 +3864,12 @@ function printReport(){
 // INIT
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+  // Close lang dropdowns on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.lang-dropdown')) {
+      document.querySelectorAll('.lang-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+  });
   // Apply saved language
   document.documentElement.lang = currentLang;
   renderHomePage();
