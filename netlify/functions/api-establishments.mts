@@ -8,6 +8,38 @@ const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
 
+// ---------------------------------------------------------------------------
+// Rate limiting — 5 login attempts per IP per 15 minutes
+// ---------------------------------------------------------------------------
+const LOGIN_RATE_LIMIT = 5;
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+
+async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; remaining: number }> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `school_login_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < LOGIN_RATE_WINDOW_MS) || [];
+  if (recent.length >= LOGIN_RATE_LIMIT) return { blocked: true, remaining: 0 };
+  return { blocked: false, remaining: LOGIN_RATE_LIMIT - recent.length };
+}
+
+async function recordLoginAttempt(ip: string): Promise<void> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `school_login_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < LOGIN_RATE_WINDOW_MS) || [];
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+}
+
 function authCheck(req: Request): boolean {
   const auth = req.headers.get('x-sa-token');
   if (!auth) return false;
@@ -148,12 +180,23 @@ export default async (req: Request, context: Context) => {
 
   // Public endpoint: admin login for a school (verifies credentials without exposing them)
   if (req.method === 'POST' && path.startsWith('/admin-login/')) {
+    // Rate limit login attempts
+    const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+    const rateCheck = await checkLoginRateLimit(clientIp);
+    if (rateCheck.blocked) {
+      return cors({ error: 'Trop de tentatives. Reessayez dans 15 minutes.', retry_after_seconds: LOGIN_RATE_WINDOW_MS / 1000 }, 429);
+    }
+
     const slug = path.replace('/admin-login/', '');
+    if (!slug || slug.length > 100 || !/^[a-z0-9-]+$/.test(slug)) {
+      return cors({ error: 'Slug invalide' }, 400);
+    }
+
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const entry = index.find((e: any) => e.slug === slug && e.is_active);
-    if (!entry) return cors({ error: 'Établissement non trouvé' }, 404);
+    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404);
     const data = await store.get(`school_${entry.id}`, { type: 'json' }) as any;
-    if (!data) return cors({ error: 'Données non trouvées' }, 404);
+    if (!data) return cors({ error: 'Donnees non trouvees' }, 404);
 
     let body: any;
     try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
@@ -161,7 +204,9 @@ export default async (req: Request, context: Context) => {
     const email = (body.email || '').trim().toLowerCase();
     const password = (body.password || '').trim();
 
-    if (!email || !password) return cors({ error: 'Email et mot de passe requis' }, 400);
+    if (!email || !isValidEmail(email)) return cors({ error: 'Format d\'email invalide' }, 400);
+    if (!password || password.length === 0) return cors({ error: 'Mot de passe requis' }, 400);
+    if (password.length > 200) return cors({ error: 'Mot de passe trop long' }, 400);
 
     // Check admin credentials
     const storedEmail = (data.admin_email || '').toLowerCase();
@@ -178,7 +223,8 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    return cors({ error: 'Identifiants incorrects' }, 401);
+    await recordLoginAttempt(clientIp);
+    return cors({ error: 'Identifiants incorrects', attempts_remaining: rateCheck.remaining - 1 }, 401);
   }
 
   // POST /api/establishments/ensure-uuid - Resolve a school to a valid Supabase UUID (public - needed by client for report submission)

@@ -1,6 +1,43 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
+// ---------------------------------------------------------------------------
+// Rate limiting
+// ---------------------------------------------------------------------------
+const UPLOAD_RATE_LIMIT = 10; // max uploads per IP per hour
+const UPLOAD_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+async function checkUploadRateLimit(ip: string): Promise<boolean> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `photo_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < UPLOAD_RATE_WINDOW_MS) || [];
+  if (recent.length >= UPLOAD_RATE_LIMIT) return true;
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILENAME_LENGTH = 200;
+
+function isValidBase64(str: string): boolean {
+  if (!str || typeof str !== 'string') return false;
+  return /^[A-Za-z0-9+/]*={0,2}$/.test(str);
+}
+
+function sanitizeFilename(name: string): string {
+  return String(name).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, MAX_FILENAME_LENGTH);
+}
+
 function cors(body: any, status = 200, headers: Record<string, string> = {}) {
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
     status,
@@ -26,14 +63,32 @@ export default async (req: Request, context: Context) => {
   // POST /api/photos/upload - Upload photos for a report
   if (req.method === 'POST' && path === '/upload') {
     try {
-      const body = await req.json() as any;
-      const reportId = body.report_id;
-      const photos = body.photos; // Array of { name, data (base64), type }
-
-      if (!reportId || !photos || !Array.isArray(photos) || photos.length === 0) {
-        return cors({ error: 'report_id et photos requis' }, 400);
+      // Rate limit check
+      const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      if (await checkUploadRateLimit(clientIp)) {
+        return cors({ error: 'Trop de telechargements. Reessayez plus tard.' }, 429);
       }
 
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return cors({ error: 'Corps de requete invalide' }, 400);
+      }
+
+      const reportId = body.report_id;
+      const photos = body.photos;
+
+      // Server-side validation
+      if (!reportId || typeof reportId !== 'string' || reportId.length > 100) {
+        return cors({ error: 'report_id invalide' }, 400);
+      }
+      if (!/^[a-zA-Z0-9_-]+$/.test(reportId)) {
+        return cors({ error: 'Format de report_id invalide' }, 400);
+      }
+      if (!photos || !Array.isArray(photos) || photos.length === 0) {
+        return cors({ error: 'report_id et photos requis' }, 400);
+      }
       if (photos.length > 5) {
         return cors({ error: 'Maximum 5 photos par signalement' }, 400);
       }
@@ -44,11 +99,21 @@ export default async (req: Request, context: Context) => {
         const photo = photos[i];
         if (!photo.data || !photo.name) continue;
 
+        // Validate filename
+        if (typeof photo.name !== 'string' || photo.name.length > MAX_FILENAME_LENGTH) continue;
+
+        // Validate MIME type
+        const mimeType = photo.type || 'image/jpeg';
+        if (!ALLOWED_MIME_TYPES.includes(mimeType)) continue;
+
+        // Validate base64 data
+        if (!isValidBase64(photo.data)) continue;
+
         // Validate base64 data size (max 5MB per photo)
         const base64Size = (photo.data.length * 3) / 4;
-        if (base64Size > 5 * 1024 * 1024) continue;
+        if (base64Size > MAX_PHOTO_SIZE) continue;
 
-        const key = `${reportId}/${i}_${Date.now()}_${photo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const key = `${reportId}/${i}_${Date.now()}_${sanitizeFilename(photo.name)}`;
         const buffer = Uint8Array.from(atob(photo.data), c => c.charCodeAt(0));
 
         await store.set(key, buffer, {

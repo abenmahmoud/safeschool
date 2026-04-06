@@ -11,6 +11,27 @@ const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || 'SafeSchool2026!';
 const VAPID_PUBLIC  = () => Netlify.env.get('VAPID_PUBLIC_KEY')  || '';
 const VAPID_PRIVATE = () => Netlify.env.get('VAPID_PRIVATE_KEY') || '';
 
+// ---------------------------------------------------------------------------
+// Rate limiting — 20 subscribe/unsubscribe actions per IP per hour
+// ---------------------------------------------------------------------------
+const PUSH_RATE_LIMIT = 20;
+const PUSH_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+async function checkPushRateLimit(ip: string): Promise<boolean> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `push_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < PUSH_RATE_WINDOW_MS) || [];
+  if (recent.length >= PUSH_RATE_LIMIT) return true;
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+  return false;
+}
+
 function cors(body: any, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {
     status,
@@ -64,7 +85,14 @@ export default async (req: Request, context: Context) => {
 
     // ── POST /api/push/subscribe — Register a push subscription ──
     if (path === 'subscribe' && req.method === 'POST') {
-      const body = await req.json();
+      // Rate limit
+      const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      if (await checkPushRateLimit(clientIp)) {
+        return cors({ error: 'Too many requests. Please try again later.' }, 429);
+      }
+
+      let body: any;
+      try { body = await req.json(); } catch { return cors({ error: 'Invalid request body' }, 400); }
       const { subscription, schoolId, role, userId } = body;
 
       if (!subscription?.endpoint) {
