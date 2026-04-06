@@ -625,10 +625,38 @@ html.dark .dm-switch::after { left:25px; }
 .st-btn{padding:9px 16px;border-radius:20px;font-size:.82rem;font-weight:700;border:none;cursor:pointer;transition:.15s}
 </style>
 <script src="/i18n-translations.js"></script>
+<!-- Sentry Error Monitoring (configure SENTRY_DSN to activate) -->
+<script>
+(function() {
+  var dsn = window.SENTRY_DSN || '';
+  if (!dsn) return;
+  var s = document.createElement('script');
+  s.src = 'https://browser.sentry-cdn.com/8.0.0/bundle.min.js';
+  s.crossOrigin = 'anonymous';
+  s.onload = function() {
+    if (window.Sentry) {
+      window.Sentry.init({
+        dsn: dsn,
+        tracesSampleRate: 0.1,
+        environment: location.hostname.includes('localhost') ? 'development' : 'production',
+        release: 'safeschool@8.1.0',
+        ignoreErrors: ['ResizeObserver loop', 'Non-Error exception captured'],
+        beforeSend: function(event) {
+          // Strip PII from error reports
+          if (event.request && event.request.cookies) delete event.request.cookies;
+          return event;
+        }
+      });
+      console.log('[SafeSchool] Sentry monitoring active');
+    }
+  };
+  document.head.appendChild(s);
+})();
+</script>
 </head>
 <body>
 <a href="#app" class="skip-link" tabindex="0">Aller au contenu principal</a>
-<div id="app" role="main">
+<div id="app" role="main" aria-label="SafeSchool application">
 
 <!-- ════ ESTABLISHMENT SELECTOR ════ -->
 <div id="pg-select-etab" style="display:none">
@@ -671,25 +699,25 @@ html.dark .dm-switch::after { left:25px; }
 </div>
 
 <!-- Toast tray -->
-<div class="tray" id="tray"></div>
+<div class="tray" id="tray" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ════ HOME ════ -->
-<div id="pg-home" class="page active">
+<div id="pg-home" class="page active" role="region" aria-label="Accueil">
   <div id="home-content"></div>
 </div>
 
 <!-- ════ REPORT ════ -->
-<div id="pg-report" class="page">
+<div id="pg-report" class="page" role="region" aria-label="Signalement">
   <div id="report-container"></div>
 </div>
 
 <!-- ════ MY REPORT ════ -->
-<div id="pg-myreport" class="page">
+<div id="pg-myreport" class="page" role="region" aria-label="Suivi de dossier">
   <div style="padding:22px 20px 8px"><h1 id="myreport-title">Suivre mon dossier</h1><p class="subtitle" id="myreport-subtitle">Saisis ton code pour voir la réponse de l'équipe</p></div>
   <div style="padding:0 20px">
     <div class="fg">
       <label class="fl" id="myreport-code-label">Ton code de suivi</label>
-      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="20" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="20" aria-describedby="myreport-hint" autocomplete="off" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
       <p class="fhint" id="myreport-hint">Code de suivi (SS-XXXXXX) ou numéro de dossier</p>
     </div>
     <button class="btn btn-p btn-full btn-lg" onclick="lookupCode()">
@@ -702,7 +730,7 @@ html.dark .dm-switch::after { left:25px; }
 </div>
 
 <!-- ════ EDUCATION ════ -->
-<div id="pg-education" class="page">
+<div id="pg-education" class="page" role="region" aria-label="Education et apprentissage">
   <div style="padding:22px 20px 8px"><h1>Comprendre & Apprendre</h1><p class="subtitle">Le harcèlement sous toutes ses formes</p></div>
   <div class="tabs">
     <button class="tb active" onclick="switchTab('understand',this)">📖 Comprendre</button>
@@ -737,20 +765,20 @@ html.dark .dm-switch::after { left:25px; }
 </div>
 
 <!-- ════ ASSISTANT ════ -->
-<div id="pg-assistant" class="page">
+<div id="pg-assistant" class="page" role="region" aria-label="Assistant Lea">
   <div class="chat-wrap">
     <div class="chat-head">
-      <div class="chat-av">🤖</div>
+      <div class="chat-av" aria-hidden="true">🤖</div>
       <div class="chat-info"><h3 id="chat-title">Léa — Assistante bien-être</h3><p id="chat-subtitle">Écoute · Orientation · Confidentiel</p></div>
       <button class="btn btn-ghost btn-sm" onclick="clearChat()" style="margin-left:auto" id="chat-clear-btn">Effacer</button>
     </div>
     <div class="chat-disc" id="chat-disclaimer">⚠️ Léa est une IA — pas un professionnel de santé. En cas de danger : <strong>3018</strong> ou <strong>15</strong>. Tes messages ne sont pas enregistrés (RGPD).</div>
-    <div class="chat-msgs" id="chat-msgs"></div>
+    <div class="chat-msgs" id="chat-msgs" role="log" aria-live="polite" aria-label="Messages de conversation"></div>
     <div class="chat-in-wrap">
-      <textarea class="chat-in" id="chat-in" rows="1"
+      <textarea class="chat-in" id="chat-in" rows="1" aria-label="Message pour Lea"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
         oninput="autoH(this)"></textarea>
-      <button class="send-btn" onclick="sendMsg()">
+      <button class="send-btn" onclick="sendMsg()" aria-label="Envoyer le message">
         <svg width="17" height="17" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
@@ -758,7 +786,7 @@ html.dark .dm-switch::after { left:25px; }
 </div>
 
 <!-- ════ HELP ════ -->
-<div id="pg-help" class="page">
+<div id="pg-help" class="page" role="region" aria-label="Aide et contacts d'urgence">
   <div style="padding:22px 20px 8px"><h1>Aide & Contacts</h1><p>Des personnes sont là pour toi, maintenant</p></div>
   <div class="emcard">
     <div class="eci">🆘</div>
@@ -785,7 +813,7 @@ html.dark .dm-switch::after { left:25px; }
 </div>
 
 <!-- ════ DASHBOARD ════ -->
-<div id="pg-dashboard" class="page" style="display:none">
+<div id="pg-dashboard" class="page" role="region" aria-label="Tableau de bord administrateur" style="display:none">
   <div id="dashboard-body"></div>
 </div>
 
@@ -806,36 +834,36 @@ html.dark .dm-switch::after { left:25px; }
 
 <!-- Bottom Nav -->
 <nav class="bnav" role="navigation" aria-label="Navigation principale">
-  <button class="ni active" id="ni-home" onclick="go('home')">
+  <button class="ni active" id="ni-home" onclick="go('home')" aria-label="Accueil" aria-current="page">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <span>Accueil</span>
   </button>
-  <button class="ni" id="ni-education" onclick="go('education')">
+  <button class="ni" id="ni-education" onclick="go('education')" aria-label="Apprendre">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
     <span>Apprendre</span>
   </button>
-  <button class="ni ni-report" id="ni-report" onclick="go('report')">
+  <button class="ni ni-report" id="ni-report" onclick="go('report')" aria-label="Faire un signalement">
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     <span>Signaler</span>
   </button>
-  <button class="ni" id="ni-assistant" onclick="go('assistant')">
+  <button class="ni" id="ni-assistant" onclick="go('assistant')" aria-label="Parler a Lea">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
     <span>Léa</span>
   </button>
-  <button class="ni" id="ni-help" onclick="go('help')">
+  <button class="ni" id="ni-help" onclick="go('help')" aria-label="Aide et urgences">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     <span>Aide</span>
   </button>
-  <button class="ni" id="ni-profile" onclick="go('profile')">
+  <button class="ni" id="ni-profile" onclick="go('profile')" aria-label="Mon profil">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span>Profil</span>
   </button>
-  <button class="ni" id="ni-dashboard" onclick="go('dashboard')" style="display:none">
+  <button class="ni" id="ni-dashboard" onclick="go('dashboard')" aria-label="Dashboard administrateur" style="display:none">
     <div class="ni-pip"></div>
     <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     <span>Admin</span>

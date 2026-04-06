@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeSchool — Guide de mise en production professionnelle</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #1e293b;
+    line-height: 1.7;
+    background: #fff;
+    padding: 0;
+  }
+
+  @media print {
+    body { padding: 0; font-size: 11pt; }
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    h2 { page-break-after: avoid; }
+    .task-card { break-inside: avoid; }
+    .cover { height: auto; padding: 60px 40px; }
+  }
+
+  @media screen {
+    body { max-width: 900px; margin: 0 auto; padding: 20px; }
+  }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+    color: white;
+    padding: 80px 50px;
+    border-radius: 16px;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .cover h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; }
+  .cover .subtitle { font-size: 1.1rem; opacity: 0.9; margin-bottom: 30px; }
+  .cover .meta { font-size: 0.85rem; opacity: 0.7; }
+  .cover .shield { font-size: 4rem; margin-bottom: 20px; }
+
+  /* Print button */
+  .print-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #4f46e5; color: white; border: none;
+    padding: 14px 28px; border-radius: 12px; font-size: 1rem;
+    font-weight: 600; cursor: pointer; margin: 20px 0 40px;
+    transition: 0.2s;
+  }
+  .print-btn:hover { background: #4338ca; transform: translateY(-1px); }
+
+  /* TOC */
+  .toc { background: #f8fafc; border-radius: 12px; padding: 28px 32px; margin-bottom: 40px; border: 1px solid #e2e8f0; }
+  .toc h2 { font-size: 1.3rem; font-weight: 800; color: #4f46e5; margin-bottom: 16px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { padding: 6px 0; font-size: 0.95rem; color: #475569; }
+  .toc li a { color: #4f46e5; text-decoration: none; font-weight: 600; }
+  .toc li a:hover { text-decoration: underline; }
+
+  /* Section headers */
+  h2 {
+    font-size: 1.5rem; font-weight: 800; color: #1e293b;
+    margin: 48px 0 8px; padding-bottom: 8px;
+    border-bottom: 3px solid #4f46e5;
+  }
+  h2 .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #4f46e5; color: white;
+    border-radius: 10px; font-size: 0.9rem; margin-right: 10px;
+  }
+
+  h3 { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 20px 0 8px; }
+
+  /* Task cards */
+  .task-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 24px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .task-card.done {
+    border-left: 4px solid #10b981;
+    background: #f0fdf4;
+  }
+  .task-card.todo {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+  }
+
+  /* Priority badges */
+  .priority {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+  }
+  .priority.critical { background: #fef2f2; color: #dc2626; }
+  .priority.high { background: #fff7ed; color: #ea580c; }
+  .priority.medium { background: #fffbeb; color: #d97706; }
+  .priority.low { background: #f0fdf4; color: #16a34a; }
+
+  /* Status badges */
+  .status {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+  }
+  .status.done { background: #dcfce7; color: #166534; }
+  .status.partial { background: #dbeafe; color: #1d4ed8; }
+  .status.pending { background: #fef3c7; color: #92400e; }
+
+  /* Code blocks */
+  pre {
+    background: #1e293b; color: #e2e8f0; padding: 16px 20px;
+    border-radius: 10px; overflow-x: auto; font-size: 0.85rem;
+    line-height: 1.6; margin: 12px 0;
+  }
+  code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  p code, li code {
+    background: #f1f5f9; color: #7c3aed; padding: 2px 6px;
+    border-radius: 4px; font-size: 0.88em;
+  }
+
+  /* Lists */
+  ul, ol { padding-left: 24px; margin: 8px 0; }
+  li { margin: 4px 0; }
+
+  /* Info boxes */
+  .info-box {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 14px 18px; margin: 12px 0; font-size: 0.9rem;
+  }
+  .info-box.warning {
+    background: #fffbeb; border-color: #fcd34d;
+  }
+  .info-box.danger {
+    background: #fef2f2; border-color: #fca5a5;
+  }
+  .info-box strong { display: block; margin-bottom: 4px; }
+
+  /* Cost table */
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: 0.9rem;
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; font-weight: 700; color: #475569; }
+  tr:hover { background: #f8fafc; }
+
+  /* Checklist */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 0; padding-left: 28px; position: relative; }
+  .checklist li::before {
+    content: '☐'; position: absolute; left: 0; font-size: 1.1rem;
+  }
+  .checklist li.checked::before { content: '☑'; color: #10b981; }
+
+  p { margin: 8px 0; }
+
+  .footer {
+    text-align: center; padding: 40px 20px; color: #94a3b8;
+    font-size: 0.85rem; border-top: 1px solid #e2e8f0; margin-top: 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="shield">🛡️</div>
+  <h1>SafeSchool — Guide Complet de Mise en Production</h1>
+  <div class="subtitle">Instructions detaillees pour deployer une plateforme anti-harcelement professionnelle capable de gerer des millions d'utilisateurs</div>
+  <div class="meta">Version 8.1.0 · Avril 2026 · Document confidentiel</div>
+</div>
+
+<!-- Print button -->
+<div class="no-print" style="text-align:center">
+  <button class="print-btn" onclick="window.print()">
+    🖨️ Imprimer / Sauvegarder en PDF
+  </button>
+  <p style="color:#94a3b8;font-size:.85rem">Utilisez <strong>Ctrl+P</strong> (ou Cmd+P sur Mac) puis selectionnez "Enregistrer en PDF"</p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <h2>📋 Table des matieres</h2>
+  <ol>
+    <li><a href="#s1">Base de donnees Supabase — Passage a l'echelle</a> <span class="priority critical">CRITIQUE</span></li>
+    <li><a href="#s2">Authentification admin avec Supabase Auth + 2FA</a> <span class="priority critical">CRITIQUE</span></li>
+    <li><a href="#s3">Chiffrement des donnees sensibles</a> <span class="priority critical">CRITIQUE</span></li>
+    <li><a href="#s4">Migration vers un framework (Vue/React/Svelte)</a> <span class="priority high">HAUTE</span></li>
+    <li><a href="#s5">Tests automatises</a> <span class="priority high">HAUTE</span></li>
+    <li><a href="#s6">Systeme d'email transactionnel</a> <span class="priority high">HAUTE</span></li>
+    <li><a href="#s7">Notifications push serveur</a> <span class="priority medium">MOYENNE</span></li>
+    <li><a href="#s8">Audit de securite (Pentest)</a> <span class="priority critical">CRITIQUE</span></li>
+    <li><a href="#s9">Accessibilite WCAG 2.1 AA</a> <span class="priority medium">MOYENNE</span></li>
+    <li><a href="#s10">Scan antivirus des fichiers uploades</a> <span class="priority medium">MOYENNE</span></li>
+    <li><a href="#s11">Tests de charge</a> <span class="priority medium">MOYENNE</span></li>
+    <li><a href="#s12">Sauvegarde automatique Supabase</a> <span class="priority high">HAUTE</span></li>
+    <li><a href="#s13">Multi-region</a> <span class="priority low">BASSE</span></li>
+    <li><a href="#s14">Queue de messages pour les notifications</a> <span class="priority medium">MOYENNE</span></li>
+    <li><a href="#s15">Monitoring avance (Sentry)</a> <span class="priority high">HAUTE</span></li>
+    <li><a href="#s16">Estimation des couts</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- SECTION: Ce qui a deja ete fait -->
+<!-- ═══════════════════════════════════ -->
+<h2>✅ Ce qui a deja ete realise (par l'agent)</h2>
+
+<div class="task-card done">
+  <h3><span class="status done">FAIT</span> Pipeline CI/CD — GitHub Actions</h3>
+  <p>Un fichier <code>.github/workflows/ci.yml</code> a ete cree avec :</p>
+  <ul>
+    <li>Validation HTML et TypeScript a chaque push/PR</li>
+    <li>Audit de securite des dependances npm</li>
+    <li>Tests Lighthouse automatiques sur les PRs (accessibilite, performance, SEO)</li>
+    <li>Configuration Lighthouse dans <code>.lighthouserc.json</code></li>
+  </ul>
+</div>
+
+<div class="task-card done">
+  <h3><span class="status done">FAIT</span> Protection CSRF</h3>
+  <p>Une nouvelle fonction Netlify <code>api-csrf.mts</code> a ete creee :</p>
+  <ul>
+    <li>Generation de tokens CSRF avec TTL de 30 minutes</li>
+    <li>Tokens a usage unique stockes dans Netlify Blobs</li>
+    <li>Helper <code>validateCsrfToken()</code> exportable pour les autres fonctions</li>
+    <li>Route <code>/api/csrf/token</code> ajoutee dans <code>netlify.toml</code></li>
+  </ul>
+</div>
+
+<div class="task-card done">
+  <h3><span class="status done">FAIT</span> Ameliorations d'accessibilite (a11y)</h3>
+  <ul>
+    <li>Attributs <code>role="region"</code> et <code>aria-label</code> sur toutes les pages</li>
+    <li>Zone <code>aria-live="polite"</code> pour les messages du chat Lea</li>
+    <li>Zone <code>aria-live</code> pour les notifications toast</li>
+    <li>Attributs <code>aria-label</code> sur tous les boutons de navigation</li>
+    <li><code>aria-current="page"</code> sur le bouton actif</li>
+    <li><code>aria-describedby</code> sur le champ de code de suivi</li>
+    <li><code>aria-hidden="true"</code> sur les icones decoratives</li>
+  </ul>
+</div>
+
+<div class="task-card done">
+  <h3><span class="status done">FAIT</span> Internationalisation du dashboard</h3>
+  <p>Ajout de 50+ cles i18n pour le dashboard admin (FR + EN) dans <code>i18n-translations.js</code> :</p>
+  <ul>
+    <li>Labels de statut, types de harcelement, niveaux d'urgence</li>
+    <li>Textes du tableau de bord, filtres, modales</li>
+    <li>Messages de confirmation et placeholders</li>
+  </ul>
+</div>
+
+<div class="task-card done">
+  <h3><span class="status done">FAIT</span> Integration Sentry (configurable)</h3>
+  <p>Le SDK Sentry est integre dans <code>index.html</code> avec chargement conditionnel :</p>
+  <ul>
+    <li>S'active uniquement si <code>window.SENTRY_DSN</code> est defini</li>
+    <li>Echantillonnage des traces a 10%</li>
+    <li>Suppression automatique des cookies (RGPD)</li>
+    <li>Detection automatique de l'environnement (dev/prod)</li>
+  </ul>
+</div>
+
+<div class="task-card done">
+  <h3><span class="status done">FAIT</span> Realisations precedentes (session 1)</h3>
+  <ul>
+    <li>Logo et branding modernes (icones PWA redesignees)</li>
+    <li>Headers de securite renforces (HSTS 2 ans, COOP, CORP)</li>
+    <li>Cache optimise (fonts immutable, API no-store)</li>
+    <li>Rate limiting sur tous les endpoints API</li>
+    <li>Validation serveur des uploads et logins</li>
+    <li>API d'export CSV/JSON pour les administrateurs</li>
+    <li>Automatisation RGPD (retention des donnees programmee)</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════ -->
+<!-- REMAINING TASKS -->
+<!-- ═══════════════════════════════════ -->
+
+<div class="page-break"></div>
+
+<h2 id="s1"><span class="num">1</span> Base de donnees Supabase — Passage a l'echelle</h2>
+
+<div class="task-card todo">
+  <p><span class="priority critical">CRITIQUE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> Pour supporter des millions d'utilisateurs, la base Supabase gratuite ne suffira pas. Le plan Free est limite a 500 Mo de stockage et 2 Go de bande passante.</p>
+
+  <h3>Etape 1 : Passer au plan Pro Supabase</h3>
+  <ol>
+    <li>Connectez-vous a <code>dashboard.supabase.com</code></li>
+    <li>Selectionnez votre projet SafeSchool</li>
+    <li>Allez dans <strong>Settings &gt; Billing</strong></li>
+    <li>Passez au <strong>Plan Pro</strong> (25$/mois) ou <strong>Enterprise</strong></li>
+  </ol>
+
+  <h3>Etape 2 : Activer le connection pooling (PgBouncer)</h3>
+  <ol>
+    <li>Dans le dashboard Supabase, allez dans <strong>Settings &gt; Database</strong></li>
+    <li>Section <strong>Connection Pooling</strong>, activez PgBouncer</li>
+    <li>Notez la nouvelle chaine de connexion (port 6543 au lieu de 5432)</li>
+    <li>Mettez a jour vos variables d'environnement Netlify avec cette nouvelle URL</li>
+  </ol>
+
+  <h3>Etape 3 : Creer les index manquants</h3>
+  <p>Ouvrez l'<strong>Editeur SQL</strong> dans Supabase et executez :</p>
+  <pre><code>-- Index pour les requetes frequentes
+CREATE INDEX IF NOT EXISTS idx_reports_school_id ON reports(school_id);
+CREATE INDEX IF NOT EXISTS idx_reports_tracking_code ON reports(tracking_code);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_school_status ON reports(school_id, status);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_school_id ON audit_logs(school_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+-- Verifier que les index sont bien crees
+SELECT indexname, tablename FROM pg_indexes
+WHERE schemaname = 'public'
+ORDER BY tablename;</code></pre>
+
+  <h3>Etape 4 : Activer les replicas en lecture</h3>
+  <ol>
+    <li>Dans <strong>Settings &gt; Infrastructure</strong> (plan Pro)</li>
+    <li>Activez <strong>Read Replicas</strong></li>
+    <li>Choisissez une region proche de vos utilisateurs (ex: eu-west-1 pour la France)</li>
+  </ol>
+
+  <div class="info-box">
+    <strong>💡 Conseil :</strong> Surveillez les metriques dans Supabase Dashboard &gt; Reports pour identifier les requetes lentes. Ajoutez des index supplementaires si necessaire.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s2"><span class="num">2</span> Authentification admin avec Supabase Auth + 2FA</h2>
+
+<div class="task-card todo">
+  <p><span class="priority critical">CRITIQUE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> L'authentification actuelle utilise un mot de passe encode en base64 (<code>atob(token)</code>). C'est insuffisant pour la production avec des donnees sensibles de mineurs.</p>
+
+  <h3>Etape 1 : Configurer Supabase Auth</h3>
+  <ol>
+    <li>Dans Supabase Dashboard &gt; <strong>Authentication &gt; Providers</strong></li>
+    <li>Activez <strong>Email/Password</strong></li>
+    <li>Activez la <strong>verification par email</strong> (Email Confirmations)</li>
+    <li>Dans <strong>Authentication &gt; Multi Factor</strong>, activez le 2FA/MFA</li>
+  </ol>
+
+  <h3>Etape 2 : Creer la table admin_users</h3>
+  <pre><code>CREATE TABLE admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  school_id UUID REFERENCES schools(id),
+  email TEXT UNIQUE NOT NULL,
+  role TEXT DEFAULT 'admin' CHECK (role IN ('admin','cpe','staff','superadmin')),
+  first_name TEXT,
+  last_name TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  last_login TIMESTAMPTZ
+);
+
+-- Securiser avec Row Level Security
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+
+-- Politique : un admin ne peut voir que les users de son ecole
+CREATE POLICY "Admins see own school users" ON admin_users
+  FOR SELECT USING (
+    school_id = (
+      SELECT school_id FROM admin_users WHERE auth_id = auth.uid()
+    )
+  );
+
+-- Politique : seul le superadmin peut creer des admins
+CREATE POLICY "Superadmin can insert" ON admin_users
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM admin_users
+      WHERE auth_id = auth.uid() AND role = 'superadmin'
+    )
+  );</code></pre>
+
+  <h3>Etape 3 : Modifier les fonctions Netlify</h3>
+  <p>Remplacez la fonction <code>authCheck()</code> dans chaque fichier <code>.mts</code> :</p>
+  <pre><code>// AVANT (insecure) :
+function authCheck(req: Request): boolean {
+  const token = req.headers.get('x-sa-token');
+  try { return atob(token) === `${email}:${pass}`; }
+  catch { return false; }
+}
+
+// APRES (securise avec JWT Supabase) :
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  Netlify.env.get('SUPABASE_URL')!,
+  Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+async function authCheck(req: Request): Promise&lt;{
+  authenticated: boolean;
+  user?: any;
+  role?: string;
+}&gt; {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return { authenticated: false };
+
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return { authenticated: false };
+
+  const { data: adminUser } = await supabase
+    .from('admin_users')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (!adminUser) return { authenticated: false };
+
+  return { authenticated: true, user: adminUser, role: adminUser.role };
+}</code></pre>
+
+  <h3>Etape 4 : Modifier le client (index.html / superadmin.html)</h3>
+  <ol>
+    <li>Remplacez le stockage <code>localStorage</code> du token base64 par le SDK Supabase Auth</li>
+    <li>Utilisez <code>supabase.auth.signInWithPassword()</code> pour le login</li>
+    <li>Utilisez <code>supabase.auth.getSession()</code> pour verifier la session</li>
+    <li>Ajoutez le header <code>Authorization: Bearer &lt;access_token&gt;</code> a toutes les requetes API</li>
+    <li>Ajoutez une page de recuperation de mot de passe avec <code>supabase.auth.resetPasswordForEmail()</code></li>
+  </ol>
+
+  <h3>Etape 5 : Ajouter la dependance Supabase</h3>
+  <pre><code>npm install @supabase/supabase-js</code></pre>
+  <p>Puis ajoutez la cle <code>SUPABASE_SERVICE_ROLE_KEY</code> dans les variables d'environnement Netlify (Site Settings &gt; Environment Variables). <strong>Ne la mettez JAMAIS dans le code client.</strong></p>
+
+  <div class="info-box danger">
+    <strong>⚠️ ATTENTION :</strong> La migration doit etre faite progressivement. Gardez l'ancien systeme fonctionnel pendant la transition et testez sur un environnement de staging avant de deployer en production.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s3"><span class="num">3</span> Chiffrement des donnees sensibles</h2>
+
+<div class="task-card todo">
+  <p><span class="priority critical">CRITIQUE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> Les descriptions de harcelement et donnees personnelles doivent etre protegees meme en cas de compromission de la base de donnees. C'est une exigence RGPD pour les donnees de mineurs.</p>
+
+  <h3>Etape 1 : Verifier le chiffrement au repos</h3>
+  <p>Supabase Plan Pro active automatiquement le chiffrement AES-256 au repos. Verifiez dans <strong>Settings &gt; Database</strong> que "Encryption at rest" est actif.</p>
+
+  <h3>Etape 2 : Ajouter le chiffrement au niveau des colonnes</h3>
+  <pre><code>-- Activer l'extension pgcrypto
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Ajouter une colonne chiffree pour la description
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS description_encrypted BYTEA;
+
+-- Fonction pour chiffrer
+CREATE OR REPLACE FUNCTION encrypt_description()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.description IS NOT NULL THEN
+    NEW.description_encrypted = pgp_sym_encrypt(
+      NEW.description,
+      current_setting('app.encryption_key')
+    );
+    NEW.description = '***CHIFFRE***';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger automatique a l'insertion
+CREATE TRIGGER encrypt_report_description
+  BEFORE INSERT ON reports
+  FOR EACH ROW
+  EXECUTE FUNCTION encrypt_description();
+
+-- Fonction pour dechiffrer (utiliser dans les fonctions serveur)
+CREATE OR REPLACE FUNCTION decrypt_description(encrypted_data BYTEA)
+RETURNS TEXT AS $$
+BEGIN
+  RETURN pgp_sym_decrypt(
+    encrypted_data,
+    current_setting('app.encryption_key')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;</code></pre>
+
+  <h3>Etape 3 : Configurer la cle de chiffrement</h3>
+  <ol>
+    <li>Generez une cle forte : <code>openssl rand -base64 32</code></li>
+    <li>Ajoutez-la dans les variables d'environnement Netlify : <code>ENCRYPTION_KEY=votre_cle_ici</code></li>
+    <li>Dans Supabase, configurez-la en tant que variable d'environnement de la base</li>
+    <li><strong>Sauvegardez cette cle dans un gestionnaire de secrets</strong> (1Password, Vault, AWS Secrets Manager)</li>
+  </ol>
+
+  <h3>Etape 4 : Chiffrer les donnees existantes</h3>
+  <pre><code>-- Migration des donnees existantes (executez UNE SEULE FOIS)
+UPDATE reports
+SET description_encrypted = pgp_sym_encrypt(
+  description,
+  current_setting('app.encryption_key')
+),
+description = '***CHIFFRE***'
+WHERE description_encrypted IS NULL
+  AND description IS NOT NULL
+  AND description != '***CHIFFRE***';</code></pre>
+
+  <div class="info-box warning">
+    <strong>⚠️ Important :</strong> Faites un backup COMPLET de la base AVANT de lancer la migration de chiffrement. En cas d'erreur, les donnees non chiffrees seront perdues si aucun backup n'existe.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s4"><span class="num">4</span> Migration vers un framework (Vue 3 + Vite)</h2>
+
+<div class="task-card todo">
+  <p><span class="priority high">HAUTE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> Le fichier <code>index.html</code> fait 4500+ lignes. Le code splitting ameliorera les temps de chargement et la maintenabilite.</p>
+
+  <h3>Etape 1 : Initialiser le projet Vue 3 + Vite</h3>
+  <pre><code># Dans un nouveau dossier (ou a la racine)
+npm create vite@latest . -- --template vue
+npm install vue-router@4 pinia vue-i18n@9 @supabase/supabase-js</code></pre>
+
+  <h3>Etape 2 : Structure des fichiers recommandee</h3>
+  <pre><code>src/
+├── App.vue                    # Layout principal + navigation
+├── main.js                    # Point d'entree + initialisation
+├── router/
+│   └── index.js               # Vue Router config
+├── stores/
+│   ├── auth.js                # Pinia store — authentification
+│   ├── reports.js             # Pinia store — signalements
+│   └── school.js              # Pinia store — etablissement
+├── composables/
+│   ├── useSupabase.js         # Client Supabase singleton
+│   ├── useI18n.js             # Wrapper i18n
+│   └── useToast.js            # Systeme de notifications
+├── views/
+│   ├── Home.vue               # Page d'accueil
+│   ├── Report.vue             # Formulaire de signalement (multi-etapes)
+│   ├── MyReport.vue           # Suivi de dossier
+│   ├── Education.vue          # Quiz et education
+│   ├── Assistant.vue          # Chatbot Lea
+│   ├── Help.vue               # Aide et urgences
+│   ├── Profile.vue            # Profil utilisateur
+│   ├── Dashboard.vue          # Dashboard admin
+│   ├── Privacy.vue            # Politique de confidentialite
+│   ├── Legal.vue              # Mentions legales
+│   └── GDPR.vue               # Droits RGPD
+├── components/
+│   ├── EmergencyBar.vue       # Barre d'urgence 3018/15
+│   ├── BottomNav.vue          # Navigation mobile
+│   ├── Toast.vue              # Notifications toast
+│   ├── SchoolSelector.vue     # Selecteur d'etablissement
+│   ├── ReportCard.vue         # Carte de signalement
+│   └── ReportModal.vue        # Modale detail de signalement
+├── i18n/
+│   ├── fr.json                # Traductions francaises
+│   ├── en.json                # Traductions anglaises
+│   └── ... (es, de, it, pt, pl, nl)
+└── assets/
+    └── styles/
+        ├── variables.css      # Variables CSS
+        ├── base.css           # Styles de base
+        └── dark.css           # Mode sombre</code></pre>
+
+  <h3>Etape 3 : Migrer progressivement</h3>
+  <ol>
+    <li><strong>Commencez par le layout</strong> : App.vue avec EmergencyBar et BottomNav</li>
+    <li><strong>Puis les pages simples</strong> : Help, Privacy, Legal, GDPR</li>
+    <li><strong>Ensuite les pages dynamiques</strong> : Home, Education, MyReport</li>
+    <li><strong>Le plus complexe en dernier</strong> : Report (multi-etapes), Assistant (chat), Dashboard</li>
+    <li><strong>Migrez les styles</strong> : variables CSS → fichiers separes, styles inline → <code>&lt;style scoped&gt;</code></li>
+    <li><strong>Migrez dashboard-v3.js</strong> → composables Pinia</li>
+    <li><strong>Migrez i18n-translations.js</strong> → fichiers JSON par langue via <code>vue-i18n</code></li>
+  </ol>
+
+  <h3>Etape 4 : Configurer Vite</h3>
+  <pre><code>// vite.config.js
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+export default defineConfig({
+  plugins: [vue()],
+  build: {
+    // Noms de fichiers avec hash pour cache immutable
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
+  }
+})</code></pre>
+
+  <div class="info-box">
+    <strong>💡 Estimation :</strong> Cette migration est un projet a part entiere. Prevoyez 2 a 4 semaines pour un developpeur experimenter. Travaillez sur une branche separee et faites des PRs progressives.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s5"><span class="num">5</span> Tests automatises</h2>
+
+<div class="task-card todo">
+  <p><span class="priority high">HAUTE</span> <span class="status pending">A FAIRE</span></p>
+
+  <h3>Etape 1 : Installer les outils de test</h3>
+  <pre><code>npm install -D vitest @testing-library/dom jsdom
+npm install -D playwright @playwright/test
+npx playwright install --with-deps chromium</code></pre>
+
+  <h3>Etape 2 : Configurer Vitest</h3>
+  <pre><code>// vitest.config.js
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    include: ['tests/**/*.test.{js,ts}']
+  }
+})</code></pre>
+
+  <h3>Etape 3 : Creer les tests unitaires pour les fonctions Netlify</h3>
+  <pre><code>// tests/functions/api-csrf.test.ts
+import { describe, it, expect } from 'vitest'
+
+describe('CSRF Token', () =&gt; {
+  it('devrait generer un token valide', async () =&gt; {
+    const res = await fetch('http://localhost:8888/api/csrf/token')
+    const data = await res.json()
+    expect(data.token).toBeDefined()
+    expect(data.token).toMatch(/^[a-f0-9-]{36}$/)
+  })
+
+  it('devrait rejeter un token invalide', async () =&gt; {
+    const res = await fetch('http://localhost:8888/api/csrf/validate', {
+      method: 'POST',
+      headers: { 'x-csrf-token': 'fake-token' }
+    })
+    expect(res.status).toBe(403)
+  })
+})</code></pre>
+
+  <h3>Etape 4 : Creer les tests e2e avec Playwright</h3>
+  <pre><code>// tests/e2e/report.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('parcours de signalement complet', async ({ page }) =&gt; {
+  await page.goto('/')
+
+  // Selectionner un etablissement
+  await page.click('[data-testid="school-selector"]')
+  await page.click('[data-testid="school-item"]:first-child')
+
+  // Naviguer vers le formulaire
+  await page.click('#ni-report')
+
+  // Remplir le formulaire etape par etape
+  await page.click('[data-role="victim"]')
+  await page.click('[data-type="verbal"]')
+  await page.fill('[data-desc]', 'Description de test pour le signalement')
+
+  // Verifier la generation du code de suivi
+  await expect(page.locator('.tracking-code')).toBeVisible()
+})</code></pre>
+
+  <h3>Etape 5 : Ajouter les scripts dans package.json</h3>
+  <pre><code>{
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  }
+}</code></pre>
+
+  <div class="info-box">
+    <strong>💡 Objectif minimum :</strong> Couvrir 80% des fonctions Netlify (validation, rate limiting, auth) et les 3 parcours principaux (signalement, suivi, login admin).
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s6"><span class="num">6</span> Systeme d'email transactionnel</h2>
+
+<div class="task-card todo">
+  <p><span class="priority high">HAUTE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> Les endpoints de notification existent mais n'envoient pas encore d'emails reels. Le statut reste "queued" sans envoi.</p>
+
+  <h3>Etape 1 : Choisir un fournisseur</h3>
+  <table>
+    <thead><tr><th>Fournisseur</th><th>Gratuit</th><th>Prix au-dela</th><th>Points forts</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Resend</strong> (recommande)</td><td>100 emails/jour</td><td>20$/mois (50K)</td><td>API simple, bon support React Email</td></tr>
+      <tr><td>SendGrid</td><td>100 emails/jour</td><td>15$/mois (50K)</td><td>Mature, templates visuels</td></tr>
+      <tr><td>Mailgun</td><td>-</td><td>35$/mois</td><td>Fiabilite enterprise</td></tr>
+      <tr><td>Postmark</td><td>100 emails/mois</td><td>15$/mois (10K)</td><td>Meilleure delivrabilite</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Etape 2 : Configurer Resend</h3>
+  <ol>
+    <li>Creez un compte sur <code>resend.com</code></li>
+    <li>Generez une cle API dans <strong>Settings &gt; API Keys</strong></li>
+    <li>Ajoutez dans Netlify : <strong>Site Settings &gt; Environment Variables</strong></li>
+  </ol>
+  <pre><code>RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
+EMAIL_FROM=SafeSchool &lt;noreply@votre-domaine.fr&gt;</code></pre>
+
+  <h3>Etape 3 : Modifier api-notify.mts</h3>
+  <pre><code>// Ajouter cette fonction dans api-notify.mts
+async function sendEmail(to: string, subject: string, html: string): Promise&lt;boolean&gt; {
+  const apiKey = Netlify.env.get('RESEND_API_KEY');
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY non configure — email non envoye');
+    return false;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: Netlify.env.get('EMAIL_FROM') || 'SafeSchool &lt;noreply@safeschool.fr&gt;',
+        to: [to],
+        subject,
+        html
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Resend error:', err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Email send failed:', e);
+    return false;
+  }
+}
+
+// Puis remplacez status: 'queued' par un appel reel :
+const sent = await sendEmail(
+  recipient,
+  `[SafeSchool] ${notifType}`,
+  emailHtmlTemplate
+);
+record.status = sent ? 'sent' : 'failed';</code></pre>
+
+  <h3>Etape 4 : Configurer le domaine email</h3>
+  <p>Pour eviter que vos emails atterrissent en spam :</p>
+  <ol>
+    <li>Ajoutez un <strong>enregistrement SPF</strong> dans votre DNS</li>
+    <li>Configurez <strong>DKIM</strong> (Resend vous fournit les enregistrements)</li>
+    <li>Ajoutez un <strong>enregistrement DMARC</strong> : <code>v=DMARC1; p=quarantine; rua=mailto:dmarc@votre-domaine.fr</code></li>
+  </ol>
+
+  <h3>Types d'emails a implementer</h3>
+  <ul class="checklist">
+    <li>Confirmation de signalement (avec code de suivi)</li>
+    <li>Notification d'une reponse de l'equipe educative</li>
+    <li>Notification de changement de statut</li>
+    <li>Digest quotidien pour les admins (nombre de nouveaux cas)</li>
+    <li>Recuperation de mot de passe admin</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s7"><span class="num">7</span> Notifications push serveur</h2>
+
+<div class="task-card todo">
+  <p><span class="priority medium">MOYENNE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> Le service worker client est pret mais le serveur ne pousse pas les notifications.</p>
+
+  <h3>Etape 1 : Generer les cles VAPID</h3>
+  <pre><code>npx web-push generate-vapid-keys</code></pre>
+  <p>Vous obtiendrez :</p>
+  <pre><code>Public Key: BDxxxxxxxxxx...
+Private Key: xxxxxxxxxx...</code></pre>
+
+  <h3>Etape 2 : Ajouter les cles dans Netlify</h3>
+  <pre><code>VAPID_PUBLIC_KEY=BDxxxxxxxxxx...
+VAPID_PRIVATE_KEY=xxxxxxxxxx...
+VAPID_EMAIL=mailto:contact@safeschool.fr</code></pre>
+
+  <h3>Etape 3 : Installer la dependance</h3>
+  <pre><code>npm install web-push</code></pre>
+
+  <h3>Etape 4 : Modifier api-push.mts</h3>
+  <pre><code>import webpush from 'web-push';
+
+// Configurer VAPID
+webpush.setVapidDetails(
+  Netlify.env.get('VAPID_EMAIL') || 'mailto:contact@safeschool.fr',
+  Netlify.env.get('VAPID_PUBLIC_KEY')!,
+  Netlify.env.get('VAPID_PRIVATE_KEY')!
+);
+
+// Dans le handler /send :
+async function sendPushNotification(subscription: any, payload: any) {
+  try {
+    await webpush.sendNotification(
+      subscription,
+      JSON.stringify({
+        title: payload.title || 'SafeSchool',
+        body: payload.message,
+        icon: '/icons/icon-192.svg',
+        badge: '/icons/icon-72.svg',
+        data: { url: payload.url || '/' }
+      })
+    );
+    return true;
+  } catch (error: any) {
+    if (error.statusCode === 410) {
+      // Subscription expiree — la supprimer
+      await removeSubscription(subscription.endpoint);
+    }
+    return false;
+  }
+}</code></pre>
+
+  <h3>Etape 5 : Mettre a jour le client</h3>
+  <p>Dans <code>index.html</code>, lors de l'abonnement aux notifications push, utilisez la cle publique VAPID :</p>
+  <pre><code>// Remplacer la cle VAPID hardcodee par une cle recuperee dynamiquement
+const vapidPublicKey = await fetch('/api/push/vapid-key').then(r =&gt; r.json());
+const subscription = await swRegistration.pushManager.subscribe({
+  userVisibleOnly: true,
+  applicationServerKey: urlBase64ToUint8Array(vapidPublicKey.key)
+});</code></pre>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s8"><span class="num">8</span> Audit de securite (Pentest)</h2>
+
+<div class="task-card todo">
+  <p><span class="priority critical">CRITIQUE</span> <span class="status pending">A FAIRE</span></p>
+  <p><strong>Pourquoi :</strong> Avant la mise en production avec des donnees sensibles de mineurs, un audit professionnel est legalement et ethiquement indispensable.</p>
+
+  <h3>Societes recommandees en France</h3>
+  <table>
+    <thead><tr><th>Societe</th><th>Specialite</th><th>Budget indicatif</th></tr></thead>
+    <tbody>
+      <tr><td><strong>YesWeHack</strong></td><td>Bug bounty + pentest</td><td>5 000 - 15 000 €</td></tr>
+      <tr><td>Synacktiv</td><td>Pentest avance</td><td>10 000 - 25 000 €</td></tr>
+      <tr><td>Wavestone</td><td>Audit complet</td><td>15 000 - 40 000 €</td></tr>
+      <tr><td>Intrinsec</td><td>Pentest web</td><td>5 000 - 12 000 €</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Checklist pre-audit</h3>
+  <ul class="checklist">
+    <li>Preparer un environnement de staging identique a la production</li>
+    <li>Documenter tous les endpoints API et les roles d'acces</li>
+    <li>Lister les donnees sensibles et leur emplacement</li>
+    <li>Fournir des comptes de test (admin, CPE, eleve)</li>
+    <li>Definir le perimetre : application web, API, base de donnees</li>
+  </ul>
+
+  <h3>Points specifiques a verifier</h3>
+  <ol>
+    <li><strong>OWASP Top 10</strong> : injections SQL, XSS, CSRF, broken auth, etc.</li>
+    <li><strong>RGPD/CNIL</strong> : conformite du traitement des donnees de mineurs</li>
+    <li><strong>Authentification</strong> : force brute, session fixation, privilege escalation</li>
+    <li><strong>API</strong> : rate limiting, validation, enumeration des endpoints</li>
+    <li><strong>Stockage</strong> : chiffrement, acces non autorise aux blobs/photos</li>
+    <li><strong>Service Worker</strong> : manipulation du cache, interception</li>
+  </ol>
+
+  <div class="info-box danger">
+    <strong>⚠️ Obligatoire :</strong> Toutes les vulnerabilites critiques et hautes identifiees doivent etre corrigees AVANT le lancement public. Aucun compromis sur la securite des donnees de mineurs.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s9"><span class="num">9</span> Accessibilite WCAG 2.1 AA</h2>
+
+<div class="task-card todo">
+  <p><span class="priority medium">MOYENNE</span> <span class="status partial">PARTIEL</span></p>
+  <p>Des ameliorations d'accessibilite ont ete ajoutees (aria-labels, roles, live regions). Voici ce qui reste a faire :</p>
+
+  <h3>Audit automatise</h3>
+  <ol>
+    <li>Installez <strong>axe DevTools</strong> (extension Chrome/Firefox)</li>
+    <li>Lancez un audit sur chaque page de l'application</li>
+    <li>Ouvrez les <strong>Chrome DevTools &gt; Lighthouse &gt; Accessibility</strong></li>
+    <li>Visez un score de 90+ sur Lighthouse Accessibility</li>
+  </ol>
+
+  <h3>Tests manuels a effectuer</h3>
+  <ul class="checklist">
+    <li>Navigation complete au clavier uniquement (Tab, Enter, Escape)</li>
+    <li>Verifier le focus visible sur tous les elements interactifs</li>
+    <li>Contraste des couleurs (ratio minimum 4.5:1 pour le texte normal, 3:1 pour le gros texte)</li>
+    <li>Tester avec un lecteur d'ecran (NVDA sur Windows, VoiceOver sur Mac)</li>
+    <li>Verifier la hierarchie des titres (h1 &gt; h2 &gt; h3, sans sauter de niveau)</li>
+    <li>Texte alternatif pertinent sur toutes les images</li>
+    <li>Labels associes a tous les champs de formulaire</li>
+    <li>Messages d'erreur accessibles et lies aux champs</li>
+    <li>Zoom a 200% sans perte de fonctionnalite</li>
+    <li>Animation respectant <code>prefers-reduced-motion</code></li>
+  </ul>
+
+  <h3>Corrections prioritaires</h3>
+  <pre><code>&lt;!-- Ajouter dans le CSS pour respecter les preferences de mouvement --&gt;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+&lt;!-- Focus visible ameliore --&gt;
+:focus-visible {
+  outline: 3px solid #4f46e5;
+  outline-offset: 2px;
+  border-radius: 4px;
+}</code></pre>
+</div>
+
+<h2 id="s10"><span class="num">10</span> Scan antivirus des fichiers uploades</h2>
+
+<div class="task-card todo">
+  <p><span class="priority medium">MOYENNE</span> <span class="status pending">A FAIRE</span></p>
+
+  <h3>Option A : VirusTotal API (recommandee)</h3>
+  <ol>
+    <li>Creez un compte gratuit sur <code>virustotal.com</code> (4 scans/minute gratuits)</li>
+    <li>Generez une cle API</li>
+    <li>Ajoutez <code>VIRUSTOTAL_API_KEY</code> dans Netlify</li>
+  </ol>
+  <pre><code>// Ajouter dans api-photos.mts avant le stockage
+async function scanFile(fileBuffer: ArrayBuffer): Promise&lt;boolean&gt; {
+  const apiKey = Netlify.env.get('VIRUSTOTAL_API_KEY');
+  if (!apiKey) return true; // Skip si pas configure
+
+  const formData = new FormData();
+  formData.append('file', new Blob([fileBuffer]));
+
+  const res = await fetch('https://www.virustotal.com/api/v3/files', {
+    method: 'POST',
+    headers: { 'x-apikey': apiKey },
+    body: formData
+  });
+
+  if (!res.ok) return true; // Fail-open si l'API est down
+
+  const data = await res.json();
+  const analysisId = data.data.id;
+
+  // Attendre le resultat (max 30 secondes)
+  for (let i = 0; i &lt; 6; i++) {
+    await new Promise(r =&gt; setTimeout(r, 5000));
+    const analysis = await fetch(
+      `https://www.virustotal.com/api/v3/analyses/${analysisId}`,
+      { headers: { 'x-apikey': apiKey } }
+    ).then(r =&gt; r.json());
+
+    if (analysis.data.attributes.status === 'completed') {
+      const stats = analysis.data.attributes.stats;
+      return stats.malicious === 0 &amp;&amp; stats.suspicious === 0;
+    }
+  }
+  return true; // Timeout — accept
+}</code></pre>
+
+  <h3>Option B : ClamAV via API cloud</h3>
+  <p>Pour un scan local sans dependance externe, utilisez un service ClamAV heberge (ex: <code>clamav-rest</code> sur Docker).</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s11"><span class="num">11</span> Tests de charge</h2>
+
+<div class="task-card todo">
+  <p><span class="priority medium">MOYENNE</span> <span class="status pending">A FAIRE</span></p>
+
+  <h3>Etape 1 : Installer k6</h3>
+  <pre><code># macOS
+brew install k6
+
+# Linux
+sudo gpg -k && sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D68
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update && sudo apt-get install k6</code></pre>
+
+  <h3>Etape 2 : Script de test de charge</h3>
+  <pre><code>// load-test.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export const options = {
+  stages: [
+    { duration: '1m', target: 100 },   // Montee progressive
+    { duration: '3m', target: 500 },   // Charge soutenue
+    { duration: '1m', target: 1000 },  // Pic de charge
+    { duration: '2m', target: 0 },     // Descente
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)&lt;500'],  // 95% sous 500ms
+    http_req_failed: ['rate&lt;0.01'],     // Moins de 1% d'erreurs
+  },
+};
+
+const BASE_URL = __ENV.BASE_URL || 'https://votre-staging.netlify.app';
+
+export default function () {
+  // Scenario 1 : Consultation de la page d'accueil
+  let res = http.get(`${BASE_URL}/`);
+  check(res, { 'home OK': (r) =&gt; r.status === 200 });
+
+  // Scenario 2 : Soumission de signalement
+  res = http.post(`${BASE_URL}/api/lea-stats/push`, JSON.stringify({
+    schoolId: 'test-school',
+    events: [{ type: 'report_view', timestamp: Date.now() }]
+  }), { headers: { 'Content-Type': 'application/json' } });
+  check(res, { 'stats push OK': (r) =&gt; r.status === 200 });
+
+  // Scenario 3 : Suivi de dossier
+  res = http.get(`${BASE_URL}/api/gdpr/export?code=SS-TEST01`);
+  check(res, { 'GDPR OK': (r) =&gt; r.status !== 500 });
+
+  sleep(1);
+}</code></pre>
+
+  <h3>Etape 3 : Executer sur un environnement de staging</h3>
+  <pre><code>k6 run --env BASE_URL=https://votre-staging.netlify.app load-test.js</code></pre>
+
+  <div class="info-box warning">
+    <strong>⚠️ JAMAIS en production :</strong> Executez les tests de charge uniquement sur un environnement de staging. Netlify peut bloquer votre site si vous generez trop de trafic non autorise.
+  </div>
+</div>
+
+<h2 id="s12"><span class="num">12</span> Sauvegarde automatique Supabase</h2>
+
+<div class="task-card todo">
+  <p><span class="priority high">HAUTE</span> <span class="status pending">A FAIRE</span></p>
+
+  <h3>Backups automatiques (Plan Pro)</h3>
+  <p>Le plan Pro Supabase inclut des backups automatiques quotidiens avec 7 jours de retention. Verifiez dans <strong>Settings &gt; Database &gt; Backups</strong>.</p>
+
+  <h3>Backups supplementaires</h3>
+  <pre><code># Script de backup a executer via cron (ex: serveur perso ou GitHub Actions)
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+PGPASSWORD="votre_password" pg_dump \
+  -h db.xxxxx.supabase.co \
+  -U postgres \
+  -d postgres \
+  --format=custom \
+  --compress=9 \
+  -f "backup_safeschool_${DATE}.dump"
+
+# Upload vers un stockage externe (S3, GCS, etc.)
+aws s3 cp "backup_safeschool_${DATE}.dump" s3://votre-bucket/backups/</code></pre>
+
+  <h3>Plan de reprise apres sinistre</h3>
+  <ul class="checklist">
+    <li>Tester la restauration d'un backup chaque mois</li>
+    <li>Documenter la procedure de restauration</li>
+    <li>Definir un RPO (Recovery Point Objective) : max 24h de perte de donnees</li>
+    <li>Definir un RTO (Recovery Time Objective) : max 4h de temps de restauration</li>
+    <li>Stocker les backups dans au moins 2 regions geographiques differentes</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s13"><span class="num">13</span> Multi-region</h2>
+
+<div class="task-card todo">
+  <p><span class="priority low">BASSE</span> <span class="status pending">A FAIRE (si necessaire)</span></p>
+  <p><strong>Note :</strong> Necessaire uniquement si vous avez des utilisateurs internationaux. Pour la France metropolitaine, Netlify CDN + Supabase eu-west suffisent.</p>
+
+  <h3>Options</h3>
+  <table>
+    <thead><tr><th>Solution</th><th>Complexite</th><th>Cout</th></tr></thead>
+    <tbody>
+      <tr><td>Supabase Read Replicas</td><td>Faible</td><td>Inclus dans Pro</td></tr>
+      <tr><td>Upstash Redis (cache global)</td><td>Moyenne</td><td>Gratuit jusqu'a 10K req/jour</td></tr>
+      <tr><td>Supabase Fly Postgres</td><td>Elevee</td><td>Variable</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="s14"><span class="num">14</span> Queue de messages pour les notifications</h2>
+
+<div class="task-card todo">
+  <p><span class="priority medium">MOYENNE</span> <span class="status pending">A FAIRE</span></p>
+
+  <h3>Option recommandee : Inngest</h3>
+  <pre><code>npm install inngest</code></pre>
+  <pre><code>// netlify/functions/inngest.mts
+import { Inngest } from 'inngest';
+
+const inngest = new Inngest({ id: 'safeschool' });
+
+// Definir une fonction de notification email
+export const sendNotificationEmail = inngest.createFunction(
+  { id: 'send-notification-email', retries: 3 },
+  { event: 'notification/email.send' },
+  async ({ event }) =&gt; {
+    const { to, subject, html } = event.data;
+    // ... appeler Resend ici
+    return { sent: true };
+  }
+);
+
+// Pour envoyer : depuis n'importe quelle fonction
+await inngest.send({
+  name: 'notification/email.send',
+  data: { to: 'admin@ecole.fr', subject: 'Nouveau signalement', html: '...' }
+});</code></pre>
+
+  <h3>Alternative : QStash (Upstash)</h3>
+  <pre><code>npm install @upstash/qstash</code></pre>
+  <p>File d'attente HTTP simple avec retries automatiques. Gratuit jusqu'a 500 messages/jour.</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s15"><span class="num">15</span> Monitoring avance (Sentry)</h2>
+
+<div class="task-card todo">
+  <p><span class="priority high">HAUTE</span> <span class="status partial">PARTIEL</span></p>
+  <p>Le SDK Sentry a ete integre dans le code (chargement conditionnel). Il reste a :</p>
+
+  <h3>Etape 1 : Creer un compte Sentry</h3>
+  <ol>
+    <li>Inscrivez-vous sur <code>sentry.io</code> (gratuit jusqu'a 5000 erreurs/mois)</li>
+    <li>Creez un projet de type "JavaScript (Browser)"</li>
+    <li>Recuperez votre <strong>DSN</strong> (Data Source Name)</li>
+  </ol>
+
+  <h3>Etape 2 : Activer dans l'application</h3>
+  <p>Ajoutez dans votre code JavaScript (ou via une variable d'environnement injectee) :</p>
+  <pre><code>// Ajouter AVANT le chargement de l'application
+window.SENTRY_DSN = 'https://xxxxxxx@oxxxxxx.ingest.sentry.io/yyyyyyy';</code></pre>
+  <p>Le code dans <code>index.html</code> detectera automatiquement cette variable et initialisera Sentry.</p>
+
+  <h3>Etape 3 : Configurer les alertes</h3>
+  <ol>
+    <li>Dans Sentry &gt; <strong>Alerts</strong>, creez une alerte pour les erreurs critiques</li>
+    <li>Configurez l'envoi par email a l'equipe technique</li>
+    <li>Ajoutez une alerte si le taux d'erreurs depasse 5% des sessions</li>
+  </ol>
+
+  <h3>Etape 4 : Monitoring Netlify Analytics</h3>
+  <p>En complement de Sentry, activez <strong>Netlify Analytics</strong> (9$/mois/site) pour :</p>
+  <ul>
+    <li>Volume de trafic et pages vues</li>
+    <li>Codes d'erreur HTTP (404, 500, etc.)</li>
+    <li>Bande passante consommee</li>
+    <li>Metriques de performance serveur</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="s16"><span class="num">16</span> Estimation des couts mensuels</h2>
+
+<table>
+  <thead><tr><th>Service</th><th>Plan</th><th>Cout mensuel</th><th>Inclut</th></tr></thead>
+  <tbody>
+    <tr><td>Netlify</td><td>Pro</td><td>19 $</td><td>Analytics, fonctions, builds illimites</td></tr>
+    <tr><td>Supabase</td><td>Pro</td><td>25 $</td><td>8 Go DB, backups, replicas, 2FA</td></tr>
+    <tr><td>Resend</td><td>Pro</td><td>20 $</td><td>50 000 emails/mois</td></tr>
+    <tr><td>Sentry</td><td>Team</td><td>0 - 26 $</td><td>5K - 50K erreurs/mois</td></tr>
+    <tr><td>Domaine</td><td>-</td><td>~1 $</td><td>safeschool.fr</td></tr>
+    <tr style="font-weight:700;background:#f0fdf4"><td colspan="2"><strong>TOTAL ESTIME</strong></td><td><strong>65 - 91 $/mois</strong></td><td>~60 - 85 EUR/mois</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>💡 Pour demarrer :</strong> Vous pouvez commencer avec les plans gratuits de Netlify, Supabase et Sentry. Le cout reel ne depassera pas 20$/mois tant que vous avez moins de 10 000 utilisateurs actifs.
+</div>
+
+<h2>📋 Ordre de priorite recommande</h2>
+
+<div class="task-card">
+  <h3>Phase 1 — Securite (avant le lancement) — 2-4 semaines</h3>
+  <ol>
+    <li>✅ Authentification Supabase Auth + 2FA (tache #2)</li>
+    <li>✅ Chiffrement des donnees (tache #3)</li>
+    <li>✅ Pentest professionnel (tache #8)</li>
+    <li>✅ Activer Sentry (tache #15)</li>
+  </ol>
+
+  <h3>Phase 2 — Fiabilite (premiere semaine post-lancement) — 1-2 semaines</h3>
+  <ol>
+    <li>✅ Emails transactionnels (tache #6)</li>
+    <li>✅ Backups automatiques (tache #12)</li>
+    <li>✅ Tests de charge (tache #11)</li>
+    <li>✅ Index Supabase (tache #1)</li>
+  </ol>
+
+  <h3>Phase 3 — Qualite (premier mois) — 2-4 semaines</h3>
+  <ol>
+    <li>✅ Tests automatises (tache #5)</li>
+    <li>✅ Accessibilite WCAG (tache #9)</li>
+    <li>✅ Push notifications (tache #7)</li>
+    <li>✅ Scan antivirus (tache #10)</li>
+  </ol>
+
+  <h3>Phase 4 — Scalabilite (quand la base utilisateurs grandit) — 4-8 semaines</h3>
+  <ol>
+    <li>✅ Migration Vue.js (tache #4)</li>
+    <li>✅ Queue de messages (tache #14)</li>
+    <li>✅ Multi-region (tache #13)</li>
+  </ol>
+</div>
+
+<div class="footer">
+  <p>🛡️ SafeSchool — Guide de mise en production v8.1.0</p>
+  <p>Document genere le 6 avril 2026 · Confidentiel</p>
+  <p style="margin-top:8px;font-size:.8rem">Pour toute question technique, contactez l'equipe de developpement SafeSchool.</p>
+</div>
+
+</body>
+</html>
