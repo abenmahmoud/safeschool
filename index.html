@@ -661,7 +661,7 @@ html.dark .dm-switch::after { left:25px; }
 <!-- ════ ESTABLISHMENT SELECTOR ════ -->
 <div id="pg-select-etab" style="display:none">
   <div class="etab-header">
-    <div class="wbadge">🛡️ SafeSchool · Multi-établissements</div>
+    <a href="/pricing" class="wbadge" style="text-decoration:none;color:var(--p);cursor:pointer">🛡️ SafeSchool · Multi-établissements</a>
     <div style="display:flex;justify-content:center;margin-bottom:10px">
       <div id="etab-lang-picker"></div>
     </div>
@@ -1804,7 +1804,10 @@ async function selectEstablishment(etabId) {
 }
 
 function showEtabSelector() {
+  // Déconnecter la session admin lors du changement d'établissement
+  if (adminIn && window.ssSupabase) ssSupabase.auth.signOut().catch(() => {});
   adminIn = false;
+  currentAdminUser = null;
   document.getElementById('pg-dashboard').style.display = 'none';
   document.getElementById('ni-dashboard').style.display = 'none';
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
@@ -1828,7 +1831,7 @@ function showAddEtabModal() {
       </div>
       <div style="background:var(--abg);border:1.5px solid rgba(217,119,6,.2);border-radius:var(--r12);padding:14px;margin:12px 0">
         <p style="font-size:.82rem;color:#92400e;text-align:center">
-          📧 Contact : <strong>admin@safeschool.fr</strong>
+          📧 Contact : <strong>contact@safeschool.fr</strong>
         </p>
       </div>
       <div class="modal-actions">
@@ -1885,7 +1888,7 @@ function renderHomePage() {
   el.innerHTML = `
   <div class="welcome">
     <svg class="wdeco" width="180" height="180" viewBox="0 0 180 180"><circle cx="90" cy="90" r="80" stroke="#4f46e5" stroke-width="28"/><circle cx="90" cy="90" r="45" fill="#4f46e5"/></svg>
-    <div class="wbadge" id="sa-secret-tap">🛡️ SafeSchool · ${currentLang==='en'?'Safe space':'Espace sécurisé'}</div>
+    <a href="/pricing" class="wbadge" id="sa-secret-tap" style="text-decoration:none;color:var(--p);cursor:pointer">🛡️ SafeSchool · ${currentLang==='en'?'Safe space':'Espace sécurisé'}</a>
     <h1>${t('notAlone')}</h1>
     <p>${t('homeDesc')}</p>
   </div>
@@ -1934,11 +1937,11 @@ function renderHomePage() {
   const badge = document.getElementById('sa-secret-tap');
   if (badge) {
     badge.addEventListener('click', (e) => {
-      e.stopPropagation();
       saTapCount++;
       clearTimeout(saTapTimer);
-      if (saTapCount >= 5) { saTapCount = 0; openSuperAdminPage(); }
+      if (saTapCount >= 5) { e.preventDefault(); e.stopPropagation(); saTapCount = 0; openSuperAdminPage(); }
       else { saTapTimer = setTimeout(() => { saTapCount = 0; }, 2000); }
+      // Single click: let the <a href="/pricing"> navigate naturally
     });
   }
 }
@@ -3134,13 +3137,10 @@ function renderProfile(){
 }
 
 // ═══════════════════════════════════════════
-// ADMIN LOGIN
+// ADMIN LOGIN (Supabase Auth)
 // ═══════════════════════════════════════════
 function showAdminLogin(){
   if(document.getElementById('admin-overlay'))return;
-  const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-  const schoolCreds = currentEtab ? creds[currentEtab.id] : null;
-  const etabEmail = schoolCreds?.email || (currentEtab ? currentEtab.adminEmail : 'admin@lycee.fr');
   document.body.insertAdjacentHTML('beforeend',`
   <div id="admin-overlay" class="admin-wrap">
     <div class="admin-card" style="animation:scaleIn .25s ease">
@@ -3152,12 +3152,12 @@ function showAdminLogin(){
         <p style="font-size:.82rem;color:var(--tm)">Réservé au personnel éducatif</p>
       </div>
       ${currentEtab?`<div style="background:var(--pbg);border:1.5px solid rgba(79,70,229,.12);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:1.3rem">${etabTypeIcons[currentEtab.type]||'🏫'}</span><div><p style="font-size:.88rem;font-weight:700;color:var(--p)">${currentEtab.name}</p><p style="font-size:.75rem;color:var(--tm)">${etabTypeLabels[currentEtab.type]||'Établissement'}${currentEtab.city?' · '+currentEtab.city:''}</p></div></div>`:''}
-      ${schoolCreds?`<p style="text-align:center;margin-bottom:14px;font-size:.76rem;color:var(--tm)">Email conseillé : <strong>${schoolCreds.email}</strong></p>`:''}
-      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="${schoolCreds?.email || ''}" placeholder="${etabEmail}"></div>
-      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="Code admin ou mot de passe"></div>
+      <div id="al-error" style="display:none;background:var(--rbg);border:1.5px solid rgba(220,38,38,.15);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#991b1b;text-align:center"></div>
+      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="" placeholder="votre.email@etablissement.fr"></div>
+      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="Votre mot de passe"></div>
       <button class="btn btn-p btn-full btn-lg" id="al-submit-btn" onclick="tryLogin()" style="margin-bottom:10px">
         <span id="al-btn-text">Se connecter</span>
-        <span id="al-btn-loading" style="display:none">Connexion...</span>
+        <span id="al-btn-loading" style="display:none">Connexion en cours...</span>
       </button>
       <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>
     </div>
@@ -3165,86 +3165,56 @@ function showAdminLogin(){
   document.getElementById('al-pass').addEventListener('keydown',e=>e.key==='Enter'&&tryLogin());
   document.getElementById('al-email').focus();
 }
-async function tryLogin(){
-  const e=document.getElementById('al-email').value.trim().toLowerCase();
-  const p=document.getElementById('al-pass').value;
-  if (!currentEtab) { toast('Aucun établissement sélectionné','err'); return; }
 
-  // Show loading state
+async function tryLogin(){
+  const email = document.getElementById('al-email').value.trim().toLowerCase();
+  const password = document.getElementById('al-pass').value;
+  const errorEl = document.getElementById('al-error');
   const btn = document.getElementById('al-submit-btn');
   const btnText = document.getElementById('al-btn-text');
   const btnLoading = document.getElementById('al-btn-loading');
-  if(btn) btn.disabled = true;
-  if(btnText) btnText.style.display = 'none';
-  if(btnLoading) btnLoading.style.display = '';
 
-  const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-  const schoolCreds = creds[currentEtab.id];
-
-  // Check local credentials
-  if (schoolCreds && e === (schoolCreds.email || '').toLowerCase() && p === schoolCreds.password) {
-    adminIn = true;
-    document.getElementById('admin-overlay')?.remove();
-    document.getElementById('ni-dashboard').style.display = '';
-    document.getElementById('pg-dashboard').style.display='flex';
-    try {
-      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-    } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
-    go('dashboard');
-    toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
+  if (!email || !password) {
+    errorEl.textContent = 'Veuillez remplir tous les champs.';
+    errorEl.style.display = '';
     return;
   }
 
-  // Check against API (admin-login endpoint)
-  const slug = currentEtab.slug || '';
-  if (slug) {
-    try {
-      const r = await fetch('/api/establishments/admin-login/' + slug, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: e, password: p })
-      });
-      if (r.ok) {
-        const ct = r.headers.get('content-type') || '';
-        if (ct.includes('application/json')) {
-          const apiRes = await r.json();
-          if (apiRes.ok) {
-            // Save creds locally for future logins
-            creds[currentEtab.id] = { email: e, password: p };
-            // Also save with blobId and apiId for cross-reference
-            if (currentEtab.blobId) creds[currentEtab.blobId] = { email: e, password: p };
-            if (currentEtab.apiId) creds[currentEtab.apiId] = { email: e, password: p };
-            localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
-            // Store the plan for subscription-based features
-            localStorage.setItem('ss_plan_' + currentEtab.id, apiRes.plan || currentEtab.plan || 'starter');
-            // Update currentEtab with school_id from API if available
-            if (apiRes.school_id) {
-              localStorage.setItem('ss_current_etab', currentEtab.id);
-            }
-            adminIn = true;
-            document.getElementById('admin-overlay')?.remove();
-            document.getElementById('ni-dashboard').style.display = '';
-            document.getElementById('pg-dashboard').style.display='flex';
-            // Reload data - don't let failures block dashboard display
-            try {
-              await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-            } catch(reloadErr) {
-              console.warn('Data reload after login had errors (non-blocking):', reloadErr);
-            }
-            go('dashboard');
-            toast(`Connecté · Admin ${currentEtab.name}`, 'ok');
-            return;
-          }
-        }
-      }
-    } catch(err) { console.warn('API auth check failed:', err); }
-  }
+  // État de chargement
+  if(btn) btn.disabled = true;
+  if(btnText) btnText.style.display = 'none';
+  if(btnLoading) btnLoading.style.display = '';
+  if(errorEl) errorEl.style.display = 'none';
 
-  // Reset button state
-  if(btn) btn.disabled = false;
-  if(btnText) btnText.style.display = '';
-  if(btnLoading) btnLoading.style.display = 'none';
-  toast('Identifiants incorrects. Utilisez le compte admin créé avec cet établissement.','err');
+  try {
+    const adminRow = await login(email, password);
+    adminIn = true;
+    document.getElementById('admin-overlay')?.remove();
+    document.getElementById('ni-dashboard').style.display = '';
+    document.getElementById('pg-dashboard').style.display = 'flex';
+
+    // Charger les données du dashboard
+    try {
+      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+    } catch(reloadErr) { console.warn('Chargement données (non-bloquant):', reloadErr); }
+
+    go('dashboard');
+    toast('Connecté · Admin' + (currentEtab ? ' ' + currentEtab.name : ''), 'ok');
+  } catch (err) {
+    // Réinitialiser le bouton
+    if(btn) btn.disabled = false;
+    if(btnText) btnText.style.display = '';
+    if(btnLoading) btnLoading.style.display = 'none';
+
+    // Afficher l'erreur
+    const msg = err.message || 'Échec de la connexion';
+    if(errorEl) {
+      errorEl.textContent = msg === 'Invalid login credentials'
+        ? 'Identifiants incorrects. Vérifiez votre email et mot de passe.'
+        : msg;
+      errorEl.style.display = '';
+    }
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -3763,7 +3733,7 @@ function saveToReportHistory(code, caseNumber) {
   localStorage.setItem('ss_my_reports', JSON.stringify(history.slice(0, 20)));
 }
 
-function adminLogout(){adminIn=false;document.getElementById('ni-dashboard').style.display='none';go('home');document.getElementById('pg-dashboard').style.display='none';toast('Déconnecté')}
+function adminLogout(){ logout(); }
 
 // ═══════════════════════════════════════════
 // DEMO DATA FOR PRESENTATION
@@ -3911,6 +3881,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load establishments
   await loadEstablishments();
 
+  // Restaurer la session Supabase Auth si existante
+  await restoreSession();
+
   // Check for subdomain auto-selection (injected by edge function)
   const subdomainSlug = window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
   const autoAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
@@ -3918,71 +3891,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const etab = etabList.find(e => e.slug === subdomainSlug);
     if (etab) {
       await selectEstablishment(etab.id);
-      // Auto-open admin dashboard if admin=1 parameter is set (from superadmin)
+      // Auto-open admin dashboard if admin=1 and user has an active Supabase session
       if (autoAdmin) {
-        try {
-          // Fetch admin credentials via API with superadmin token from sessionStorage
-          const saToken = sessionStorage.getItem('sa_token') || '';
-          const r = await fetch('/api/establishments/by-slug/' + subdomainSlug, {
-            headers: saToken ? { 'x-sa-token': saToken } : {}
-          });
-          let autoLoginDone = false;
-          if (r.ok) {
-            const ct = r.headers.get('content-type') || '';
-            if (ct.includes('application/json')) {
-              const apiSchool = await r.json();
-              if (apiSchool && (apiSchool.admin_code || apiSchool.admin_email)) {
-                // Auto-login with admin credentials from API
-                const creds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-                creds[etab.id] = { email: apiSchool.admin_email || '', password: apiSchool.admin_code || apiSchool.admin_password || '' };
-                if (etab.blobId) creds[etab.blobId] = creds[etab.id];
-                if (etab.apiId) creds[etab.apiId] = creds[etab.id];
-                localStorage.setItem('ss_admin_creds', JSON.stringify(creds));
-                localStorage.setItem('ss_plan_' + etab.id, apiSchool.plan || etab.plan || 'starter');
-                adminIn = true;
-                document.getElementById('ni-dashboard').style.display = '';
-                document.getElementById('pg-dashboard').style.display = 'flex';
-                try {
-                  await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-                } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
-                go('dashboard');
-                toast('Mode admin (accès superadmin)', 'ok');
-                autoLoginDone = true;
-              }
-            }
-          }
-          // If auto-login failed (no sa_token or no admin creds returned), show login form
-          if (!autoLoginDone) {
-            // Check if we have saved credentials for this school
-            const savedCreds = JSON.parse(localStorage.getItem('ss_admin_creds') || '{}');
-            const schoolCreds = savedCreds[etab.id] || (etab.blobId ? savedCreds[etab.blobId] : null) || (etab.apiId ? savedCreds[etab.apiId] : null);
-            if (schoolCreds && schoolCreds.email && schoolCreds.password) {
-              // Try auto-login with saved credentials
-              const loginR = await fetch('/api/establishments/admin-login/' + subdomainSlug, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: schoolCreds.email, password: schoolCreds.password })
-              });
-              if (loginR.ok) {
-                const loginRes = await loginR.json();
-                if (loginRes.ok) {
-                  adminIn = true;
-                  document.getElementById('ni-dashboard').style.display = '';
-                  document.getElementById('pg-dashboard').style.display = 'flex';
-                  try {
-                    await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-                  } catch(reloadErr) { console.warn('Data reload errors (non-blocking):', reloadErr); }
-                  go('dashboard');
-                  toast(`Connecté · Admin ${etab.name}`, 'ok');
-                  autoLoginDone = true;
-                }
-              }
-            }
-            if (!autoLoginDone) {
-              showAdminLogin();
-            }
-          }
-        } catch(err) { console.warn('Auto-admin login failed:', err); showAdminLogin(); }
+        const restored = await restoreSession();
+        if (restored) {
+          try {
+            await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+          } catch(reloadErr) { console.warn('Chargement données (non-bloquant):', reloadErr); }
+          go('dashboard');
+          toast('Connecté · Admin', 'ok');
+        } else {
+          showAdminLogin();
+        }
       }
       return;
     }
@@ -4507,20 +4427,99 @@ function toggleDarkMode() {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ═══════════════════════════════════════════
+// SUPABASE CONFIG & AUTH
+// ═══════════════════════════════════════════
 const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-const SS_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+const SS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
 
 window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
-window.ENV_SUPABASE_KEY = SS_SUPABASE_PUBLISHABLE_KEY;
+window.ENV_SUPABASE_KEY = SS_SUPABASE_ANON_KEY;
 
-const ssSupabase = window.supabase.createClient(
-  SS_SUPABASE_URL,
-  SS_SUPABASE_PUBLISHABLE_KEY
-);
+const ssSupabase = window.supabase.createClient(SS_SUPABASE_URL, SS_SUPABASE_ANON_KEY);
 
-console.log("✅ Supabase connecté OK");
+// Current admin user data (from admin_users table)
+let currentAdminUser = null;
+
+// ── Login via Supabase Auth ──
+async function login(email, password) {
+  const { data, error } = await ssSupabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
+
+  // Vérifier que l'utilisateur existe dans admin_users
+  const userId = data.user.id;
+  const { data: adminRow, error: adminErr } = await ssSupabase
+    .from('admin_users')
+    .select('*')
+    .eq('auth_user_id', userId)
+    .maybeSingle();
+
+  if (adminErr) throw new Error('Erreur de vérification des droits');
+  if (!adminRow) {
+    await ssSupabase.auth.signOut();
+    throw new Error('Accès refusé — compte non autorisé');
+  }
+
+  currentAdminUser = adminRow;
+  return adminRow;
+}
+
+// ── Logout ──
+async function logout() {
+  await ssSupabase.auth.signOut();
+  currentAdminUser = null;
+  adminIn = false;
+  document.getElementById('ni-dashboard').style.display = 'none';
+  document.getElementById('pg-dashboard').style.display = 'none';
+  go('home');
+  toast('Déconnecté', 'info');
+}
+
+// ── Restauration de session au chargement ──
+async function restoreSession() {
+  try {
+    const { data: { session } } = await ssSupabase.auth.getSession();
+    if (!session) return false;
+
+    const userId = session.user.id;
+    const { data: adminRow } = await ssSupabase
+      .from('admin_users')
+      .select('*')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+
+    if (!adminRow) return false;
+
+    currentAdminUser = adminRow;
+    adminIn = true;
+    document.getElementById('ni-dashboard').style.display = '';
+    document.getElementById('pg-dashboard').style.display = 'flex';
+    return true;
+  } catch (e) {
+    console.warn('Restauration session échouée:', e);
+    return false;
+  }
+}
+
+// ── Écoute des changements d'auth ──
+ssSupabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    currentAdminUser = null;
+    adminIn = false;
+    document.getElementById('ni-dashboard').style.display = 'none';
+    document.getElementById('pg-dashboard').style.display = 'none';
+  }
+});
 </script>
 
 <script src="./dashboard-v3.js"></script>
+
+<!-- COOKIE CONSENT (ePrivacy / RGPD) -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:calc(var(--nav) + var(--safe) + 8px);left:8px;right:8px;z-index:9999;background:rgba(15,23,42,.97);backdrop-filter:blur(16px);color:#fff;padding:14px 18px;border-radius:16px;box-shadow:0 -4px 24px rgba(0,0,0,.2);max-width:600px;margin:0 auto">
+  <p style="font-size:.82rem;color:#e2e8f0;line-height:1.5;margin:0 0 10px">🍪 Ce site utilise uniquement des cookies strictement nécessaires (session, sécurité). Aucun cookie publicitaire. <a href="/politique-confidentialite" style="color:#818cf8;text-decoration:underline">En savoir plus</a></p>
+  <button onclick="localStorage.setItem('ss_cookies_accepted','1');this.parentElement.style.display='none'" style="background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border:none;padding:9px 20px;border-radius:10px;font-size:.84rem;font-weight:700;cursor:pointer;width:100%">J'ai compris</button>
+</div>
+<script>if(!localStorage.getItem('ss_cookies_accepted'))document.getElementById('cookie-banner').style.display='block';</script>
+
 </body>
 </html>

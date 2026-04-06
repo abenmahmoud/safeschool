@@ -2,9 +2,9 @@ import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 import { randomUUID } from 'crypto';
 
-// ── V8 Extra Pro — Environment-driven auth with no hardcoded fallbacks ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || 'admin@safeschool.fr';
-const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || 'SafeSchool2026!';
+// ── V10 EU — Environment-driven auth — NO hardcoded fallbacks ──
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
 
@@ -41,6 +41,7 @@ async function recordLoginAttempt(ip: string): Promise<void> {
 }
 
 function authCheck(req: Request): boolean {
+  if (!SUPERADMIN_EMAIL || !SUPERADMIN_PASS) return false;
   const auth = req.headers.get('x-sa-token');
   if (!auth) return false;
   try {
@@ -57,14 +58,30 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function cors(body: any, status = 200) {
+const ALLOWED_ORIGINS = [
+  'https://darling-muffin-21eb90.netlify.app',
+  Netlify.env.get('SITE_URL') || '',
+  Netlify.env.get('DEPLOY_PRIME_URL') || '',
+].filter(Boolean);
+
+function getAllowedOrigin(req: Request): string {
+  const origin = req.headers.get('origin') || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+\.safeschool\.(fr|com|net)$/.test(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+--darling-muffin-21eb90\.netlify\.app$/.test(origin)) return origin;
+  return ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
+}
+
+function cors(body: any, status = 200, req?: Request) {
+  const allowedOrigin = req ? getAllowedOrigin(req) : ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Vary': 'Origin'
     }
   });
 }
@@ -158,7 +175,6 @@ export default async (req: Request, context: Context) => {
     if (isAdmin) {
       publicInfo.admin_code = (data as any).admin_code;
       publicInfo.admin_email = (data as any).admin_email;
-      publicInfo.admin_password = (data as any).admin_password;
     }
     return cors(publicInfo);
   }
@@ -418,7 +434,7 @@ export default async (req: Request, context: Context) => {
       admin_password: body.admin_password || adminCode,
       max_students: { starter: 200, pro: 9999, enterprise: 99999 }[plan] || 200,
       max_reports: { starter: 50, pro: 9999, enterprise: 99999 }[plan] || 50,
-      max_admins: { starter: 1, pro: 1, enterprise: 99 }[plan] || 1,
+      max_admins: { starter: 1, pro: 2, enterprise: 99 }[plan] || 1,
       created_at: now,
       expires_at: expDate.toISOString(),
       report_count: 0,

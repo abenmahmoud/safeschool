@@ -250,12 +250,13 @@ h1,h2,h3,h4{font-family:'Nunito',sans-serif;font-weight:800;line-height:1.2}
       <ul class="price-features">
         <li>Élèves illimités</li>
         <li>Signalements illimités</li>
-        <li>1 compte admin</li>
+        <li>2 comptes admin (CPE + Direction)</li>
         <li>Statistiques avancées</li>
         <li>Attribution des incidents</li>
         <li>Export CSV & rapports</li>
         <li>Sous-domaine dédié</li>
         <li>Baromètre IA bien-être</li>
+        <li>Notifications push & email</li>
         <li>Support prioritaire</li>
       </ul>
       <a href="/" class="btn btn-p" style="width:100%">Choisir le plan Pro</a>
@@ -266,13 +267,14 @@ h1,h2,h3,h4{font-family:'Nunito',sans-serif;font-weight:800;line-height:1.2}
       <div class="price-desc">Pour les réseaux multi-établissements</div>
       <ul class="price-features">
         <li>Multi-sites illimités</li>
-        <li>Nombre d'admins selon devis</li>
+        <li>Admins illimités</li>
         <li>Accès complet aux statistiques</li>
         <li>API dédiée</li>
         <li>SLA 99.9%</li>
         <li>Onboarding dédié</li>
         <li>Rapport personnalisé</li>
         <li>Formations équipe</li>
+        <li>DPO dédié & audit RGPD</li>
         <li>Support 24/7</li>
       </ul>
       <a href="mailto:contact@safeschool.fr" class="btn btn-ghost" style="width:100%">Nous contacter</a>
@@ -334,17 +336,44 @@ h1,h2,h3,h4{font-family:'Nunito',sans-serif;font-weight:800;line-height:1.2}
       <a href="/superadmin">Super Admin</a>
       <a href="#features">Fonctionnalités</a>
       <a href="#pricing">Tarifs</a>
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href="/politique-confidentialite">Politique de confidentialité</a>
+      <a href="/cgu">CGU</a>
       <a href="mailto:contact@safeschool.fr">Contact</a>
     </div>
     <div class="footer-copy">
-      © 2026 SafeSchool — Plateforme anti-harcèlement scolaire · RGPD (UE 2016/679) · Loi n°2022-299<br>
-      Hébergé dans l'Union Européenne · Données chiffrées · Confidentiel
+      © 2026 SafeSchool — Plateforme anti-harcèlement scolaire · RGPD (UE 2016/679) · Loi n°2022-299 · Directive ePrivacy<br>
+      Hébergé dans l'Union Européenne · Données chiffrées · Confidentiel · DPO : dpo@safeschool.fr
     </div>
   </div>
 </footer>
 
 <!-- DEMO BADGE -->
 <a href="/" class="demo-badge">🎯 Tester l'application</a>
+
+<!-- COOKIE CONSENT (ePrivacy / RGPD) -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,.97);backdrop-filter:blur(16px);color:#fff;padding:18px 24px;box-shadow:0 -4px 24px rgba(0,0,0,.2)">
+  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <p style="font-size:.88rem;color:#e2e8f0;line-height:1.6;margin:0">🍪 Ce site utilise uniquement des cookies strictement nécessaires au fonctionnement (session, sécurité). Aucun cookie publicitaire ni de traçage. <a href="/politique-confidentialite" style="color:#818cf8;text-decoration:underline">En savoir plus</a></p>
+    </div>
+    <div style="display:flex;gap:10px;flex-shrink:0">
+      <button onclick="acceptCookies()" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none;padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;transition:.2s">Accepter</button>
+      <button onclick="acceptCookies()" style="background:transparent;border:1.5px solid rgba(255,255,255,.25);color:#fff;padding:10px 18px;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;transition:.2s">Continuer</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  if(!localStorage.getItem('ss_cookies_accepted')){
+    document.getElementById('cookie-banner').style.display='block';
+  }
+})();
+function acceptCookies(){
+  localStorage.setItem('ss_cookies_accepted','1');
+  document.getElementById('cookie-banner').style.display='none';
+}
+</script>
 
 </body>
 </html>

@@ -26,9 +26,23 @@ var URGENCES = {
 window.DB = {
   _ok: function() { return !!(SUPABASE_URL && SUPABASE_KEY); },
   _h: function() {
+    // Utiliser le token de session Supabase Auth si disponible
+    var token = SUPABASE_KEY;
+    if (window.ssSupabase && window.ssSupabase.auth) {
+      try {
+        // Accès synchrone au token stocké par le SDK
+        var sessionStr = localStorage.getItem('sb-' + new URL(SUPABASE_URL).hostname.split('.')[0] + '-auth-token');
+        if (sessionStr) {
+          var sessionData = JSON.parse(sessionStr);
+          if (sessionData && sessionData.access_token) {
+            token = sessionData.access_token;
+          }
+        }
+      } catch(e) { /* fallback au anon key */ }
+    }
     return {
       "apikey": SUPABASE_KEY,
-      "Authorization": "Bearer " + SUPABASE_KEY,
+      "Authorization": "Bearer " + token,
       "Content-Type": "application/json",
       "Prefer": "return=representation"
     };
