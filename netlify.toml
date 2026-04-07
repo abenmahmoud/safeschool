@@ -1,14 +1,7 @@
-functionsDirectory = "/opt/build/repo/netlify/functions"
-functionsDirectoryOrigin = "default"
-headersOrigin = "config"
-redirectsOrigin = "config"
-plugins = []
-
 [build]
-edge_functions = "/opt/build/repo/netlify/edge-functions"
-publish = "/opt/build/repo"
-publishOrigin = "config"
-functions = "/opt/build/repo/netlify/functions"
+publish = "."
+functions = "netlify/functions"
+edge_functions = "netlify/edge-functions"
 
   [build.environment]
   NODE_VERSION = "18"
@@ -41,7 +34,7 @@ for = "/*"
   Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
   Cross-Origin-Opener-Policy = "same-origin"
   Cross-Origin-Resource-Policy = "same-origin"
-  Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+  Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app https://*.safeschool.fr https://*.safeschool.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
 
 [[headers]]
 for = "/*.html"
@@ -54,13 +47,13 @@ for = "/*.html"
 for = "/*.js"
 
   [headers.values]
-  Cache-Control = "public, max-age=7200, must-revalidate"
+  Cache-Control = "public, max-age=604800, must-revalidate"
 
 [[headers]]
 for = "/*.css"
 
   [headers.values]
-  Cache-Control = "public, max-age=7200, must-revalidate"
+  Cache-Control = "public, max-age=604800, must-revalidate"
 
 [[headers]]
 for = "/sw.js"
@@ -85,6 +78,18 @@ for = "/icons/*.svg"
 
 [[headers]]
 for = "/*.woff2"
+
+  [headers.values]
+  Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/*.woff"
+
+  [headers.values]
+  Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/icons/*.png"
 
   [headers.values]
   Cache-Control = "public, max-age=31536000, immutable"

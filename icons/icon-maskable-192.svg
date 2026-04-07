@@ -2,21 +2,46 @@
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#4f46e5"/>
+      <stop offset="50%" style="stop-color:#4f46e5"/>
+      <stop offset="100%" style="stop-color:#3730a3"/>
     </linearGradient>
     <linearGradient id="ht" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#f472b6"/>
-      <stop offset="100%" style="stop-color:#ec4899"/>
+      <stop offset="50%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#db2777"/>
     </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
+  <!-- Full bleed background for maskable -->
   <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Content scaled down to safe area (~76% centered) -->
   <g transform="translate(256, 248)">
-    <path d="M0 -118 L98 -80 L98 18 Q98 106 0 138 Q-98 106 -98 18 L-98 -80 Z" fill="white" opacity="0.95"/>
+    <g filter="url(#shadow)">
+      <path d="M0 -106 C15 -106 76 -87 87 -72 L87 11 C87 68 53 106 0 125 C-53 106 -87 68 -87 11 L-87 -72 C-76 -87 -15 -106 0 -106 Z" fill="white" opacity="0.95"/>
+    </g>
   </g>
-  <g transform="translate(256, 230)">
+  <g transform="translate(256, 230)" filter="url(#glow)">
     <path d="M0 32 Q-8 24 -28 8 Q-52 -12 -52 -36 Q-52 -56 -36 -56 Q-20 -56 0 -36 Q20 -56 36 -56 Q52 -56 52 -36 Q52 -12 28 8 Q8 24 0 32 Z" fill="url(#ht)" transform="scale(1.1)"/>
   </g>
   <g transform="translate(256, 224)">
     <path d="M-16 4 L-4 16 L20 -12" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Sparkle accents -->
+  <g fill="white" opacity="0.6">
+    <circle cx="160" cy="160" r="2.5"/>
+    <circle cx="352" cy="160" r="2"/>
+    <circle cx="155" cy="350" r="2"/>
+    <circle cx="358" cy="345" r="2.5"/>
+    <path d="M365 175 l2 -6 2 6 -6 -2 6 -2z" opacity="0.4"/>
+    <path d="M148 330 l2 -5 2 5 -5 -2 5 -2z" opacity="0.4"/>
   </g>
 </svg>
