@@ -26,8 +26,24 @@ async function checkUploadRateLimit(ip: string): Promise<boolean> {
 // Validation helpers
 // ---------------------------------------------------------------------------
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_PHOTO_SIZE = 3 * 1024 * 1024; // 3MB (stricter for production)
 const MAX_FILENAME_LENGTH = 200;
+
+// Magic byte signatures for image validation
+const MAGIC_BYTES: Record<string, number[][]> = {
+  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+  'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
+  'image/gif': [[0x47, 0x49, 0x46, 0x38, 0x37, 0x61], [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]], // GIF87a, GIF89a
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header (WebP starts with RIFF)
+};
+
+function validateMagicBytes(buffer: Uint8Array, declaredMime: string): boolean {
+  const signatures = MAGIC_BYTES[declaredMime];
+  if (!signatures) return false;
+  return signatures.some(sig =>
+    sig.every((byte, i) => i < buffer.length && buffer[i] === byte)
+  );
+}
 
 function isValidBase64(str: string): boolean {
   if (!str || typeof str !== 'string') return false;
@@ -109,12 +125,18 @@ export default async (req: Request, context: Context) => {
         // Validate base64 data
         if (!isValidBase64(photo.data)) continue;
 
-        // Validate base64 data size (max 5MB per photo)
+        // Validate base64 data size (max 3MB per photo)
         const base64Size = (photo.data.length * 3) / 4;
         if (base64Size > MAX_PHOTO_SIZE) continue;
 
         const key = `${reportId}/${i}_${Date.now()}_${sanitizeFilename(photo.name)}`;
         const buffer = Uint8Array.from(atob(photo.data), c => c.charCodeAt(0));
+
+        // Validate magic bytes match declared MIME type
+        if (!validateMagicBytes(buffer, mimeType)) {
+          console.warn(`[PHOTOS] Magic byte mismatch for ${photo.name}, declared: ${mimeType}`);
+          continue;
+        }
 
         await store.set(key, buffer, {
           metadata: {

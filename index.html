@@ -4521,5 +4521,55 @@ ssSupabase.auth.onAuthStateChange((event, session) => {
 </div>
 <script>if(!localStorage.getItem('ss_cookies_accepted'))document.getElementById('cookie-banner').style.display='block';</script>
 
+<!-- ERROR MONITORING — Lightweight client-side error capture -->
+<script>
+(function() {
+  const ERROR_LOG_KEY = 'ss_error_log';
+  const MAX_ERRORS = 50;
+  const REPORT_ENDPOINT = '/api/notify/new-report';
+
+  function getErrorLog() {
+    try { return JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveError(entry) {
+    const log = getErrorLog();
+    log.push(entry);
+    if (log.length > MAX_ERRORS) log.splice(0, log.length - MAX_ERRORS);
+    try { localStorage.setItem(ERROR_LOG_KEY, JSON.stringify(log)); } catch {}
+  }
+
+  function buildEntry(msg, source, line, col, stack) {
+    return {
+      ts: new Date().toISOString(),
+      msg: String(msg).slice(0, 500),
+      src: source ? String(source).slice(0, 200) : '',
+      line: line || 0,
+      col: col || 0,
+      stack: stack ? String(stack).slice(0, 1000) : '',
+      url: location.pathname,
+      ua: navigator.userAgent.slice(0, 150)
+    };
+  }
+
+  // Capture unhandled errors
+  window.addEventListener('error', function(e) {
+    saveError(buildEntry(e.message, e.filename, e.lineno, e.colno, e.error?.stack));
+  });
+
+  // Capture unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(e) {
+    const reason = e.reason;
+    const msg = reason?.message || String(reason);
+    saveError(buildEntry('Promise: ' + msg, '', 0, 0, reason?.stack));
+  });
+
+  // Expose error log for admin debugging
+  window.__SS_ERROR_LOG = getErrorLog;
+  window.__SS_CLEAR_ERRORS = function() { localStorage.removeItem(ERROR_LOG_KEY); };
+})();
+</script>
+
 </body>
 </html>

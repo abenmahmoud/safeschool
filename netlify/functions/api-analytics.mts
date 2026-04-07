@@ -55,11 +55,30 @@ interface HealthCheck {
   value?: number;
 }
 
-// --- Auth & CORS ---
+// --- Auth, CORS & Rate Limiting ---
 
 // ── V8 Extra Pro — Environment-driven auth ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
 const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
+
+// Rate limiting: 30 requests per IP per 5 minutes for analytics
+const ANALYTICS_RATE_LIMIT = 30;
+const ANALYTICS_RATE_WINDOW_MS = 5 * 60 * 1000;
+
+async function checkAnalyticsRateLimit(ip: string): Promise<boolean> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `analytics_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < ANALYTICS_RATE_WINDOW_MS) || [];
+  if (recent.length >= ANALYTICS_RATE_LIMIT) return true;
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+  return false;
+}
 
 function cors(body: any, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -809,6 +828,12 @@ export default async (req: Request, context: Context): Promise<Response> => {
   if (req.method === 'OPTIONS') return cors({ ok: true });
 
   if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+
+  // Rate limiting
+  const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  if (await checkAnalyticsRateLimit(clientIp)) {
+    return cors({ error: 'Trop de requetes. Reessayez dans quelques minutes.' }, 429);
+  }
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/analytics', '');

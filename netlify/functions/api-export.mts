@@ -2,10 +2,28 @@ import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
 // ---------------------------------------------------------------------------
-// Auth
+// Auth & Rate Limiting
 // ---------------------------------------------------------------------------
 const SA_EMAIL = () => Netlify.env.get('SUPERADMIN_EMAIL') || '';
 const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || '';
+
+const EXPORT_RATE_LIMIT = 20;
+const EXPORT_RATE_WINDOW_MS = 5 * 60 * 1000;
+
+async function checkExportRateLimit(ip: string): Promise<boolean> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `export_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = await store.get(key, { type: 'json' }) as any;
+  } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < EXPORT_RATE_WINDOW_MS) || [];
+  if (recent.length >= EXPORT_RATE_LIMIT) return true;
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+  return false;
+}
 
 function cors(body: string, status = 200, contentType = 'application/json') {
   return new Response(body, {
@@ -109,6 +127,12 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') return corsJson({ ok: true });
 
   if (!authCheck(req)) return corsJson({ error: 'Non autorise' }, 401);
+
+  // Rate limiting
+  const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  if (await checkExportRateLimit(clientIp)) {
+    return corsJson({ error: 'Trop de requetes d\'export. Reessayez dans quelques minutes.' }, 429);
+  }
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/export', '');
