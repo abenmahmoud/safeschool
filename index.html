@@ -581,9 +581,9 @@ a{text-decoration:none}
   <div style="padding:22px 20px 8px"><h1>Suivre mon dossier</h1><p class="subtitle">Saisis ton code pour voir la réponse de l'équipe</p></div>
   <div style="padding:0 20px">
     <div class="fg">
-      <label class="fl">Ton code de suivi</label>
-      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123" maxlength="12" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
-      <p class="fhint">6 caractères reçus à la confirmation de ton signalement</p>
+      <label class="fl">Ton code de suivi ou numéro de dossier</label>
+      <input type="text" class="fi fi-code" id="code-in" placeholder="SS-ABC123 ou numéro de dossier" maxlength="20" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+      <p class="fhint">Code reçu à la confirmation ou numéro de dossier</p>
     </div>
     <button class="btn btn-p btn-full btn-lg" onclick="lookupCode()">
       <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -755,16 +755,16 @@ function normalizeReportFromDb(r){
     frequency: r.frequency || '',
     harassmentType: dbTypeToUi(r.type),
     type: r.type || null,
-    urgency: dbUrgencyToUi(r.urgency),
+    urgency: dbUrgencyToUi(r.urgence || r.urgency),
     reporterType: r.reporter_role || '',
-    isAnonymous: r.is_anonymous !== false,
+    isAnonymous: r.anonymous !== false && r.is_anonymous !== false,
     reporterName: r.reporter_name || '',
     reporterClass: r.reporter_class || '',
     reporterEmail: r.reporter_email || '',
     followupEmailOptIn: !!r.followup_email_opt_in,
     consentAccepted: !!r.consent_accepted,
     status: dbStatusToUi(r.status),
-    staffReply: r.staff_reply || '',
+    staffReply: r.admin_note || r.staff_reply || '',
     staffNotes: r.admin_note || '',
     assignedTo: r.assigned_staff_id || null,
     createdAt: r.created_at || new Date().toISOString(),
@@ -802,8 +802,8 @@ const S = {
     try {
       const payload = {
         status: uiStatusToDb(report.status),
-        admin_note: report.staffNotes || report.adminNote || null,
-        staff_reply: report.staffReply || null,
+        // FIX: admin_note sert de réponse staff (staff_reply n'existe pas en DB)
+        admin_note: report.staffReply || report.staffNotes || report.adminNote || null,
         assigned_staff_id: report.assignedTo || null,
         updated_at: new Date().toISOString()
       };
@@ -907,10 +907,11 @@ const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'
 
 async function loadEstablishments() {
   try {
+    // FIX: colonnes corrigées pour correspondre au schema Supabase (ville, status)
     const { data, error } = await ssSupabase
       .from('schools')
-      .select('id, name, slug, city, is_active')
-      .eq('is_active', true)
+      .select('id, name, slug, ville, status')
+      .in('status', ['active', 'trial'])
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -919,10 +920,10 @@ async function loadEstablishments() {
       id: s.id,
       name: s.name,
       slug: s.slug,
-      address: s.city || '',
-      city: s.city || '',
+      address: s.ville || '',
+      city: s.ville || '',
       type: 'lycee',
-      isActive: s.is_active
+      isActive: s.status === 'active' || s.status === 'trial'
     }));
   } catch (e) {
     console.error('Failed to load establishments from Supabase', e);
@@ -1292,8 +1293,9 @@ async function submitReport(){
       description: rData.description || '',
       location: rData.location || null,
       frequency: rData.frequency || null,
-      urgency: urgencyMap[String(rData.urgency)] || 'faible',
-      is_anonymous: rData.isAnonymous !== false,
+      urgence: urgencyMap[String(rData.urgency)] || 'faible',
+      // FIX: colonne DB = "anonymous" (pas "is_anonymous")
+      anonymous: rData.isAnonymous !== false,
       reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
       reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
       reporter_email: rData.isAnonymous !== false ? null : (rData.reporterEmail || null),
@@ -1317,14 +1319,14 @@ async function submitReport(){
       caseNumber:data.case_number,
       trackingCode:data.tracking_code,
       status:data.status,
-      staffReply:data.staff_reply || '',
+      staffReply:data.admin_note || '',
       adminNote:data.admin_note || '',
       assignedTo:data.assigned_staff_id || null,
       createdAt:data.created_at,
       type:data.type,
       description:data.description,
       location:data.location,
-      urgency:data.urgency,
+      urgency:data.urgence,
       reporterEmail:data.reporter_email
     };
 
@@ -1379,27 +1381,35 @@ function copyCode(code){
 // ═══════════════════════════════════════════
 // MY REPORT LOOKUP
 // ═══════════════════════════════════════════
+// FIX: lookup par tracking_code OU case_number, colonnes alignées avec schema Supabase
+// admin_note utilisé comme réponse staff, urgence (pas urgency), school_id filtré
 async function lookupCode(){
-  const raw=document.getElementById('code-in').value.trim().toUpperCase();
-  const code=raw.startsWith('SS-') ? raw : ('SS-' + raw.replace(/^SS-?/,''));
-  if(code.replace(/[^A-Z0-9]/g,'').length<8){toast('Entre ton code de suivi','err');return}
-  const el=document.getElementById('lookup-result');
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tm)">Recherche du dossier…</div>';
+  const raw=document.getElementById(‘code-in’).value.trim().toUpperCase();
+  // Accepter code brut ou préfixé SS-
+  const code=raw.startsWith(‘SS-’) ? raw : (‘SS-’ + raw.replace(/^SS-?/,’’));
+  if(raw.replace(/[^A-Z0-9]/g,’’).length<3){toast(‘Entre ton code de suivi’,’err’);return}
+  const el=document.getElementById(‘lookup-result’);
+  el.innerHTML=’<div style="text-align:center;padding:20px;color:var(--tm)">Recherche du dossier…</div>’;
   try {
-    const { data, error } = await ssSupabase
-      .from('reports')
-      .select('id, case_number, tracking_code, status, staff_reply, created_at, type, urgency')
-      .eq('tracking_code', code)
-      .order('created_at', { ascending: false })
+    // Recherche par tracking_code OU case_number
+    let query = ssSupabase
+      .from(‘reports’)
+      .select(‘id, tracking_code, case_number, status, admin_note, created_at, type, urgence, school_id’)
+      .or(`tracking_code.eq.${code},case_number.eq.${raw}`)
+      .order(‘created_at’, { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    const { data, error } = await query;
     if(error) throw error;
-    if(!data){
+
+    // Vérifier correspondance avec établissement sélectionné
+    if(!data || (currentEtab && data.school_id && data.school_id !== currentEtab.id)){
       el.innerHTML=`
       <div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)">
         <div style="font-size:2.5rem;margin-bottom:11px">❌</div>
-        <h3 style="color:var(--r);margin-bottom:7px">Code introuvable</h3>
-        <p style="font-size:.87rem;max-width:250px;margin:0 auto">Vérifie le code de suivi reçu après la déclaration. Exemple : SS-ABC123.</p>
+        <h3 style="color:var(--r);margin-bottom:7px">Dossier introuvable</h3>
+        <p style="font-size:.87rem;max-width:280px;margin:0 auto">${!data ? ‘Vérifie le code de suivi reçu après ta déclaration. Exemple : SS-ABC123.’ : ‘Ce dossier n\’appartient pas à l\’établissement sélectionné.’}</p>
       </div>`;
       return;
     }
@@ -1411,6 +1421,8 @@ async function lookupCode(){
       anonymized:{l:"Anonymisé",i:"⚪",cls:"ba",desc:"Le dossier a été anonymisé selon la procédure prévue."},
       closed:{l:"Clôturé",i:"⚫",cls:"ba",desc:"Le dossier est clôturé."}};
     const s=sc[data.status]||sc.nouveau;
+    // FIX: admin_note = réponse visible, urgence (pas urgency)
+    const replyText = data.admin_note || ‘’;
     el.innerHTML=`
     <div class="status-card card">
       <div class="sc-header">
@@ -1418,29 +1430,29 @@ async function lookupCode(){
         <span class="badge ${s.cls}">${s.i} ${s.l}</span>
       </div>
       <div class="sc-body">
-        <div class="sc-status scs-${data.status==='nouveau'?'n':data.status==='en_cours'?'i':'r'}">
+        <div class="sc-status scs-${data.status===’nouveau’?’n’:data.status===’en_cours’?’i’:’r’}">
           <div class="sc-dot">${s.i}</div>
           <div><h4>${s.l}</h4><p style="font-size:.79rem;margin-top:1px">${s.desc}</p></div>
         </div>
-        ${data.staff_reply?`
+        ${replyText?`
         <div class="sc-reply">
-          <h5>💬 Réponse de l'équipe</h5>
-          <p>${data.staff_reply}</p>
+          <h5>💬 Réponse de l’équipe</h5>
+          <p>${replyText}</p>
         </div>`:`
         <div style="background:var(--bg);border-radius:var(--r12);padding:14px;text-align:center;margin-bottom:12px">
-          <p style="font-size:.86rem">⏳ L'équipe n'a pas encore publié de réponse visible.</p>
+          <p style="font-size:.86rem">⏳ L’équipe n’a pas encore publié de réponse visible.</p>
         </div>`}
         <div class="sc-meta">
           <span>📌 Code de suivi : <strong>${data.tracking_code}</strong></span>
-          <span>🗂️ Numéro de dossier : <strong>${data.case_number || 'En cours de génération'}</strong></span>
+          <span>🗂️ Numéro de dossier : <strong>${data.case_number || ‘Non attribué’}</strong></span>
           <span>📅 Déposé le ${fmtDate(data.created_at)} à ${fmtTime(data.created_at)}</span>
-          <span>🏷️ Type : ${data.type || 'autre'} · Urgence : ${data.urgency || 'faible'}</span>
+          <span>🏷️ Type : ${data.type || ‘autre’} · Urgence : ${data.urgence || ‘faible’}</span>
         </div>
       </div>
     </div>`;
   } catch(err){
-    console.error(err);
-    el.innerHTML=`<div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)"><div style="font-size:2rem;margin-bottom:10px">⚠️</div><h3 style="color:var(--r);margin-bottom:6px">Erreur de recherche</h3><p style="font-size:.87rem;max-width:260px;margin:0 auto">Impossible de charger le dossier pour le moment.</p></div>`;
+    console.error(‘Lookup error:’, err);
+    el.innerHTML=`<div style="text-align:center;padding:28px 20px;background:var(--rbg);border-radius:var(--r16);border:1.5px solid rgba(220,38,38,.18)"><div style="font-size:2rem;margin-bottom:10px">⚠️</div><h3 style="color:var(--r);margin-bottom:6px">Erreur de recherche</h3><p style="font-size:.87rem;max-width:260px;margin:0 auto">Impossible de charger le dossier pour le moment. Réessaie dans quelques instants.</p></div>`;
   }
 }
 
