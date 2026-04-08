@@ -457,7 +457,14 @@ var supa = window.supabase.createClient(SS_SUPABASE_URL, SS_SUPABASE_KEY);
 
 // ═══════════ API HELPERS ═══════════
 async function api(method, path, body) {
-  var opts = { method: method, headers: { 'Content-Type': 'application/json', 'x-sa-token': TOKEN } };
+  var opts = {
+    method: method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': TOKEN ? ('Bearer ' + TOKEN) : '',
+      'x-sa-token': TOKEN
+    }
+  };
   if (body) opts.body = JSON.stringify(body);
   var r = await fetch(API_BASE + path, opts);
   var ct = r.headers.get('content-type') || '';
@@ -642,6 +649,7 @@ async function createSch() {
 }
 
 function showSucc(s) {
+  var tmpPwd = s.admin_temp_password || s.admin_password || '';
   var el = document.getElementById('p-cr');
   el.innerHTML = '<div class="pt">Etablissement cree !</div><div class="ps">'+s.name+'</div>'
     + '<div class="card" style="max-width:600px"><div style="padding:24px">'
@@ -651,7 +659,7 @@ function showSucc(s) {
     + '<div class="sr"><span class="slb">Expire le</span><span class="sv">'+fmtD(s.expires_at)+'</span></div>'
     + '<div class="sr"><span class="slb">Code admin</span><span class="sv pwd">'+s.admin_code+'</span></div>'
     + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+s.admin_email+'</span></div>'
-    + '<div class="sr"><span class="slb">Mot de passe admin</span><span class="sv pwd">'+s.admin_password+'</span></div>'
+    + '<div class="sr"><span class="slb">Mot de passe admin (temporaire)</span><span class="sv pwd">'+(tmpPwd || 'Non affiche')+'</span></div>'
     + '</div>'
     + '<div class="db"><h4>DNS Cloudflare</h4><div class="dr"><span class="dt">CNAME</span><span class="dv">'+s.slug+'.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div></div>'
     + '<div style="display:flex;gap:12px;margin-top:12px">'
@@ -769,7 +777,6 @@ async function loadSavData() {
     + '<div class="sr"><span class="slb">Plan</span><span class="sv"><span class="badge b-'+school.plan+'">'+school.plan.toUpperCase()+'</span></span></div>'
     + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+(school.admin_email||'-')+'</span></div>'
     + '<div class="sr"><span class="slb">Code admin</span><span class="sv pwd">'+(school.admin_code||'-')+'</span></div>'
-    + '<div class="sr"><span class="slb">Mot de passe admin</span><span class="sv pwd">'+(school.admin_password||'-')+'</span></div>'
     + '<div class="sr"><span class="slb">Statut</span><span class="sv"><span class="badge b-'+school.status+'">'+school.status+'</span></span></div>'
     + '<div class="sr"><span class="slb">Expire</span><span class="sv">'+fmtD(school.expires_at)+'</span></div>'
     + '</div></div></div>';

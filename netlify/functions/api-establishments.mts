@@ -1,9 +1,15 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import {
+  extractClientIp,
+  hashPassword,
+  isSuperadminRequest,
+  jsonCors,
+  safeJson,
+  sanitizeText
+} from './_lib/security.mts';
 
 // ── V10 EU — Environment-driven auth — NO hardcoded fallbacks ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
-const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
 
@@ -39,50 +45,8 @@ async function recordLoginAttempt(ip: string): Promise<void> {
   await store.setJSON(key, { attempts: recent });
 }
 
-function authCheck(req: Request): boolean {
-  if (!SUPERADMIN_EMAIL || !SUPERADMIN_PASS) return false;
-  const auth = req.headers.get('x-sa-token');
-  if (!auth) return false;
-  try {
-    const decoded = atob(auth);
-    return decoded === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
-  } catch { return false; }
-}
-
-function sanitize(str: string): string {
-  return String(str).replace(/[<>]/g, '').trim();
-}
-
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-const ALLOWED_ORIGINS = [
-  'https://darling-muffin-21eb90.netlify.app',
-  Netlify.env.get('SITE_URL') || '',
-  Netlify.env.get('DEPLOY_PRIME_URL') || '',
-].filter(Boolean);
-
-function getAllowedOrigin(req: Request): string {
-  const origin = req.headers.get('origin') || '';
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+\.safeschool\.(fr|com|net)$/.test(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+--darling-muffin-21eb90\.netlify\.app$/.test(origin)) return origin;
-  return ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
-}
-
-function cors(body: any, status = 200, req?: Request) {
-  const allowedOrigin = req ? getAllowedOrigin(req) : ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token, Authorization',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Vary': 'Origin'
-    }
-  });
 }
 
 function genAdminCode(): string {
@@ -145,7 +109,7 @@ async function syncToSupabase(school: any, store: any): Promise<void> {
 
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') {
-    return cors({ ok: true });
+    return jsonCors({ ok: true }, 200, req);
   }
 
   const url = new URL(req.url);
@@ -157,11 +121,11 @@ export default async (req: Request, context: Context) => {
     const slug = path.replace('/by-slug/', '');
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const entry = index.find((e: any) => e.slug === slug && e.is_active);
-    if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404);
+    if (!entry) return jsonCors({ error: 'Etablissement non trouvé' }, 404, req);
     const data = await store.get(`school_${entry.id}`, { type: 'json' });
-    if (!data) return cors({ error: 'Données non trouvées' }, 404);
+    if (!data) return jsonCors({ error: 'Données non trouvées' }, 404, req);
     // If authenticated as superadmin, return admin info too
-    const isAdmin = authCheck(req);
+    const isAdmin = await isSuperadminRequest(req);
     const publicInfo: any = {
       id: (data as any).id,
       name: (data as any).name,
@@ -171,11 +135,8 @@ export default async (req: Request, context: Context) => {
       plan: (data as any).plan,
       is_active: (data as any).is_active
     };
-    if (isAdmin) {
-      publicInfo.admin_code = (data as any).admin_code;
-      publicInfo.admin_email = (data as any).admin_email;
-    }
-    return cors(publicInfo);
+    if (isAdmin) publicInfo.admin_email = (data as any).admin_email;
+    return jsonCors(publicInfo, 200, req);
   }
 
   // Public endpoint: list active establishments (for app)
@@ -190,66 +151,75 @@ export default async (req: Request, context: Context) => {
         supabase_id: data?.supabase_id || null
       });
     }
-    return cors(results);
+    return jsonCors(results, 200, req);
   }
 
   // Public endpoint: admin login for a school (verifies credentials without exposing them)
   if (req.method === 'POST' && path.startsWith('/admin-login/')) {
     // Rate limit login attempts
-    const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+    const clientIp = extractClientIp(req, context);
     const rateCheck = await checkLoginRateLimit(clientIp);
     if (rateCheck.blocked) {
-      return cors({ error: 'Trop de tentatives. Reessayez dans 15 minutes.', retry_after_seconds: LOGIN_RATE_WINDOW_MS / 1000 }, 429);
+      return jsonCors({ error: 'Trop de tentatives. Reessayez dans 15 minutes.', retry_after_seconds: LOGIN_RATE_WINDOW_MS / 1000 }, 429, req);
     }
 
     const slug = path.replace('/admin-login/', '');
     if (!slug || slug.length > 100 || !/^[a-z0-9-]+$/.test(slug)) {
-      return cors({ error: 'Slug invalide' }, 400);
+      return jsonCors({ error: 'Slug invalide' }, 400, req);
     }
 
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const entry = index.find((e: any) => e.slug === slug && e.is_active);
-    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404);
+    if (!entry) return jsonCors({ error: 'Etablissement non trouve' }, 404, req);
     const data = await store.get(`school_${entry.id}`, { type: 'json' }) as any;
-    if (!data) return cors({ error: 'Donnees non trouvees' }, 404);
+    if (!data) return jsonCors({ error: 'Donnees non trouvees' }, 404, req);
 
     let body: any;
-    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
+    try { body = await safeJson(req); } catch { return jsonCors({ error: 'Corps invalide' }, 400, req); }
 
-    const email = (body.email || '').trim().toLowerCase();
-    const password = (body.password || '').trim();
+    const email = sanitizeText(body.email || '', 140).toLowerCase();
+    const password = String(body.password || '').trim();
 
-    if (!email || !isValidEmail(email)) return cors({ error: 'Format d\'email invalide' }, 400);
-    if (!password || password.length === 0) return cors({ error: 'Mot de passe requis' }, 400);
-    if (password.length > 200) return cors({ error: 'Mot de passe trop long' }, 400);
+    if (!email || !isValidEmail(email)) return jsonCors({ error: 'Format d\'email invalide' }, 400, req);
+    if (!password || password.length === 0) return jsonCors({ error: 'Mot de passe requis' }, 400, req);
+    if (password.length > 200) return jsonCors({ error: 'Mot de passe trop long' }, 400, req);
 
     // Check admin credentials
     const storedEmail = (data.admin_email || '').toLowerCase();
     const storedCode = data.admin_code || '';
-    const storedPassword = data.admin_password || '';
+    const storedPasswordHash = data.admin_password_hash || '';
+    const passwordHash = await hashPassword(password);
+    const legacyPassword = data.admin_password || '';
+    const matches = email === storedEmail && (password === storedCode || passwordHash === storedPasswordHash || password === legacyPassword);
 
-    if (email === storedEmail && (password === storedCode || password === storedPassword)) {
-      return cors({
+    if (matches) {
+      if (!storedPasswordHash || legacyPassword) {
+        data.admin_password_hash = passwordHash;
+        delete data.admin_password;
+        await store.setJSON(`school_${entry.id}`, data);
+      }
+      return jsonCors({
         ok: true,
         school_id: data.id,
         name: data.name,
         plan: data.plan,
-        admin_email: data.admin_email
-      });
+        admin_email: data.admin_email,
+        role: 'establishment_admin'
+      }, 200, req);
     }
 
     await recordLoginAttempt(clientIp);
-    return cors({ error: 'Identifiants incorrects', attempts_remaining: rateCheck.remaining - 1 }, 401);
+    return jsonCors({ error: 'Identifiants incorrects', attempts_remaining: Math.max(rateCheck.remaining - 1, 0) }, 401, req);
   }
 
   // POST /api/establishments/ensure-uuid - Resolve a school to a valid Supabase UUID (public - needed by client for report submission)
   if (req.method === 'POST' && path === '/ensure-uuid') {
     let body: any;
-    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
+    try { body = await safeJson(req); } catch { return jsonCors({ error: 'Corps invalide' }, 400, req); }
 
     const blobId = body.blob_id || body.id;
     const slug = body.slug;
-    if (!blobId && !slug) return cors({ error: 'blob_id ou slug requis' }, 400);
+    if (!blobId && !slug) return jsonCors({ error: 'blob_id ou slug requis' }, 400, req);
 
     // Find the school in blobs
     let schoolData: any = null;
@@ -263,7 +233,7 @@ export default async (req: Request, context: Context) => {
         schoolData = await store.get(`school_${entry.id}`, { type: 'json' });
       }
     }
-    if (!schoolData) return cors({ error: 'École non trouvée' }, 404);
+    if (!schoolData) return jsonCors({ error: 'École non trouvée' }, 404, req);
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -284,7 +254,7 @@ export default async (req: Request, context: Context) => {
           }
         } catch { /* best effort */ }
       }
-      return cors({ uuid: schoolData.supabase_id, source: 'cached' });
+      return jsonCors({ uuid: schoolData.supabase_id, source: 'cached' }, 200, req);
     }
 
     // If blob ID is already a valid UUID
@@ -293,7 +263,7 @@ export default async (req: Request, context: Context) => {
       if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
         await syncToSupabase(schoolData, store).catch(() => {});
       }
-      return cors({ uuid: schoolData.id, source: 'blob_uuid' });
+      return jsonCors({ uuid: schoolData.id, source: 'blob_uuid' }, 200, req);
     }
 
     // Old-format ID: need to create a proper UUID
@@ -308,7 +278,7 @@ export default async (req: Request, context: Context) => {
           if (Array.isArray(rows) && rows.length > 0) {
             schoolData.supabase_id = rows[0].id;
             await store.setJSON(`school_${schoolData.id}`, schoolData);
-            return cors({ uuid: rows[0].id, source: 'lookup' });
+            return jsonCors({ uuid: rows[0].id, source: 'lookup' }, 200, req);
           }
         }
       } catch { /* ignore */ }
@@ -345,7 +315,7 @@ export default async (req: Request, context: Context) => {
           const finalUUID = (Array.isArray(supaData) && supaData.length > 0) ? supaData[0].id : newUUID;
           schoolData.supabase_id = finalUUID;
           await store.setJSON(`school_${schoolData.id}`, schoolData);
-          return cors({ uuid: finalUUID, source: 'created' });
+          return jsonCors({ uuid: finalUUID, source: 'created' }, 200, req);
         } else {
           console.warn('Supabase insert failed:', res.status, await res.text().catch(() => ''));
         }
@@ -357,12 +327,12 @@ export default async (req: Request, context: Context) => {
     // Last resort: generate UUID locally (Supabase unavailable)
     schoolData.supabase_id = newUUID;
     await store.setJSON(`school_${schoolData.id}`, schoolData);
-    return cors({ uuid: newUUID, source: 'generated', warning: 'Supabase sync unavailable' });
+    return jsonCors({ uuid: newUUID, source: 'generated', warning: 'Supabase sync unavailable' }, 200, req);
   }
 
   // All other endpoints require superadmin auth
-  if (!authCheck(req)) {
-    return cors({ error: 'Non autorisé' }, 401);
+  if (!(await isSuperadminRequest(req))) {
+    return jsonCors({ error: 'Non autorisé' }, 401, req);
   }
 
   // GET /api/establishments - List all (superadmin)
@@ -373,41 +343,48 @@ export default async (req: Request, context: Context) => {
       const data = await store.get(`school_${entry.id}`, { type: 'json' });
       if (data) schools.push(data);
     }
-    return cors(schools);
+    const sanitizedSchools = schools.map((s: any) => {
+      const copy = { ...s };
+      delete copy.admin_password;
+      return copy;
+    });
+    return jsonCors(sanitizedSchools, 200, req);
   }
 
   // GET /api/establishments/:id - Get single (superadmin)
   if (req.method === 'GET' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
     const id = path.slice(1);
     const data = await store.get(`school_${id}`, { type: 'json' });
-    if (!data) return cors({ error: 'Non trouvé' }, 404);
-    return cors(data);
+    if (!data) return jsonCors({ error: 'Non trouvé' }, 404, req);
+    const sanitized = { ...(data as any) };
+    delete sanitized.admin_password;
+    return jsonCors(sanitized, 200, req);
   }
 
   // POST /api/establishments - Create
   if (req.method === 'POST' && (path === '' || path === '/')) {
     let body: any;
     try {
-      body = await req.json();
+      body = await safeJson(req);
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return jsonCors({ error: 'Corps de requête invalide' }, 400, req);
     }
 
     if (!body.name || typeof body.name !== 'string' || body.name.trim().length < 2) {
-      return cors({ error: 'Nom requis (minimum 2 caractères)' }, 400);
+      return jsonCors({ error: 'Nom requis (minimum 2 caractères)' }, 400, req);
     }
     if (body.email && !isValidEmail(body.email)) {
-      return cors({ error: 'Format d\'email invalide' }, 400);
+      return jsonCors({ error: 'Format d\'email invalide' }, 400, req);
     }
     if (body.admin_email && !isValidEmail(body.admin_email)) {
-      return cors({ error: 'Format d\'email admin invalide' }, 400);
+      return jsonCors({ error: 'Format d\'email admin invalide' }, 400, req);
     }
 
-    const name = sanitize(body.name.trim());
-    const slug = body.slug || genSlug(name);
+    const name = sanitizeText(body.name, 140);
+    const slug = sanitizeText(body.slug || genSlug(name), 80);
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     if (index.find((e: any) => e.slug === slug)) {
-      return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
+      return jsonCors({ error: 'Sous-domaine déjà utilisé' }, 409, req);
     }
 
     const id = crypto.randomUUID();
@@ -418,6 +395,8 @@ export default async (req: Request, context: Context) => {
     const expDate = new Date();
     expDate.setMonth(expDate.getMonth() + (planDurations[plan] || 3));
 
+    const generatedPassword = sanitizeText(body.admin_password || adminCode, 200);
+    const adminPasswordHash = await hashPassword(generatedPassword);
     const school: any = {
       id,
       name,
@@ -429,8 +408,8 @@ export default async (req: Request, context: Context) => {
       status: plan === 'starter' ? 'trial' : 'active',
       is_active: true,
       admin_code: adminCode,
-      admin_email: body.admin_email || body.email || '',
-      admin_password: body.admin_password || adminCode,
+      admin_email: sanitizeText(body.admin_email || body.email || '', 140).toLowerCase(),
+      admin_password_hash: adminPasswordHash,
       max_students: { starter: 200, pro: 9999, enterprise: 99999 }[plan] || 200,
       max_reports: { starter: 50, pro: 9999, enterprise: 99999 }[plan] || 50,
       max_admins: { starter: 1, pro: 2, enterprise: 99 }[plan] || 1,
@@ -453,17 +432,22 @@ export default async (req: Request, context: Context) => {
     // Sync to Supabase (non-blocking)
     syncToSupabase(school, store).catch(() => {});
 
-    return cors(school, 201);
+    const responseSchool = { ...school, admin_temp_password: generatedPassword };
+    return jsonCors(responseSchool, 201, req);
   }
 
   // PUT /api/establishments/:id - Update
   if (req.method === 'PUT' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
     const id = path.slice(1);
     const existing = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!existing) return cors({ error: 'Non trouvé' }, 404);
+    if (!existing) return jsonCors({ error: 'Non trouvé' }, 404, req);
 
-    const body = await req.json() as any;
+    const body = await safeJson(req) as any;
     const updated = { ...existing, ...body, id, updated_at: new Date().toISOString() };
+    if (body.admin_password) {
+      updated.admin_password_hash = await hashPassword(String(body.admin_password));
+      delete updated.admin_password;
+    }
     await store.setJSON(`school_${id}`, updated);
 
     // Update index
@@ -479,7 +463,9 @@ export default async (req: Request, context: Context) => {
       await store.setJSON('_index', index);
     }
 
-    return cors(updated);
+    const sanitized = { ...updated };
+    delete sanitized.admin_password;
+    return jsonCors(sanitized, 200, req);
   }
 
   // DELETE /api/establishments/:id
@@ -489,16 +475,16 @@ export default async (req: Request, context: Context) => {
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const filtered = index.filter((e: any) => e.id !== id);
     await store.setJSON('_index', filtered);
-    return cors({ deleted: true });
+    return jsonCors({ deleted: true }, 200, req);
   }
 
   // POST /api/establishments/:id/staff-codes - Generate staff codes
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/staff-codes$/)) {
     const id = path.split('/')[1];
     const existing = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!existing) return cors({ error: 'Non trouvé' }, 404);
+    if (!existing) return jsonCors({ error: 'Non trouvé' }, 404, req);
 
-    const body = await req.json() as any;
+    const body = await safeJson(req) as any;
     const count = Math.min(body.count || 5, 50);
     const codes: any[] = existing.staff_codes || [];
     for (let i = 0; i < count; i++) {
@@ -511,22 +497,23 @@ export default async (req: Request, context: Context) => {
     }
     existing.staff_codes = codes;
     await store.setJSON(`school_${id}`, existing);
-    return cors({ codes });
+    return jsonCors({ codes }, 200, req);
   }
 
   // POST /api/establishments/:id/regenerate-admin
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/regenerate-admin$/)) {
     const id = path.split('/')[1];
     const existing = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!existing) return cors({ error: 'Non trouvé' }, 404);
+    if (!existing) return jsonCors({ error: 'Non trouvé' }, 404, req);
 
     existing.admin_code = genAdminCode();
-    existing.admin_password = existing.admin_code;
+    existing.admin_password_hash = await hashPassword(existing.admin_code);
+    delete existing.admin_password;
     await store.setJSON(`school_${id}`, existing);
-    return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password });
+    return jsonCors({ admin_code: existing.admin_code, admin_temp_password: existing.admin_code }, 200, req);
   }
 
-  return cors({ error: 'Route non trouvée' }, 404);
+  return jsonCors({ error: 'Route non trouvée' }, 404, req);
 };
 
 export const config: Config = {

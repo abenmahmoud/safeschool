@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { isSuperadminRequest, jsonCors, safeJson, sanitizeText } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Auth & helpers
@@ -7,29 +8,6 @@ import type { Context, Config } from '@netlify/functions';
 
 // ── V8 Extra Pro — Environment-driven auth ──
 const SA_EMAIL = () => Netlify.env.get('SUPERADMIN_EMAIL') || '';
-const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || '';
-
-function cors(body: any, status = 200) {
-  return new Response(JSON.stringify(body, null, 2), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    },
-  });
-}
-
-function authCheck(req: Request): boolean {
-  const token = req.headers.get('x-sa-token');
-  if (!token) return false;
-  try {
-    return atob(token) === `${SA_EMAIL()}:${SA_PASS()}`;
-  } catch {
-    return false;
-  }
-}
 
 function genId(): string {
   return `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -155,12 +133,82 @@ function emailTest(): string {
   `);
 }
 
+function emailWelcome(p: Record<string, any>): string {
+  return wrapHtml('Bienvenue sur SafeSchool', `
+    <p>Bienvenue ${p.name ? `<strong>${sanitizeText(p.name, 80)}</strong>` : ''}.</p>
+    <p>Votre espace SafeSchool est pret. Vous pouvez vous connecter et commencer la configuration de votre etablissement.</p>
+  `);
+}
+
+function emailVerification(p: Record<string, any>): string {
+  return wrapHtml('Verification de votre email', `
+    <p>Confirmez votre adresse email pour activer votre compte.</p>
+    <p><a href="${sanitizeText(p.verifyUrl || '#', 500)}" style="display:inline-block;padding:10px 20px;background:#1a56db;color:#fff;text-decoration:none;border-radius:4px;">Verifier mon email</a></p>
+  `);
+}
+
+function emailPasswordReset(p: Record<string, any>): string {
+  return wrapHtml('Reinitialisation de mot de passe', `
+    <p>Une demande de reinitialisation a ete recue.</p>
+    <p><a href="${sanitizeText(p.resetUrl || '#', 500)}" style="display:inline-block;padding:10px 20px;background:#1a56db;color:#fff;text-decoration:none;border-radius:4px;">Reinitialiser mon mot de passe</a></p>
+  `);
+}
+
+function emailAdminAlert(p: Record<string, any>): string {
+  return wrapHtml('Alerte administrateur', `
+    <p>${sanitizeText(p.message || 'Une action administrateur requiert votre attention.', 1000)}</p>
+    <p>Etablissement: <strong>${sanitizeText(p.schoolName || p.schoolId || '-', 120)}</strong></p>
+  `);
+}
+
+function emailAcknowledgement(p: Record<string, any>): string {
+  return wrapHtml('Accuse de reception', `
+    <p>Le signalement <strong>${sanitizeText(p.trackingCode || '-', 80)}</strong> a bien ete recu.</p>
+    <p>Une equipe habilitee prendra en charge votre demande selon le niveau d'urgence.</p>
+  `);
+}
+
+async function sendEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<{ sent: boolean; provider: string; reason?: string }> {
+  const resendKey = Netlify.env.get('RESEND_API_KEY') || '';
+  const from = Netlify.env.get('EMAIL_FROM') || 'SafeSchool <no-reply@safeschool.fr>';
+  if (!resendKey) {
+    return { sent: false, provider: 'none', reason: 'email_not_configured' };
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        subject: params.subject,
+        html: params.html
+      })
+    });
+
+    if (!response.ok) {
+      return { sent: false, provider: 'resend', reason: `resend_${response.status}` };
+    }
+    return { sent: true, provider: 'resend' };
+  } catch {
+    return { sent: false, provider: 'resend', reason: 'resend_network_error' };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return jsonCors({ ok: true }, 200, req);
 
   const url  = new URL(req.url);
   const path = url.pathname.replace('/api/notify', '');
@@ -170,7 +218,7 @@ export default async (req: Request, context: Context) => {
     // GET /api/notify/history  (superadmin only)
     // =======================================================================
     if (req.method === 'GET' && path === '/history') {
-      if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+      if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorise' }, 401, req);
 
       const store  = getNotifStore();
       const day    = url.searchParams.get('day') || todayKey();
@@ -186,14 +234,14 @@ export default async (req: Request, context: Context) => {
         if (rec) records.push(rec);
       }
 
-      return cors({ day, total: ids.length, showing: records.length, notifications: records });
+      return jsonCors({ day, total: ids.length, showing: records.length, notifications: records }, 200, req);
     }
 
     // =======================================================================
     // GET /api/notify/stats  (superadmin only)
     // =======================================================================
     if (req.method === 'GET' && path === '/stats') {
-      if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+      if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorise' }, 401, req);
 
       const store  = getNotifStore();
       const day    = url.searchParams.get('day') || todayKey();
@@ -216,21 +264,21 @@ export default async (req: Request, context: Context) => {
         else if (rec.status === 'failed') failed++;
       }
 
-      return cors({ day, total: ids.length, sent, skipped, failed, by_type: byType, by_school: bySchool });
+      return jsonCors({ day, total: ids.length, sent, skipped, failed, by_type: byType, by_school: bySchool }, 200, req);
     }
 
     // =======================================================================
     // POST endpoints — parse body once
     // =======================================================================
-    if (req.method !== 'POST') return cors({ error: 'Method not allowed' }, 405);
+    if (req.method !== 'POST') return jsonCors({ error: 'Method not allowed' }, 405, req);
 
-    const body = await req.json() as Record<string, any>;
+    const body = await safeJson(req);
 
     // =======================================================================
     // POST /api/notify/test  (superadmin only)
     // =======================================================================
     if (path === '/test') {
-      if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+      if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorise' }, 401, req);
 
       const id = genId();
       const html = emailTest();
@@ -246,23 +294,23 @@ export default async (req: Request, context: Context) => {
       };
       await storeNotification(record);
 
-      return cors({
+      return jsonCors({
         id,
         sent: false,
         reason: 'email_not_configured',
         message: 'Notification de test enregistree. L\'email sera envoye apres configuration du provider.',
         email_preview: html,
-      });
+      }, 200, req);
     }
 
     // =======================================================================
     // POST /api/notify/digest
     // =======================================================================
     if (path === '/digest') {
-      if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+      if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorise' }, 401, req);
 
       const { schoolId } = body;
-      if (!schoolId) return cors({ error: 'schoolId requis' }, 400);
+      if (!schoolId) return jsonCors({ error: 'schoolId requis' }, 400, req);
 
       // Gather today's stats for this school
       const store  = getNotifStore();
@@ -297,7 +345,7 @@ export default async (req: Request, context: Context) => {
       };
       await storeNotification(record);
 
-      return cors({
+      return jsonCors({
         id,
         sent: false,
         reason: 'email_not_configured',
@@ -305,7 +353,50 @@ export default async (req: Request, context: Context) => {
         schoolId,
         stats: digestStats,
         email_preview: html,
-      });
+      }, 200, req);
+    }
+
+    // =======================================================================
+    // POST /api/notify/welcome | /email-verification | /password-reset | /admin-alert | /ack
+    // =======================================================================
+    if (['/welcome', '/email-verification', '/password-reset', '/admin-alert', '/ack'].includes(path)) {
+      const email = sanitizeText(String(body.email || ''), 160);
+      if (!email) return jsonCors({ error: 'email requis' }, 400, req);
+      const schoolId = sanitizeText(String(body.schoolId || 'platform'), 120);
+      if (await isRateLimited(schoolId)) {
+        return jsonCors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429, req);
+      }
+
+      const cfg: Record<string, { type: string; subject: string; html: string }> = {
+        '/welcome': { type: 'welcome', subject: 'Bienvenue sur SafeSchool', html: emailWelcome(body) },
+        '/email-verification': { type: 'email-verification', subject: 'Verification de votre email', html: emailVerification(body) },
+        '/password-reset': { type: 'password-reset', subject: 'Reinitialisation de mot de passe', html: emailPasswordReset(body) },
+        '/admin-alert': { type: 'admin-alert', subject: 'Alerte administrateur SafeSchool', html: emailAdminAlert(body) },
+        '/ack': { type: 'acknowledgement', subject: 'Accuse de reception SafeSchool', html: emailAcknowledgement(body) }
+      };
+      const selected = cfg[path];
+
+      const id = genId();
+      const sendResult = await sendEmail({ to: email, subject: selected.subject, html: selected.html });
+      const record: NotificationRecord = {
+        id,
+        type: selected.type,
+        schoolId,
+        recipient: email,
+        status: sendResult.sent ? 'sent' : 'queued',
+        reason: sendResult.reason || undefined,
+        payload: body,
+        email_preview: selected.html,
+        created_at: new Date().toISOString()
+      };
+      await storeNotification(record);
+
+      return jsonCors({
+        id,
+        sent: sendResult.sent,
+        reason: sendResult.reason || null,
+        provider: sendResult.provider
+      }, 200, req);
     }
 
     // =======================================================================
@@ -313,10 +404,10 @@ export default async (req: Request, context: Context) => {
     // =======================================================================
     if (path === '/new-report') {
       const { schoolId, reportId, urgency, type } = body;
-      if (!schoolId) return cors({ error: 'schoolId requis' }, 400);
+      if (!schoolId) return jsonCors({ error: 'schoolId requis' }, 400, req);
 
       if (await isRateLimited(schoolId)) {
-        return cors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429);
+        return jsonCors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429, req);
       }
 
       const id   = genId();
@@ -332,16 +423,27 @@ export default async (req: Request, context: Context) => {
         email_preview: html,
         created_at: new Date().toISOString(),
       };
-      await storeNotification(record);
       console.log(`[NOTIFY] New report for school ${schoolId}: ${reportId} (${type}, urgency: ${urgency})`);
 
-      return cors({
+      const adminEmail = sanitizeText(String(body.adminEmail || ''), 160);
+      const sendResult = adminEmail ? await sendEmail({
+        to: adminEmail,
+        subject: 'SafeSchool - Nouveau signalement',
+        html
+      }) : { sent: false, provider: 'none', reason: 'missing_admin_email' };
+
+      record.status = sendResult.sent ? 'sent' : 'queued';
+      record.reason = sendResult.reason || undefined;
+      await storeNotification(record);
+
+      return jsonCors({
         id,
-        sent: false,
-        reason: 'email_not_configured',
-        message: 'Notification enregistree. L\'envoi d\'emails sera active apres configuration du provider.',
+        sent: sendResult.sent,
+        reason: sendResult.reason || null,
+        message: sendResult.sent ? 'Notification envoyee.' : 'Notification enregistree.',
+        provider: sendResult.provider,
         email_preview: html,
-      });
+      }, 200, req);
     }
 
     // =======================================================================
@@ -351,12 +453,12 @@ export default async (req: Request, context: Context) => {
       const { reportId, trackingCode, newStatus, email, schoolId } = body;
 
       if (!email) {
-        return cors({ id: null, sent: false, reason: 'no_email', message: 'Pas d\'email fourni par le declarant.' });
+        return jsonCors({ id: null, sent: false, reason: 'no_email', message: 'Pas d\'email fourni par le declarant.' }, 200, req);
       }
 
       const sid = schoolId || 'unknown';
       if (await isRateLimited(sid)) {
-        return cors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429);
+        return jsonCors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429, req);
       }
 
       const id   = genId();
@@ -373,16 +475,25 @@ export default async (req: Request, context: Context) => {
         email_preview: html,
         created_at: new Date().toISOString(),
       };
+      const recipient = sanitizeText(String(email), 160);
+      const sendResult = await sendEmail({
+        to: recipient,
+        subject: 'SafeSchool - Mise a jour de votre signalement',
+        html
+      });
+      record.status = sendResult.sent ? 'sent' : 'queued';
+      record.reason = sendResult.reason || undefined;
       await storeNotification(record);
       console.log(`[NOTIFY] Status update for ${trackingCode}: ${newStatus} -> ${email}`);
 
-      return cors({
+      return jsonCors({
         id,
-        sent: false,
-        reason: 'email_not_configured',
-        message: 'Notification enregistree. L\'email sera envoye apres configuration du provider.',
+        sent: sendResult.sent,
+        reason: sendResult.reason || null,
+        provider: sendResult.provider,
+        message: sendResult.sent ? 'Notification envoyee.' : 'Notification enregistree.',
         email_preview: html,
-      });
+      }, 200, req);
     }
 
     // =======================================================================
@@ -392,12 +503,12 @@ export default async (req: Request, context: Context) => {
       const { reportId, trackingCode, email, message, schoolId } = body;
 
       if (!email) {
-        return cors({ id: null, sent: false, reason: 'no_email' });
+        return jsonCors({ id: null, sent: false, reason: 'no_email' }, 200, req);
       }
 
       const sid = schoolId || 'unknown';
       if (await isRateLimited(sid)) {
-        return cors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429);
+        return jsonCors({ error: 'Rate limit atteint (100 notifications/jour par ecole)' }, 429, req);
       }
 
       const id   = genId();
@@ -414,22 +525,31 @@ export default async (req: Request, context: Context) => {
         email_preview: html,
         created_at: new Date().toISOString(),
       };
+      const recipient = sanitizeText(String(email), 160);
+      const sendResult = await sendEmail({
+        to: recipient,
+        subject: 'SafeSchool - Reponse de l\'equipe educative',
+        html
+      });
+      record.status = sendResult.sent ? 'sent' : 'queued';
+      record.reason = sendResult.reason || undefined;
       await storeNotification(record);
       console.log(`[NOTIFY] Staff reply for ${trackingCode} -> ${email}`);
 
-      return cors({
+      return jsonCors({
         id,
-        sent: false,
-        reason: 'email_not_configured',
-        message: 'Notification enregistree.',
+        sent: sendResult.sent,
+        reason: sendResult.reason || null,
+        provider: sendResult.provider,
+        message: sendResult.sent ? 'Notification envoyee.' : 'Notification enregistree.',
         email_preview: html,
-      });
+      }, 200, req);
     }
 
-    return cors({ error: 'Route de notification inconnue' }, 404);
+    return jsonCors({ error: 'Route de notification inconnue' }, 404, req);
   } catch (e: any) {
     console.error('[NOTIFY] Error:', e?.message || e);
-    return cors({ error: 'Requete invalide', detail: e?.message }, 400);
+    return jsonCors({ error: 'Requete invalide' }, 400, req);
   }
 };
 

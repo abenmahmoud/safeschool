@@ -1,5 +1,13 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import {
+  createSuperadminSessionToken,
+  extractClientIp,
+  isSuperadminRequest,
+  jsonCors,
+  safeJson,
+  sanitizeText
+} from './_lib/security.mts';
 
 // ── V8 Extra Pro — Environment-driven auth ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
@@ -7,26 +15,6 @@ const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-function cors(body: any, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS'
-    }
-  });
-}
-
-function authCheck(req: Request): boolean {
-  const auth = req.headers.get('x-sa-token');
-  if (!auth) return false;
-  try {
-    return atob(auth) === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
-  } catch { return false; }
-}
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -93,54 +81,55 @@ async function clearRateLimit(ip: string): Promise<void> {
 }
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return jsonCors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/superadmin', '');
-  const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  const clientIp = extractClientIp(req, context);
 
   // ─── POST /api/superadmin/login ───
   if (req.method === 'POST' && path === '/login') {
     // Rate limit check
     const rateCheck = await checkRateLimit(clientIp);
     if (rateCheck.blocked) {
-      return cors({
+      return jsonCors({
         error: 'Trop de tentatives. Réessayez dans 15 minutes.',
         retry_after_seconds: RATE_LIMIT_WINDOW_MS / 1000
-      }, 429);
+      }, 429, req);
     }
 
-    let body: any;
     try {
-      body = await req.json();
+      const body = await safeJson(req);
+      const email = sanitizeText(body.email || '', 140).toLowerCase();
+      const password = String(body.password || '');
+
+      // Input validation
+      if (!email || !isValidEmail(email)) {
+        return jsonCors({ error: 'Format d\'email invalide' }, 400, req);
+      }
+      if (!password || password.length === 0) {
+        return jsonCors({ error: 'Mot de passe requis' }, 400, req);
+      }
+
+      if (email === SUPERADMIN_EMAIL && password === SUPERADMIN_PASS) {
+        await clearRateLimit(clientIp);
+        const token = await createSuperadminSessionToken(SUPERADMIN_EMAIL);
+        return jsonCors({ ok: true, token, email: SUPERADMIN_EMAIL, role: 'superadmin' }, 200, req);
+      }
+
+      await recordFailedAttempt(clientIp);
+      const updated = await checkRateLimit(clientIp);
+      return jsonCors({
+        error: 'Identifiants incorrects',
+        attempts_remaining: Math.max(updated.remaining, 0)
+      }, 401, req);
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return jsonCors({ error: 'Corps de requête invalide' }, 400, req);
     }
-
-    // Input validation
-    if (!body.email || typeof body.email !== 'string' || !isValidEmail(body.email)) {
-      return cors({ error: 'Format d\'email invalide' }, 400);
-    }
-    if (!body.password || typeof body.password !== 'string' || body.password.length === 0) {
-      return cors({ error: 'Mot de passe requis' }, 400);
-    }
-
-    if (body.email === SUPERADMIN_EMAIL && body.password === SUPERADMIN_PASS) {
-      await clearRateLimit(clientIp);
-      const token = btoa(`${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`);
-      return cors({ ok: true, token, email: SUPERADMIN_EMAIL });
-    }
-
-    await recordFailedAttempt(clientIp);
-    const updated = await checkRateLimit(clientIp);
-    return cors({
-      error: 'Identifiants incorrects',
-      attempts_remaining: updated.remaining
-    }, 401);
   }
 
   // All routes below require authentication
-  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401);
+  if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorisé' }, 401, req);
 
   // ─── GET /api/superadmin/dashboard — Global stats ───
   if (req.method === 'GET' && path === '/dashboard') {
@@ -165,7 +154,7 @@ export default async (req: Request, context: Context) => {
     const trial = schools.filter(s => s.status === 'trial').length;
     const expired = schools.filter(s => s.status === 'expired').length;
 
-    return cors({
+    return jsonCors({
       total_schools: schools.length,
       active,
       trial,
@@ -174,7 +163,7 @@ export default async (req: Request, context: Context) => {
       arr: mrr * 12,
       total_reports: totalReports,
       schools
-    });
+    }, 200, req);
   }
 
   // ─── GET /api/superadmin/school/:id/reports — Access school reports ───
@@ -182,8 +171,8 @@ export default async (req: Request, context: Context) => {
     const id = path.split('/')[2];
     const store = getStore({ name: 'establishments', consistency: 'strong' });
     const data = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!data) return cors({ error: 'Non trouvé' }, 404);
-    return cors({ school: data, supabase_school_id: data.supabase_id || data.id });
+    if (!data) return jsonCors({ error: 'Non trouvé' }, 404, req);
+    return jsonCors({ school: data, supabase_school_id: data.supabase_id || data.id }, 200, req);
   }
 
   // ─── GET /api/superadmin/reports/latest — Latest auto-generated report ───
@@ -192,11 +181,11 @@ export default async (req: Request, context: Context) => {
     try {
       const latest = await store.get('_latest', { type: 'json' }) as any;
       if (!latest) {
-        return cors({ error: 'Aucun rapport disponible' }, 404);
+        return jsonCors({ error: 'Aucun rapport disponible' }, 404, req);
       }
-      return cors({ report: latest });
+      return jsonCors({ report: latest }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération du rapport' }, 500);
+      return jsonCors({ error: 'Erreur lors de la récupération du rapport' }, 500, req);
     }
   }
 
@@ -219,9 +208,9 @@ export default async (req: Request, context: Context) => {
         }
       }
 
-      return cors({ count: reports.length, reports });
+      return jsonCors({ count: reports.length, reports }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération des rapports' }, 500);
+      return jsonCors({ error: 'Erreur lors de la récupération des rapports' }, 500, req);
     }
   }
 
@@ -243,39 +232,38 @@ export default async (req: Request, context: Context) => {
         }
       }
 
-      return cors({ count: events.length, events });
+      return jsonCors({ count: events.length, events }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération de l\'activité' }, 500);
+      return jsonCors({ error: 'Erreur lors de la récupération de l\'activité' }, 500, req);
     }
   }
 
   // ─── POST /api/superadmin/activity — Log an activity event ───
   if (req.method === 'POST' && path === '/activity') {
-    let body: any;
     try {
-      body = await req.json();
+      const body = await safeJson(req);
+      const eventType = sanitizeText(body.type, 80);
+      if (!eventType) {
+        return jsonCors({ error: 'Le champ "type" est requis' }, 400, req);
+      }
+
+      const store = getStore({ name: 'activity-log', consistency: 'strong' });
+      const timestamp = new Date().toISOString();
+      const key = `event_${timestamp.replace(/[:.]/g, '-')}_${Math.random().toString(36).slice(2, 8)}`;
+
+      const event = {
+        type: eventType,
+        message: sanitizeText(body.message || '', 1000),
+        metadata: (body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)) ? body.metadata : {},
+        timestamp,
+        ip: clientIp
+      };
+
+      await store.setJSON(key, event);
+      return jsonCors({ ok: true, key, event }, 200, req);
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return jsonCors({ error: 'Corps de requête invalide' }, 400, req);
     }
-
-    if (!body.type || typeof body.type !== 'string') {
-      return cors({ error: 'Le champ "type" est requis' }, 400);
-    }
-
-    const store = getStore({ name: 'activity-log', consistency: 'strong' });
-    const timestamp = new Date().toISOString();
-    const key = `event_${timestamp.replace(/[:.]/g, '-')}_${Math.random().toString(36).slice(2, 8)}`;
-
-    const event = {
-      type: body.type,
-      message: body.message || '',
-      metadata: body.metadata || {},
-      timestamp,
-      ip: clientIp
-    };
-
-    await store.setJSON(key, event);
-    return cors({ ok: true, key, event });
   }
 
   // ─── GET /api/superadmin/settings — Platform settings ───
@@ -283,42 +271,40 @@ export default async (req: Request, context: Context) => {
     const store = getStore({ name: 'platform-settings', consistency: 'strong' });
     try {
       const settings = await store.get('current', { type: 'json' }) as any;
-      return cors({ settings: settings || {} });
+      return jsonCors({ settings: settings || {} }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération des paramètres' }, 500);
+      return jsonCors({ error: 'Erreur lors de la récupération des paramètres' }, 500, req);
     }
   }
 
   // ─── PUT /api/superadmin/settings — Update platform settings ───
   if (req.method === 'PUT' && path === '/settings') {
-    let body: any;
     try {
-      body = await req.json();
+      const body = await safeJson(req);
+      if (!body || typeof body !== 'object') {
+        return jsonCors({ error: 'Les paramètres doivent être un objet' }, 400, req);
+      }
+
+      const store = getStore({ name: 'platform-settings', consistency: 'strong' });
+
+      // Merge with existing settings
+      let existing: any = {};
+      try {
+        existing = await store.get('current', { type: 'json' }) || {};
+      } catch {
+        existing = {};
+      }
+
+      const merged = { ...existing, ...body, updated_at: new Date().toISOString() };
+      await store.setJSON('current', merged);
+
+      return jsonCors({ ok: true, settings: merged }, 200, req);
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return jsonCors({ error: 'Corps de requête invalide' }, 400, req);
     }
-
-    if (!body || typeof body !== 'object') {
-      return cors({ error: 'Les paramètres doivent être un objet' }, 400);
-    }
-
-    const store = getStore({ name: 'platform-settings', consistency: 'strong' });
-
-    // Merge with existing settings
-    let existing: any = {};
-    try {
-      existing = await store.get('current', { type: 'json' }) || {};
-    } catch {
-      existing = {};
-    }
-
-    const merged = { ...existing, ...body, updated_at: new Date().toISOString() };
-    await store.setJSON('current', merged);
-
-    return cors({ ok: true, settings: merged });
   }
 
-  return cors({ error: 'Route non trouvée' }, 404);
+  return jsonCors({ error: 'Route non trouvée' }, 404, req);
 };
 
 export const config: Config = {

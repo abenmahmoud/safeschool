@@ -4,7 +4,7 @@ functions = "netlify/functions"
 edge_functions = "netlify/edge-functions"
 
   [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "22"
 
   [build.processing]
 
@@ -21,6 +21,27 @@ edge_functions = "netlify/edge-functions"
 [functions]
 
   [functions."*"]
+  node_bundler = "esbuild"
+
+[dev]
+framework = "#static"
+publish = "."
+targetPort = 8888
+
+[context.deploy-preview.environment]
+NODE_ENV = "staging"
+APP_ENV = "preview"
+SUPERADMIN_SESSION_TTL_SECONDS = "3600"
+
+[context.branch-deploy.environment]
+NODE_ENV = "staging"
+APP_ENV = "staging"
+SUPERADMIN_SESSION_TTL_SECONDS = "7200"
+
+[context.production.environment]
+NODE_ENV = "production"
+APP_ENV = "production"
+SUPERADMIN_SESSION_TTL_SECONDS = "28800"
 
 [[headers]]
 for = "/*"
@@ -106,6 +127,7 @@ for = "/api/*"
   [headers.values]
   Cache-Control = "no-store, no-cache, must-revalidate"
   Pragma = "no-cache"
+  X-Robots-Tag = "noindex, nofollow"
 
 [[headers]]
 for = "/offline.html"
@@ -152,18 +174,6 @@ force = false
 [[redirects]]
 from = "/offline"
 to = "/offline.html"
-status = 200
-force = false
-
-  [redirects.query]
-
-  [redirects.conditions]
-
-  [redirects.headers]
-
-[[redirects]]
-from = "/api/*"
-to = "/api/:splat"
 status = 200
 force = false
 

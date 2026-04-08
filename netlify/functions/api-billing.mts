@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { isSuperadminRequest } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Plan definitions with full feature details
@@ -109,16 +110,8 @@ const PLANS: Record<string, PlanDef> = {
 // Auth helpers (mirrors api-superadmin / api-establishments pattern)
 // ---------------------------------------------------------------------------
 
-// ── V8 Extra Pro — Environment-driven auth ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
-const SUPERADMIN_PASS  = Netlify.env.get('SUPERADMIN_PASS')  || '';
-
-function authCheck(req: Request): boolean {
-  const auth = req.headers.get('x-sa-token');
-  if (!auth) return false;
-  try {
-    return atob(auth) === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
-  } catch { return false; }
+async function authCheck(req: Request): Promise<boolean> {
+  return isSuperadminRequest(req);
 }
 
 // ---------------------------------------------------------------------------
@@ -830,7 +823,7 @@ export default async (req: Request, context: Context) => {
   // GET /api/billing/revenue -- Revenue dashboard (superadmin only)
   // -----------------------------------------------------------------------
   if (req.method === 'GET' && path === '/revenue') {
-    if (!authCheck(req)) {
+    if (!(await authCheck(req))) {
       return cors({ error: 'Non autorise. Token superadmin requis.' }, 401);
     }
 

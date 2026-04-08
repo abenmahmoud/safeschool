@@ -1,8 +1,8 @@
-// SafeSchool i18n — 8 languages (fr, en, es, de, it, pt, pl, nl)
+// SafeSchool i18n — extended language set (including FR/AR/TR/UK)
 // Auto-detected from navigator.language, persisted to localStorage
-window.SS_LANGS = ['fr','en','es','de','it','pt','pl','nl'];
-window.SS_LANG_LABELS = {fr:'Français',en:'English',es:'Español',de:'Deutsch',it:'Italiano',pt:'Português',pl:'Polski',nl:'Nederlands'};
-window.SS_LANG_FLAGS = {fr:'🇫🇷',en:'🇬🇧',es:'🇪🇸',de:'🇩🇪',it:'🇮🇹',pt:'🇵🇹',pl:'🇵🇱',nl:'🇳🇱'};
+window.SS_LANGS = ['fr','ar','tr','uk','en','es','de','it','pt','pl','nl'];
+window.SS_LANG_LABELS = {fr:'Français',ar:'العربية',tr:'Türkçe',uk:'Українська',en:'English',es:'Español',de:'Deutsch',it:'Italiano',pt:'Português',pl:'Polski',nl:'Nederlands'};
+window.SS_LANG_FLAGS = {fr:'🇫🇷',ar:'🇸🇦',tr:'🇹🇷',uk:'🇺🇦',en:'🇬🇧',es:'🇪🇸',de:'🇩🇪',it:'🇮🇹',pt:'🇵🇹',pl:'🇵🇱',nl:'🇳🇱'};
 
 window.i18n_extended = {
   es: {
@@ -937,6 +937,44 @@ window.i18n_extended = {
     systemTheme: 'Systeemthema'
   }
 };
+
+// Minimal mandatory locales (fallback to FR keys when missing)
+window.i18n_extended.ar = Object.assign({}, window.i18n_extended.ar || {}, {
+  language: 'اللغة',
+  langFr: 'الفرنسية',
+  langEn: 'الإنجليزية',
+  navHome: 'الرئيسية',
+  navLearn: 'تعلّم',
+  navReport: 'إبلاغ',
+  navLea: 'ليا',
+  navHelp: 'مساعدة',
+  navProfile: 'الملف الشخصي',
+  adminDash: 'لوحة الإدارة'
+});
+window.i18n_extended.tr = Object.assign({}, window.i18n_extended.tr || {}, {
+  language: 'Dil',
+  langFr: 'Fransızca',
+  langEn: 'İngilizce',
+  navHome: 'Ana sayfa',
+  navLearn: 'Öğren',
+  navReport: 'Bildir',
+  navLea: 'Lea',
+  navHelp: 'Yardım',
+  navProfile: 'Profil',
+  adminDash: 'Yönetici paneli'
+});
+window.i18n_extended.uk = Object.assign({}, window.i18n_extended.uk || {}, {
+  language: 'Мова',
+  langFr: 'Французька',
+  langEn: 'Англійська',
+  navHome: 'Головна',
+  navLearn: 'Навчання',
+  navReport: 'Повідомити',
+  navLea: 'Леа',
+  navHelp: 'Допомога',
+  navProfile: 'Профіль',
+  adminDash: 'Адмін-панель'
+});
 
 // Add extra keys to FR and EN as well
 window.i18n_extended.fr = {
