@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
@@ -315,7 +316,7 @@ export default async (req: Request, context: Context) => {
     }
 
     // Create a new UUID and insert into Supabase
-    const newUUID = crypto.randomUUID();
+    const newUUID = randomUUID();
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
@@ -410,7 +411,7 @@ export default async (req: Request, context: Context) => {
       return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
     }
 
-    const id = crypto.randomUUID();
+    const id = randomUUID();
     const adminCode = genAdminCode();
     const now = new Date().toISOString();
     const plan = body.plan || 'starter';
