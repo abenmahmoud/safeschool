@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 
 // ---------------------------------------------------------------------------
@@ -35,7 +36,7 @@ export default async (req: Request) => {
   const path = url.pathname.replace('/api/csrf', '').replace(/^\/+/, '') || 'token';
 
   if (req.method === 'GET' && path === 'token') {
-    const token = crypto.randomUUID();
+    const token = randomUUID();
     const store = getTokenStore();
     await store.setJSON(`csrf_${token}`, { created: Date.now() });
     return cors({ token });

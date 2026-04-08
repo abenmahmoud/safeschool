@@ -2,6 +2,13 @@
 // Key is stored in env: REPORTS_ENCRYPTION_KEY (hex, 32 bytes)
 // Key ID for rotation: REPORTS_ENCRYPTION_KEY_ID
 
+import nodeCrypto from 'node:crypto';
+
+function getCrypto(): Crypto {
+  if (typeof globalThis !== 'undefined' && globalThis.crypto) return globalThis.crypto;
+  return nodeCrypto.webcrypto as unknown as Crypto;
+}
+
 // Default export required by Netlify Functions runtime
 export default async () => new Response('Not a public endpoint', { status: 404 });
 
@@ -28,12 +35,12 @@ export interface EncryptedEnvelope {
 
 export async function encrypt(plaintext: string): Promise<EncryptedEnvelope> {
   const { key, keyId } = getEncryptionKey();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv = getCrypto().getRandomValues(new Uint8Array(12));
   const encoder = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
+  const cryptoKey = await getCrypto().subtle.importKey(
     'raw', key, { name: 'AES-GCM' }, false, ['encrypt']
   );
-  const encrypted = await crypto.subtle.encrypt(
+  const encrypted = await getCrypto().subtle.encrypt(
     { name: 'AES-GCM', iv, tagLength: 128 },
     cryptoKey,
     encoder.encode(plaintext)
@@ -63,10 +70,10 @@ export async function decrypt(envelope: EncryptedEnvelope): Promise<string> {
   combined.set(ciphertext);
   combined.set(authTag, ciphertext.length);
 
-  const cryptoKey = await crypto.subtle.importKey(
+  const cryptoKey = await getCrypto().subtle.importKey(
     'raw', key, { name: 'AES-GCM' }, false, ['decrypt']
   );
-  const decrypted = await crypto.subtle.decrypt(
+  const decrypted = await getCrypto().subtle.decrypt(
     { name: 'AES-GCM', iv, tagLength: 128 },
     cryptoKey,
     combined

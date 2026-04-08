@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 
@@ -145,8 +146,10 @@ async function syncToSupabase(school: any, store: any): Promise<void> {
 
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') {
-    return cors({ ok: true });
+    return cors({ ok: true }, 200, req);
   }
+
+  try {
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/establishments', '');
@@ -315,7 +318,7 @@ export default async (req: Request, context: Context) => {
     }
 
     // Create a new UUID and insert into Supabase
-    const newUUID = crypto.randomUUID();
+    const newUUID = randomUUID();
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
@@ -410,7 +413,7 @@ export default async (req: Request, context: Context) => {
       return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
     }
 
-    const id = crypto.randomUUID();
+    const id = randomUUID();
     const adminCode = genAdminCode();
     const now = new Date().toISOString();
     const plan = body.plan || 'starter';
@@ -526,7 +529,12 @@ export default async (req: Request, context: Context) => {
     return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password });
   }
 
-  return cors({ error: 'Route non trouvée' }, 404);
+  return cors({ error: 'Route non trouvée' }, 404, req);
+
+  } catch (err: any) {
+    console.error('api-establishments unhandled error:', err);
+    return cors({ error: 'Erreur interne du serveur', detail: String(err?.message || err) }, 500, req);
+  }
 };
 
 export const config: Config = {
