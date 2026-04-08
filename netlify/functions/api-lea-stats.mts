@@ -95,6 +95,7 @@ async function findSchoolUUID(schoolId: string): Promise<string | null> {
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') return cors({ ok: true });
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/lea-stats', '');
   const store = getStore({ name: 'lea-stats', consistency: 'strong' });
@@ -263,6 +264,10 @@ export default async (req: Request, context: Context) => {
   }
 
   return cors({ error: 'Not found' }, 404);
+  } catch (err: any) {
+    console.error('[api-lea-stats] Unhandled error:', err);
+    return cors({ error: 'Erreur interne du serveur', detail: err?.message }, 500);
+  }
 };
 
 export const config: Config = {

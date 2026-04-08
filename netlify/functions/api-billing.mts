@@ -222,6 +222,7 @@ async function createInvoice(schoolId: string, planId: string, amount: number, c
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') return cors({ ok: true });
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/billing', '');
   const store = getStore({ name: 'billing', consistency: 'strong' });
@@ -904,6 +905,10 @@ export default async (req: Request, context: Context) => {
   }
 
   return cors({ error: 'Route non trouvee' }, 404);
+  } catch (err: any) {
+    console.error('[api-billing] Unhandled error:', err);
+    return cors({ error: 'Erreur interne du serveur', detail: err?.message }, 500);
+  }
 };
 
 export const config: Config = {

@@ -162,18 +162,6 @@ force = false
   [redirects.headers]
 
 [[redirects]]
-from = "/api/*"
-to = "/api/:splat"
-status = 200
-force = false
-
-  [redirects.query]
-
-  [redirects.conditions]
-
-  [redirects.headers]
-
-[[redirects]]
 from = "/api/csrf/*"
 to = "/.netlify/functions/api-csrf"
 status = 200
