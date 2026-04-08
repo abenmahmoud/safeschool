@@ -1,12 +1,12 @@
 import type { Context, Config } from '@netlify/edge-functions'
 
-// V8 Pro — Subdomain Router with improved validation and error handling
+// V11 — Subdomain Router with custom domain support
 export default async (req: Request, context: Context) => {
   try {
     const url = new URL(req.url)
     const hostname = url.hostname
 
-    // Extract subdomain: xxx.safeschool.fr or xxx.safeschool.com
+    // Extract subdomain from safeschool.fr, safeschool.com, safeschool.net, or Netlify app
     const safeschoolMatch = hostname.match(/^([a-z0-9][a-z0-9-]*[a-z0-9])\.(safeschool\.(fr|com|net)|darling-muffin-21eb90\.netlify\.app)$/i)
 
     // Skip if no subdomain, or if it's a reserved subdomain

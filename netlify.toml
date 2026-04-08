@@ -34,7 +34,7 @@ for = "/*"
   Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
   Cross-Origin-Opener-Policy = "same-origin"
   Cross-Origin-Resource-Policy = "same-origin"
-  Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app https://*.safeschool.fr https://*.safeschool.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+  Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://*.netlify.app https://*.safeschool.fr https://*.safeschool.com https://*.safeschool.net https://safeschool.fr https://safeschool.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
 
 [[headers]]
 for = "/*.html"
