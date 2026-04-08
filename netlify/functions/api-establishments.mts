@@ -145,9 +145,10 @@ async function syncToSupabase(school: any, store: any): Promise<void> {
 
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') {
-    return cors({ ok: true });
+    return cors({ ok: true }, 200, req);
   }
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/establishments', '');
   const store = getStore({ name: 'establishments', consistency: 'strong' });
@@ -157,9 +158,9 @@ export default async (req: Request, context: Context) => {
     const slug = path.replace('/by-slug/', '');
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const entry = index.find((e: any) => e.slug === slug && e.is_active);
-    if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404);
+    if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404, req);
     const data = await store.get(`school_${entry.id}`, { type: 'json' });
-    if (!data) return cors({ error: 'Données non trouvées' }, 404);
+    if (!data) return cors({ error: 'Données non trouvées' }, 404, req);
     // If authenticated as superadmin, return admin info too
     const isAdmin = authCheck(req);
     const publicInfo: any = {
@@ -175,7 +176,7 @@ export default async (req: Request, context: Context) => {
       publicInfo.admin_code = (data as any).admin_code;
       publicInfo.admin_email = (data as any).admin_email;
     }
-    return cors(publicInfo);
+    return cors(publicInfo, 200, req);
   }
 
   // Public endpoint: list active establishments (for app)
@@ -190,7 +191,7 @@ export default async (req: Request, context: Context) => {
         supabase_id: data?.supabase_id || null
       });
     }
-    return cors(results);
+    return cors(results, 200, req);
   }
 
   // Public endpoint: admin login for a school (verifies credentials without exposing them)
@@ -199,29 +200,29 @@ export default async (req: Request, context: Context) => {
     const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
     const rateCheck = await checkLoginRateLimit(clientIp);
     if (rateCheck.blocked) {
-      return cors({ error: 'Trop de tentatives. Reessayez dans 15 minutes.', retry_after_seconds: LOGIN_RATE_WINDOW_MS / 1000 }, 429);
+      return cors({ error: 'Trop de tentatives. Reessayez dans 15 minutes.', retry_after_seconds: LOGIN_RATE_WINDOW_MS / 1000 }, 429, req);
     }
 
     const slug = path.replace('/admin-login/', '');
     if (!slug || slug.length > 100 || !/^[a-z0-9-]+$/.test(slug)) {
-      return cors({ error: 'Slug invalide' }, 400);
+      return cors({ error: 'Slug invalide' }, 400, req);
     }
 
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const entry = index.find((e: any) => e.slug === slug && e.is_active);
-    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404);
+    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
     const data = await store.get(`school_${entry.id}`, { type: 'json' }) as any;
-    if (!data) return cors({ error: 'Donnees non trouvees' }, 404);
+    if (!data) return cors({ error: 'Donnees non trouvees' }, 404, req);
 
     let body: any;
-    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
 
     const email = (body.email || '').trim().toLowerCase();
     const password = (body.password || '').trim();
 
-    if (!email || !isValidEmail(email)) return cors({ error: 'Format d\'email invalide' }, 400);
-    if (!password || password.length === 0) return cors({ error: 'Mot de passe requis' }, 400);
-    if (password.length > 200) return cors({ error: 'Mot de passe trop long' }, 400);
+    if (!email || !isValidEmail(email)) return cors({ error: 'Format d\'email invalide' }, 400, req);
+    if (!password || password.length === 0) return cors({ error: 'Mot de passe requis' }, 400, req);
+    if (password.length > 200) return cors({ error: 'Mot de passe trop long' }, 400, req);
 
     // Check admin credentials
     const storedEmail = (data.admin_email || '').toLowerCase();
@@ -235,21 +236,21 @@ export default async (req: Request, context: Context) => {
         name: data.name,
         plan: data.plan,
         admin_email: data.admin_email
-      });
+      }, 200, req);
     }
 
     await recordLoginAttempt(clientIp);
-    return cors({ error: 'Identifiants incorrects', attempts_remaining: rateCheck.remaining - 1 }, 401);
+    return cors({ error: 'Identifiants incorrects', attempts_remaining: rateCheck.remaining - 1 }, 401, req);
   }
 
   // POST /api/establishments/ensure-uuid - Resolve a school to a valid Supabase UUID (public - needed by client for report submission)
   if (req.method === 'POST' && path === '/ensure-uuid') {
     let body: any;
-    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400); }
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
 
     const blobId = body.blob_id || body.id;
     const slug = body.slug;
-    if (!blobId && !slug) return cors({ error: 'blob_id ou slug requis' }, 400);
+    if (!blobId && !slug) return cors({ error: 'blob_id ou slug requis' }, 400, req);
 
     // Find the school in blobs
     let schoolData: any = null;
@@ -263,7 +264,7 @@ export default async (req: Request, context: Context) => {
         schoolData = await store.get(`school_${entry.id}`, { type: 'json' });
       }
     }
-    if (!schoolData) return cors({ error: 'École non trouvée' }, 404);
+    if (!schoolData) return cors({ error: 'École non trouvée' }, 404, req);
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -278,26 +279,23 @@ export default async (req: Request, context: Context) => {
           if (checkRes.ok) {
             const rows = await checkRes.json();
             if (!Array.isArray(rows) || rows.length === 0) {
-              // UUID cached but school not in Supabase - re-sync
               await syncToSupabase({ ...schoolData, id: schoolData.supabase_id }, store).catch(() => {});
             }
           }
         } catch { /* best effort */ }
       }
-      return cors({ uuid: schoolData.supabase_id, source: 'cached' });
+      return cors({ uuid: schoolData.supabase_id, source: 'cached' }, 200, req);
     }
 
     // If blob ID is already a valid UUID
     if (uuidRegex.test(schoolData.id)) {
-      // Ensure it exists in Supabase
       if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
         await syncToSupabase(schoolData, store).catch(() => {});
       }
-      return cors({ uuid: schoolData.id, source: 'blob_uuid' });
+      return cors({ uuid: schoolData.id, source: 'blob_uuid' }, 200, req);
     }
 
     // Old-format ID: need to create a proper UUID
-    // First try to look up by slug in Supabase (maybe it was synced before)
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
         const lookupRes = await fetch(`${SUPABASE_URL}/rest/v1/schools?slug=eq.${encodeURIComponent(schoolData.slug)}&select=id`, {
@@ -308,7 +306,7 @@ export default async (req: Request, context: Context) => {
           if (Array.isArray(rows) && rows.length > 0) {
             schoolData.supabase_id = rows[0].id;
             await store.setJSON(`school_${schoolData.id}`, schoolData);
-            return cors({ uuid: rows[0].id, source: 'lookup' });
+            return cors({ uuid: rows[0].id, source: 'lookup' }, 200, req);
           }
         }
       } catch { /* ignore */ }
@@ -345,7 +343,7 @@ export default async (req: Request, context: Context) => {
           const finalUUID = (Array.isArray(supaData) && supaData.length > 0) ? supaData[0].id : newUUID;
           schoolData.supabase_id = finalUUID;
           await store.setJSON(`school_${schoolData.id}`, schoolData);
-          return cors({ uuid: finalUUID, source: 'created' });
+          return cors({ uuid: finalUUID, source: 'created' }, 200, req);
         } else {
           console.warn('Supabase insert failed:', res.status, await res.text().catch(() => ''));
         }
@@ -357,12 +355,12 @@ export default async (req: Request, context: Context) => {
     // Last resort: generate UUID locally (Supabase unavailable)
     schoolData.supabase_id = newUUID;
     await store.setJSON(`school_${schoolData.id}`, schoolData);
-    return cors({ uuid: newUUID, source: 'generated', warning: 'Supabase sync unavailable' });
+    return cors({ uuid: newUUID, source: 'generated', warning: 'Supabase sync unavailable' }, 200, req);
   }
 
   // All other endpoints require superadmin auth
   if (!authCheck(req)) {
-    return cors({ error: 'Non autorisé' }, 401);
+    return cors({ error: 'Non autorisé' }, 401, req);
   }
 
   // GET /api/establishments - List all (superadmin)
@@ -373,15 +371,15 @@ export default async (req: Request, context: Context) => {
       const data = await store.get(`school_${entry.id}`, { type: 'json' });
       if (data) schools.push(data);
     }
-    return cors(schools);
+    return cors(schools, 200, req);
   }
 
   // GET /api/establishments/:id - Get single (superadmin)
   if (req.method === 'GET' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
     const id = path.slice(1);
     const data = await store.get(`school_${id}`, { type: 'json' });
-    if (!data) return cors({ error: 'Non trouvé' }, 404);
-    return cors(data);
+    if (!data) return cors({ error: 'Non trouvé' }, 404, req);
+    return cors(data, 200, req);
   }
 
   // POST /api/establishments - Create
@@ -390,24 +388,24 @@ export default async (req: Request, context: Context) => {
     try {
       body = await req.json();
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return cors({ error: 'Corps de requête invalide' }, 400, req);
     }
 
     if (!body.name || typeof body.name !== 'string' || body.name.trim().length < 2) {
-      return cors({ error: 'Nom requis (minimum 2 caractères)' }, 400);
+      return cors({ error: 'Nom requis (minimum 2 caractères)' }, 400, req);
     }
     if (body.email && !isValidEmail(body.email)) {
-      return cors({ error: 'Format d\'email invalide' }, 400);
+      return cors({ error: 'Format d\'email invalide' }, 400, req);
     }
     if (body.admin_email && !isValidEmail(body.admin_email)) {
-      return cors({ error: 'Format d\'email admin invalide' }, 400);
+      return cors({ error: 'Format d\'email admin invalide' }, 400, req);
     }
 
     const name = sanitize(body.name.trim());
     const slug = body.slug || genSlug(name);
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     if (index.find((e: any) => e.slug === slug)) {
-      return cors({ error: 'Sous-domaine déjà utilisé' }, 409);
+      return cors({ error: 'Sous-domaine déjà utilisé' }, 409, req);
     }
 
     const id = crypto.randomUUID();
@@ -453,14 +451,14 @@ export default async (req: Request, context: Context) => {
     // Sync to Supabase (non-blocking)
     syncToSupabase(school, store).catch(() => {});
 
-    return cors(school, 201);
+    return cors(school, 201, req);
   }
 
   // PUT /api/establishments/:id - Update
   if (req.method === 'PUT' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
     const id = path.slice(1);
     const existing = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!existing) return cors({ error: 'Non trouvé' }, 404);
+    if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
 
     const body = await req.json() as any;
     const updated = { ...existing, ...body, id, updated_at: new Date().toISOString() };
@@ -479,7 +477,7 @@ export default async (req: Request, context: Context) => {
       await store.setJSON('_index', index);
     }
 
-    return cors(updated);
+    return cors(updated, 200, req);
   }
 
   // DELETE /api/establishments/:id
@@ -489,14 +487,14 @@ export default async (req: Request, context: Context) => {
     const index = await store.get('_index', { type: 'json' }) as any[] || [];
     const filtered = index.filter((e: any) => e.id !== id);
     await store.setJSON('_index', filtered);
-    return cors({ deleted: true });
+    return cors({ deleted: true }, 200, req);
   }
 
   // POST /api/establishments/:id/staff-codes - Generate staff codes
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/staff-codes$/)) {
     const id = path.split('/')[1];
     const existing = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!existing) return cors({ error: 'Non trouvé' }, 404);
+    if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
 
     const body = await req.json() as any;
     const count = Math.min(body.count || 5, 50);
@@ -511,22 +509,26 @@ export default async (req: Request, context: Context) => {
     }
     existing.staff_codes = codes;
     await store.setJSON(`school_${id}`, existing);
-    return cors({ codes });
+    return cors({ codes }, 200, req);
   }
 
   // POST /api/establishments/:id/regenerate-admin
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/regenerate-admin$/)) {
     const id = path.split('/')[1];
     const existing = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!existing) return cors({ error: 'Non trouvé' }, 404);
+    if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
 
     existing.admin_code = genAdminCode();
     existing.admin_password = existing.admin_code;
     await store.setJSON(`school_${id}`, existing);
-    return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password });
+    return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password }, 200, req);
   }
 
-  return cors({ error: 'Route non trouvée' }, 404);
+  return cors({ error: 'Route non trouvée' }, 404, req);
+  } catch (error) {
+    console.error('API establishments error:', error);
+    return cors({ error: 'Erreur interne du serveur' }, 500, req);
+  }
 };
 
 export const config: Config = {

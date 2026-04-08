@@ -1,21 +1,36 @@
 import type { Context, Config } from '@netlify/edge-functions'
 
-// V8 Pro — Subdomain Router with improved validation and error handling
+// V10 — Subdomain Router with improved validation and wildcard support
 export default async (req: Request, context: Context) => {
   try {
     const url = new URL(req.url)
     const hostname = url.hostname
 
-    // Extract subdomain: xxx.safeschool.fr or xxx.safeschool.com
-    const safeschoolMatch = hostname.match(/^([a-z0-9][a-z0-9-]*[a-z0-9])\.(safeschool\.(fr|com|net)|darling-muffin-21eb90\.netlify\.app)$/i)
+    // Extract subdomain from various domain patterns:
+    // - xxx.safeschool.fr / .com / .net
+    // - xxx--darling-muffin-21eb90.netlify.app (branch deploys)
+    let subdomain: string | null = null
 
-    // Skip if no subdomain, or if it's a reserved subdomain
-    const reserved = ['www', 'app', 'admin', 'api', 'staging', 'dev', 'test', 'mail', 'smtp', 'ftp']
-    if (!safeschoolMatch || reserved.includes(safeschoolMatch[1].toLowerCase())) {
-      return
+    // Match: lycee-name.safeschool.fr (or .com / .net)
+    const safeschoolMatch = hostname.match(/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\.(safeschool\.(fr|com|net))$/i)
+    if (safeschoolMatch) {
+      subdomain = safeschoolMatch[1].toLowerCase()
     }
 
-    const subdomain = safeschoolMatch[1].toLowerCase()
+    // Match: lycee-name--darling-muffin-21eb90.netlify.app (Netlify branch subdomain)
+    if (!subdomain) {
+      const netlifyMatch = hostname.match(/^([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)--darling-muffin-21eb90\.netlify\.app$/i)
+      if (netlifyMatch) {
+        subdomain = netlifyMatch[1].toLowerCase()
+      }
+    }
+
+    // Skip if no subdomain detected
+    if (!subdomain) return
+
+    // Skip reserved subdomains
+    const reserved = ['www', 'app', 'admin', 'api', 'staging', 'dev', 'test', 'mail', 'smtp', 'ftp', 'ns1', 'ns2']
+    if (reserved.includes(subdomain)) return
 
     // For static assets, API calls, and known file extensions, pass through
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.netlify/') ||
@@ -23,17 +38,18 @@ export default async (req: Request, context: Context) => {
       return
     }
 
-    // For HTML pages, inject the subdomain as a query parameter
+    // For HTML pages, inject the subdomain as a global variable
     if (url.pathname === '/' || url.pathname === '/index.html') {
-      url.searchParams.set('school', subdomain)
       const response = await context.next()
       const html = await response.text()
-      // Safely inject school slug - only alphanumeric and hyphens allowed by regex
+      // Safely inject school slug - only alphanumeric and hyphens allowed by regex above
       const injection = `<script>window.__SAFESCHOOL_SLUG='${subdomain}';</script>`
       const modified = html.replace('<head>', '<head>' + injection)
+      const headers = new Headers(response.headers)
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
       return new Response(modified, {
         status: 200,
-        headers: response.headers
+        headers
       })
     }
 
