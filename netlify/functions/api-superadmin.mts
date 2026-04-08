@@ -95,6 +95,7 @@ async function clearRateLimit(ip: string): Promise<void> {
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') return cors({ ok: true });
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/superadmin', '');
   const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
@@ -319,6 +320,10 @@ export default async (req: Request, context: Context) => {
   }
 
   return cors({ error: 'Route non trouvée' }, 404);
+  } catch (err: any) {
+    console.error('[api-superadmin] Unhandled error:', err);
+    return cors({ error: 'Erreur interne du serveur', detail: err?.message }, 500);
+  }
 };
 
 export const config: Config = {

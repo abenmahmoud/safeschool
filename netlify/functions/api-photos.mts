@@ -72,6 +72,7 @@ export default async (req: Request, context: Context) => {
     return cors({ ok: true });
   }
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/photos', '');
   const store = getStore({ name: 'report-photos', consistency: 'strong' });
@@ -205,6 +206,10 @@ export default async (req: Request, context: Context) => {
   }
 
   return cors({ error: 'Route non trouvée' }, 404);
+  } catch (err: any) {
+    console.error('[api-photos] Unhandled error:', err);
+    return cors({ error: 'Erreur interne du serveur', detail: err?.message }, 500);
+  }
 };
 
 export const config: Config = {

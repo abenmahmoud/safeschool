@@ -55,6 +55,7 @@ export default async function handler(req: Request, context: Context) {
     return cors({ ok: true });
   }
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/gdpr', '').replace(/^\//, '');
 
@@ -174,6 +175,10 @@ export default async function handler(req: Request, context: Context) {
   }
 
   return cors({ error: 'Not found' }, 404);
+  } catch (err: any) {
+    console.error('[api-gdpr] Unhandled error:', err);
+    return cors({ error: 'Erreur interne du serveur', detail: err?.message }, 500);
+  }
 }
 
 export const config: Config = {
