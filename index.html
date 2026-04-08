@@ -458,6 +458,18 @@ html.dark .dm-switch::after { left:25px; }
 .etab-info p{font-size:.8rem;color:var(--tm)}
 .etab-type-badge{font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:10px;display:inline-block;margin-top:4px}
 .etab-footer{padding:18px 20px;text-align:center}
+.etab-search-wrap{padding:0 20px 16px;position:sticky;top:0;z-index:10}
+.etab-search{position:relative;max-width:400px;margin:0 auto}
+.etab-search input{width:100%;padding:14px 18px 14px 46px;border:2px solid var(--border);border-radius:14px;background:#fff;font-size:.92rem;color:var(--t);outline:none;transition:.2s;font-family:inherit}
+.etab-search input:focus{border-color:var(--p);box-shadow:0 0 0 4px rgba(79,70,229,.1)}
+.etab-search input::placeholder{color:var(--ts)}
+.etab-search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ts);pointer-events:none;display:flex;align-items:center}
+.etab-search .etab-search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--border);border:none;border-radius:50%;width:24px;height:24px;display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--tm);font-size:.8rem;transition:.15s}
+.etab-search .etab-search-clear:hover{background:var(--p);color:#fff}
+.etab-search.has-value .etab-search-clear{display:flex}
+.etab-no-results{text-align:center;padding:30px 20px;color:var(--tm)}
+.etab-no-results .etab-no-ico{font-size:2.5rem;margin-bottom:10px}
+.etab-count{text-align:center;font-size:.76rem;color:var(--ts);margin-bottom:8px;font-weight:500}
 .etab-current{display:flex;align-items:center;gap:8px;background:var(--pbg);border:1.5px solid rgba(79,70,229,.15);border-radius:var(--r12);padding:8px 14px;margin:0 20px;cursor:pointer;transition:.2s}
 .etab-current:hover{background:var(--p);color:#fff;border-color:var(--p)}
 .etab-current:hover *{color:#fff!important}
@@ -668,6 +680,14 @@ html.dark .dm-switch::after { left:25px; }
     <h1 id="etab-title"></h1>
     <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto" id="etab-subtitle"></p>
   </div>
+  <div class="etab-search-wrap">
+    <div class="etab-search" id="etab-search">
+      <span class="etab-search-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input type="text" id="etab-search-input" placeholder="Rechercher un établissement..." autocomplete="off" spellcheck="false">
+      <button class="etab-search-clear" onclick="clearEtabSearch()" aria-label="Effacer">&times;</button>
+    </div>
+  </div>
+  <div id="etab-result-count" class="etab-count"></div>
   <div class="etab-list" id="etab-list">
     <div class="etab-loading"><div class="spinner"></div><p>Chargement des établissements…</p></div>
   </div>
@@ -1676,13 +1696,15 @@ async function loadEstablishments() {
   return etabList;
 }
 
+let etabSearchQuery = '';
+
 function renderEtabList() {
   const el = document.getElementById('etab-list');
   if (!el) return;
-  // Update i18n texts
   const titleEl = document.getElementById('etab-title');
   const subtitleEl = document.getElementById('etab-subtitle');
   const footerEl = document.getElementById('etab-footer-text');
+  const countEl = document.getElementById('etab-result-count');
   if(titleEl) titleEl.textContent = t('chooseSchool');
   if(subtitleEl) subtitleEl.textContent = t('chooseSchoolDesc');
   if(footerEl) footerEl.textContent = t('rgpdFooter');
@@ -1692,6 +1714,7 @@ function renderEtabList() {
   }
 
   if (etabList.length === 0) {
+    if(countEl) countEl.textContent = '';
     el.innerHTML = `<div style="text-align:center;padding:30px">
       <div style="font-size:2.5rem;margin-bottom:12px">🏫</div>
       <p style="font-weight:600;margin-bottom:8px">${t('noSchools')}</p>
@@ -1700,23 +1723,96 @@ function renderEtabList() {
     </div>`;
     return;
   }
-  el.innerHTML = etabList.map(e => `
+
+  // Filter by search query (minimum 2 characters to start filtering)
+  const query = etabSearchQuery.trim().toLowerCase();
+  const normalize = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  let filtered = etabList;
+  if (query.length >= 2) {
+    const nq = normalize(query);
+    filtered = etabList.filter(e => {
+      const nName = normalize(e.name);
+      const nCity = normalize(e.address || e.city || '');
+      const nType = normalize(etabTypeLabels[e.type] || e.type || '');
+      return nName.includes(nq) || nCity.includes(nq) || nType.includes(nq) || (e.slug && e.slug.includes(nq));
+    });
+  }
+
+  // Show result count when searching
+  if (countEl) {
+    if (query.length >= 2) {
+      countEl.textContent = filtered.length === 0 ? '' : `${filtered.length} établissement${filtered.length > 1 ? 's' : ''} trouvé${filtered.length > 1 ? 's' : ''}`;
+    } else if (query.length > 0 && query.length < 2) {
+      countEl.textContent = 'Tapez au moins 2 lettres…';
+    } else {
+      countEl.textContent = etabList.length > 3 ? `${etabList.length} établissements disponibles` : '';
+    }
+  }
+
+  if (query.length >= 2 && filtered.length === 0) {
+    el.innerHTML = `<div class="etab-no-results">
+      <div class="etab-no-ico">🔍</div>
+      <p style="font-weight:600;margin-bottom:6px">Aucun résultat pour "${query}"</p>
+      <p style="font-size:.82rem">Vérifiez l'orthographe ou essayez un autre terme.</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(e => {
+    // Highlight matching text if searching
+    const highlightName = query.length >= 2 ? highlightMatch(e.name, query) : e.name;
+    const highlightCity = query.length >= 2 ? highlightMatch(e.address || '', query) : (e.address || '');
+    return `
     <div class="etab-card" onclick="confirmEstablishment('${e.id}')">
       <div class="etab-icon ${e.type}">${etabTypeIcons[e.type]||'🏢'}</div>
       <div class="etab-info">
-        <h3>${e.name}</h3>
-        <p>${e.address || ''}</p>
+        <h3>${highlightName}</h3>
+        <p>${highlightCity}</p>
         <span class="etab-type-badge" style="background:var(--pbg);color:var(--p)">${etabTypeLabels[e.type]||e.type}</span>
         ${e.plan && e.plan !== 'starter' ? `<span class="etab-type-badge" style="background:#1e1b4b;color:#a5b4fc;margin-left:4px">${e.plan.toUpperCase()}</span>` : ''}
       </div>
       <svg width="18" height="18" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
-  `).join('') + `
+    </div>`;
+  }).join('') + (query.length < 2 ? `
     <div style="margin-top:14px;text-align:center">
       <p style="font-size:.78rem;color:var(--ts);margin-bottom:8px">${t('notInList')}</p>
       <p style="font-size:.74rem;color:var(--ts)">${t('askAdmin')}</p>
-    </div>`;
+    </div>` : '');
 }
+
+function highlightMatch(text, query) {
+  if (!query || query.length < 2) return text;
+  const normalize = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const nText = normalize(text);
+  const nQuery = normalize(query);
+  const idx = nText.indexOf(nQuery);
+  if (idx === -1) return text;
+  const before = text.slice(0, idx);
+  const match = text.slice(idx, idx + query.length);
+  const after = text.slice(idx + query.length);
+  return `${before}<mark style="background:rgba(79,70,229,.15);color:var(--p);border-radius:3px;padding:0 1px">${match}</mark>${after}`;
+}
+
+function clearEtabSearch() {
+  const input = document.getElementById('etab-search-input');
+  if (input) { input.value = ''; input.focus(); }
+  etabSearchQuery = '';
+  document.getElementById('etab-search')?.classList.remove('has-value');
+  renderEtabList();
+}
+
+// Setup search event listener
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('etab-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      etabSearchQuery = this.value;
+      const wrap = document.getElementById('etab-search');
+      if (wrap) wrap.classList.toggle('has-value', this.value.length > 0);
+      renderEtabList();
+    });
+  }
+});
 
 // Verification question before selecting establishment
 function confirmEstablishment(etabId) {
@@ -1815,6 +1911,11 @@ function showEtabSelector() {
   document.getElementById('etab-current-bar').style.display = 'none';
   document.querySelector('.ebar').style.display = 'none';
   document.querySelector('.bnav').style.display = 'none';
+  // Reset search
+  etabSearchQuery = '';
+  const searchInput = document.getElementById('etab-search-input');
+  if (searchInput) searchInput.value = '';
+  document.getElementById('etab-search')?.classList.remove('has-value');
   renderEtabList();
 }
 
