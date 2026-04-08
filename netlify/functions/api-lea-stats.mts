@@ -1,9 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
-
-// ── V8 Extra Pro — Environment-driven auth ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
-const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
+import { extractClientIp, isSuperadminRequest, jsonCors, safeJson, sanitizeText } from './_lib/security.mts';
 
 // Supabase config for statistics persistence
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
@@ -28,26 +25,6 @@ async function checkStatsRateLimit(ip: string): Promise<boolean> {
   recent.push(now);
   await store.setJSON(key, { attempts: recent });
   return false;
-}
-
-function cors(body: any, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-    }
-  });
-}
-
-function authCheck(req: Request): boolean {
-  const auth = req.headers.get('x-sa-token');
-  if (!auth) return false;
-  try {
-    return atob(auth) === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
-  } catch { return false; }
 }
 
 // Supabase REST helper — saves stats to Supabase in parallel with Blobs
@@ -93,7 +70,7 @@ async function findSchoolUUID(schoolId: string): Promise<string | null> {
 }
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return jsonCors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/lea-stats', '');
@@ -102,29 +79,29 @@ export default async (req: Request, context: Context) => {
   // POST /api/lea-stats — Push stats or alerts from client (rate-limited)
   if (req.method === 'POST' && (path === '' || path === '/')) {
     // Rate limit
-    const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+    const clientIp = extractClientIp(req, context);
     if (await checkStatsRateLimit(clientIp)) {
-      return cors({ error: 'Too many requests' }, 429);
+      return jsonCors({ error: 'Too many requests' }, 429, req);
     }
 
     try {
-      const body = await req.json() as any;
+      const body = await safeJson(req);
 
       if (!body.schoolId || typeof body.schoolId !== 'string') {
-        return cors({ error: 'schoolId is required' }, 400);
+        return jsonCors({ error: 'schoolId is required' }, 400, req);
       }
 
       if (body.type === 'alert' && body.schoolId) {
         if (!body.cat || typeof body.cat !== 'string') {
-          return cors({ error: 'alert requires cat field' }, 400);
+          return jsonCors({ error: 'alert requires cat field' }, 400, req);
         }
         // Store alert in Blobs
         const alertsKey = `alerts/${body.schoolId}`;
         const existing = await store.get(alertsKey, { type: 'json' }).catch(() => []) as any[] || [];
         const alertData = {
-          cat: String(body.cat).slice(0, 100),
+          cat: sanitizeText(body.cat, 100),
           severity: Math.min(Math.max(Number(body.severity) || 0, 0), 5),
-          schoolName: String(body.schoolName || '').slice(0, 200),
+          schoolName: sanitizeText(body.schoolName || '', 200),
           ts: body.ts || new Date().toISOString()
         };
         existing.push(alertData);
@@ -143,7 +120,7 @@ export default async (req: Request, context: Context) => {
           }).catch(() => {});
         }
 
-        return cors({ ok: true });
+        return jsonCors({ ok: true }, 200, req);
       }
 
       if (body.type === 'stats' && body.schoolId) {
@@ -167,17 +144,17 @@ export default async (req: Request, context: Context) => {
           }, 'on_conflict=school_id').catch(() => {});
         }
 
-        return cors({ ok: true });
+        return jsonCors({ ok: true }, 200, req);
       }
 
-      return cors({ error: 'Invalid type' }, 400);
+      return jsonCors({ error: 'Invalid type' }, 400, req);
     } catch (e) {
-      return cors({ error: 'Invalid request' }, 400);
+      return jsonCors({ error: 'Invalid request' }, 400, req);
     }
   }
 
   // GET endpoints require superadmin auth
-  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401);
+  if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorisé' }, 401, req);
 
   // GET /api/lea-stats/all — Get all school stats (superadmin)
   if (req.method === 'GET' && path === '/all') {
@@ -190,7 +167,7 @@ export default async (req: Request, context: Context) => {
         allStats.push({ schoolId, ...data as any });
       }
     }
-    return cors(allStats);
+    return jsonCors(allStats, 200, req);
   }
 
   // GET /api/lea-stats/alerts — Get all alerts (superadmin)
@@ -204,7 +181,7 @@ export default async (req: Request, context: Context) => {
         allAlerts.push({ schoolId, alerts: data });
       }
     }
-    return cors(allAlerts);
+    return jsonCors(allAlerts, 200, req);
   }
 
   // GET /api/lea-stats/school/:id — Get stats for specific school
@@ -212,7 +189,7 @@ export default async (req: Request, context: Context) => {
     const schoolId = path.replace('/school/', '');
     const stats = await store.get(`stats/${schoolId}`, { type: 'json' });
     const alerts = await store.get(`alerts/${schoolId}`, { type: 'json' }) as any[] || [];
-    return cors({ stats: stats || {}, alerts });
+    return jsonCors({ stats: stats || {}, alerts }, 200, req);
   }
 
   // GET /api/lea-stats/report — Generate aggregated report (superadmin)
@@ -251,7 +228,7 @@ export default async (req: Request, context: Context) => {
       if (data) totalAlerts += data.length;
     }
 
-    return cors({
+    return jsonCors({
       totalConversations,
       totalMessages,
       totalAlerts,
@@ -259,10 +236,10 @@ export default async (req: Request, context: Context) => {
       globalSeverity,
       schoolBreakdown,
       generatedAt: new Date().toISOString()
-    });
+    }, 200, req);
   }
 
-  return cors({ error: 'Not found' }, 404);
+  return jsonCors({ error: 'Not found' }, 404, req);
 };
 
 export const config: Config = {

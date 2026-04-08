@@ -39,6 +39,9 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{font-family:var(--font-body);background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+body.rtl{text-align:right}
+body.rtl .bnav{direction:rtl}
+body.rtl input,body.rtl textarea{text-align:right}
 h1,h2,h3,h4{font-family:var(--font-heading);font-weight:800;line-height:1.2}
 h1{font-size:clamp(1.55rem,5vw,2.1rem)}
 h2{font-size:clamp(1.25rem,4vw,1.6rem)}
@@ -876,8 +879,11 @@ html.dark .dm-switch::after { left:25px; }
 // ═══════════════════════════════════════════
 // INTERNATIONALIZATION (i18n) — 8 languages
 // ═══════════════════════════════════════════
-const SS_LANGS = window.SS_LANGS || ['fr','en','es','de','it','pt','pl','nl'];
-const SS_LANG_LABELS = window.SS_LANG_LABELS || {fr:'Français',en:'English',es:'Español',de:'Deutsch',it:'Italiano',pt:'Português',pl:'Polski',nl:'Nederlands'};
+const SS_LANGS = window.SS_LANGS || ['fr','ar','tr','uk','en','es','de','it','pt','pl','nl'];
+const SS_LANG_LABELS = window.SS_LANG_LABELS || {
+  fr:'Français', ar:'العربية', tr:'Türkçe', uk:'Українська',
+  en:'English', es:'Español', de:'Deutsch', it:'Italiano', pt:'Português', pl:'Polski', nl:'Nederlands'
+};
 
 // Auto-detect language from browser on first visit
 function detectBrowserLang() {
@@ -889,6 +895,11 @@ function detectBrowserLang() {
 
 let currentLang = detectBrowserLang();
 localStorage.setItem('ss_lang', currentLang);
+document.documentElement.lang = currentLang;
+document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.toggle('rtl', currentLang === 'ar');
+});
 
 const i18n = {
   fr: {
@@ -1209,6 +1220,8 @@ function setLang(lang) {
   currentLang = lang;
   localStorage.setItem('ss_lang', lang);
   document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.body.classList.toggle('rtl', lang === 'ar');
   // Close all dropdowns
   document.querySelectorAll('.lang-dropdown.open').forEach(d => d.classList.remove('open'));
   applyLanguage();

@@ -1,13 +1,12 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { extractClientIp, isSuperadminRequest, jsonCors, safeJson, sanitizeText } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Auth & helpers
 // ---------------------------------------------------------------------------
 
 // ── V8 Extra Pro — Environment-driven auth ──
-const SA_EMAIL = () => Netlify.env.get('SUPERADMIN_EMAIL') || '';
-const SA_PASS  = () => Netlify.env.get('SUPERADMIN_PASS')  || '';
 const VAPID_PUBLIC  = () => Netlify.env.get('VAPID_PUBLIC_KEY')  || '';
 const VAPID_PRIVATE = () => Netlify.env.get('VAPID_PRIVATE_KEY') || '';
 
@@ -32,28 +31,6 @@ async function checkPushRateLimit(ip: string): Promise<boolean> {
   return false;
 }
 
-function cors(body: any, status = 200) {
-  return new Response(JSON.stringify(body, null, 2), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    },
-  });
-}
-
-function authCheck(req: Request): boolean {
-  const token = req.headers.get('x-sa-token');
-  if (!token) return false;
-  try {
-    return atob(token) === `${SA_EMAIL()}:${SA_PASS()}`;
-  } catch {
-    return false;
-  }
-}
-
 function getSubStore() {
   return getStore({ name: 'push-subscriptions', consistency: 'strong' });
 }
@@ -63,7 +40,7 @@ function getSubStore() {
 // ---------------------------------------------------------------------------
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return jsonCors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/push', '').replace(/^\/+/, '');
@@ -73,30 +50,30 @@ export default async (req: Request, context: Context) => {
     if (path === 'vapid-key' && req.method === 'GET') {
       const key = VAPID_PUBLIC();
       if (!key) {
-        return cors({
+        return jsonCors({
           ok: true,
           vapidKey: null,
           message: 'VAPID keys not configured. Push notifications are in demo mode.',
           demo: true
-        });
+        }, 200, req);
       }
-      return cors({ ok: true, vapidKey: key, demo: false });
+      return jsonCors({ ok: true, vapidKey: key, demo: false }, 200, req);
     }
 
     // ── POST /api/push/subscribe — Register a push subscription ──
     if (path === 'subscribe' && req.method === 'POST') {
       // Rate limit
-      const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      const clientIp = extractClientIp(req, context);
       if (await checkPushRateLimit(clientIp)) {
-        return cors({ error: 'Too many requests. Please try again later.' }, 429);
+        return jsonCors({ error: 'Too many requests. Please try again later.' }, 429, req);
       }
 
       let body: any;
-      try { body = await req.json(); } catch { return cors({ error: 'Invalid request body' }, 400); }
+      try { body = await safeJson(req); } catch { return jsonCors({ error: 'Invalid request body' }, 400, req); }
       const { subscription, schoolId, role, userId } = body;
 
       if (!subscription?.endpoint) {
-        return cors({ error: 'Missing subscription endpoint' }, 400);
+        return jsonCors({ error: 'Missing subscription endpoint' }, 400, req);
       }
 
       const store = getSubStore();
@@ -107,8 +84,8 @@ export default async (req: Request, context: Context) => {
         endpoint: subscription.endpoint,
         keys: subscription.keys || {},
         schoolId: schoolId || 'global',
-        role: role || 'student',       // student | admin | superadmin
-        userId: userId || null,
+        role: sanitizeText(role || 'student', 40),       // student | admin | superadmin
+        userId: sanitizeText(userId || '', 120) || null,
         createdAt: new Date().toISOString(),
         active: true,
         lastPush: null,
@@ -134,15 +111,15 @@ export default async (req: Request, context: Context) => {
         await store.setJSON('idx_global_all', gIds);
       }
 
-      return cors({ ok: true, subscriptionId: subId, message: 'Notifications activées' });
+      return jsonCors({ ok: true, subscriptionId: subId, message: 'Notifications activées' }, 200, req);
     }
 
     // ── DELETE /api/push/unsubscribe — Unregister a subscription ──
     if (path === 'unsubscribe' && req.method === 'POST') {
-      const body = await req.json();
+      const body = await safeJson(req);
       const { endpoint } = body;
 
-      if (!endpoint) return cors({ error: 'Missing endpoint' }, 400);
+      if (!endpoint) return jsonCors({ error: 'Missing endpoint' }, 400, req);
 
       const store = getSubStore();
       const globalIdx = (await store.get('idx_global_all', { type: 'json' }).catch(() => null)) as string[] | null;
@@ -153,34 +130,34 @@ export default async (req: Request, context: Context) => {
           if (sub?.endpoint === endpoint) {
             sub.active = false;
             await store.setJSON(subId, sub);
-            return cors({ ok: true, message: 'Subscription désactivée' });
+            return jsonCors({ ok: true, message: 'Subscription désactivée' }, 200, req);
           }
         }
       }
 
-      return cors({ ok: true, message: 'Subscription non trouvée (déjà supprimée)' });
+      return jsonCors({ ok: true, message: 'Subscription non trouvée (déjà supprimée)' }, 200, req);
     }
 
     // ── POST /api/push/send — Send push to subscribers (admin only) ──
     if (path === 'send' && req.method === 'POST') {
-      if (!authCheck(req)) return cors({ error: 'Unauthorized' }, 401);
+      if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Unauthorized' }, 401, req);
 
-      const body = await req.json();
+      const body = await safeJson(req);
       const { title, message, type, schoolId, urgent } = body;
 
-      if (!title || !message) return cors({ error: 'Missing title or message' }, 400);
+      if (!title || !message) return jsonCors({ error: 'Missing title or message' }, 400, req);
 
       const store = getSubStore();
       const targetIndex = schoolId ? `idx_${schoolId}` : 'idx_global_all';
       const subIds = (await store.get(targetIndex, { type: 'json' }).catch(() => null)) as string[] | null;
 
       if (!subIds || subIds.length === 0) {
-        return cors({
+        return jsonCors({
           ok: true,
           sent: 0,
           message: 'Aucun abonné trouvé. Les notifications seront envoyées quand des utilisateurs s\'abonneront.',
           demo: !VAPID_PRIVATE()
-        });
+        }, 200, req);
       }
 
       // In production with VAPID keys, we'd use web-push library
@@ -189,17 +166,17 @@ export default async (req: Request, context: Context) => {
       const notifId = `push_${Date.now()}`;
       await notifStore.setJSON(notifId, {
         id: notifId,
-        title,
-        body: message,
-        type: type || 'general',
-        schoolId: schoolId || 'all',
+        title: sanitizeText(title, 160),
+        body: sanitizeText(message, 1000),
+        type: sanitizeText(type || 'general', 40),
+        schoolId: sanitizeText(schoolId || 'all', 120),
         urgent: urgent || false,
         targetSubscribers: subIds.length,
         createdAt: new Date().toISOString(),
         status: VAPID_PRIVATE() ? 'queued' : 'demo-stored'
       });
 
-      return cors({
+      return jsonCors({
         ok: true,
         sent: subIds.length,
         notificationId: notifId,
@@ -207,12 +184,12 @@ export default async (req: Request, context: Context) => {
         message: VAPID_PRIVATE()
           ? `Notification envoyée à ${subIds.length} abonné(s)`
           : `Notification stockée (mode démo). Configurez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY pour l'envoi réel.`
-      });
+      }, 200, req);
     }
 
     // ── GET /api/push/stats — Subscription statistics (admin only) ──
     if (path === 'stats' && req.method === 'GET') {
-      if (!authCheck(req)) return cors({ error: 'Unauthorized' }, 401);
+      if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Unauthorized' }, 401, req);
 
       const store = getSubStore();
       const globalIdx = (await store.get('idx_global_all', { type: 'json' }).catch(() => null)) as string[] | null;
@@ -233,7 +210,7 @@ export default async (req: Request, context: Context) => {
         }
       }
 
-      return cors({
+      return jsonCors({
         ok: true,
         total: totalSubs,
         active: activeSubs,
@@ -241,14 +218,14 @@ export default async (req: Request, context: Context) => {
         byRole,
         vapidConfigured: !!VAPID_PUBLIC(),
         pushReady: !!VAPID_PRIVATE()
-      });
+      }, 200, req);
     }
 
-    return cors({ error: 'Endpoint not found', path }, 404);
+    return jsonCors({ error: 'Endpoint not found', path }, 404, req);
 
   } catch (error: any) {
     console.error('Push API error:', error);
-    return cors({ error: 'Internal server error', detail: error.message }, 500);
+    return jsonCors({ error: 'Internal server error' }, 500, req);
   }
 };
 

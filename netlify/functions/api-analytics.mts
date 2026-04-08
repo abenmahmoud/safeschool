@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { extractClientIp, isSuperadminRequest, jsonCors } from './_lib/security.mts';
 
 // --- Types ---
 
@@ -57,10 +58,6 @@ interface HealthCheck {
 
 // --- Auth, CORS & Rate Limiting ---
 
-// ── V8 Extra Pro — Environment-driven auth ──
-const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
-const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
-
 // Rate limiting: 30 requests per IP per 5 minutes for analytics
 const ANALYTICS_RATE_LIMIT = 30;
 const ANALYTICS_RATE_WINDOW_MS = 5 * 60 * 1000;
@@ -78,28 +75,6 @@ async function checkAnalyticsRateLimit(ip: string): Promise<boolean> {
   recent.push(now);
   await store.setJSON(key, { attempts: recent });
   return false;
-}
-
-function cors(body: any, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    },
-  });
-}
-
-function authCheck(req: Request): boolean {
-  const auth = req.headers.get('x-sa-token');
-  if (!auth) return false;
-  try {
-    return atob(auth) === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
-  } catch {
-    return false;
-  }
 }
 
 // --- Data loading helpers ---
@@ -258,7 +233,7 @@ async function handleTrends(): Promise<Response> {
       reason: v.highSev >= 3 ? 'Severite elevee recurrente' : 'Volume eleve d\'alertes',
     }));
 
-  return cors({
+  return jsonCors({
     trends: {
       weekly_change_pct: weeklyChangePct,
       monthly_change_pct: monthlyChangePct,
@@ -384,7 +359,7 @@ async function handleSectors(): Promise<Response> {
       reason: s.avg_severity >= 2 ? 'Severite elevee' : 'Volume important de signalements',
     }));
 
-  return cors({
+  return jsonCors({
     sectors_by_city: sectorsByCity,
     sectors_by_type: sectorsByType,
     hotspots,
@@ -575,7 +550,7 @@ async function handlePrevention(): Promise<Response> {
     return (order[a.priority] ?? 4) - (order[b.priority] ?? 4);
   });
 
-  return cors({
+  return jsonCors({
     recommendations,
     risk_score_global: riskScoreGlobal,
     risk_by_school: riskBySchool,
@@ -654,7 +629,7 @@ async function handleExport(): Promise<Response> {
     categoryTrends[alert.cat][m] = (categoryTrends[alert.cat][m] || 0) + 1;
   }
 
-  return cors({
+  return jsonCors({
     dataset: {
       meta: {
         total_schools: schools.length,
@@ -814,7 +789,7 @@ async function handleHealth(): Promise<Response> {
       (coverageCheck?.status === 'pass' ? 50 : coverageCheck?.status === 'warn' ? 25 : 0))
   );
 
-  return cors({
+  return jsonCors({
     status: overallStatus,
     checks,
     uptime_score: uptimeScore,
@@ -825,14 +800,14 @@ async function handleHealth(): Promise<Response> {
 // --- Main handler ---
 
 export default async (req: Request, context: Context): Promise<Response> => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return jsonCors({ ok: true }, 200, req);
 
-  if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+  if (!(await isSuperadminRequest(req))) return jsonCors({ error: 'Non autorise' }, 401, req);
 
   // Rate limiting
-  const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  const clientIp = extractClientIp(req, context);
   if (await checkAnalyticsRateLimit(clientIp)) {
-    return cors({ error: 'Trop de requetes. Reessayez dans quelques minutes.' }, 429);
+    return jsonCors({ error: 'Trop de requetes. Reessayez dans quelques minutes.' }, 429, req);
   }
 
   const url = new URL(req.url);
@@ -859,10 +834,10 @@ export default async (req: Request, context: Context): Promise<Response> => {
       return await handleHealth();
     }
 
-    return cors({ error: 'Route non trouvee' }, 404);
+    return jsonCors({ error: 'Route non trouvee' }, 404, req);
   } catch (err: any) {
     console.error('Analytics error:', err);
-    return cors({ error: 'Erreur interne', details: err?.message || 'Unknown error' }, 500);
+    return jsonCors({ error: 'Erreur interne' }, 500, req);
   }
 };
 
