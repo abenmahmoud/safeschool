@@ -19,6 +19,9 @@ edge_functions = "netlify/edge-functions"
   [build.services]
 
 [functions]
+  # Exclude internal shared libraries from being deployed as endpoints
+  [functions."_lib/*"]
+  excluded_routes = ["/*"]
 
   [functions."*"]
 

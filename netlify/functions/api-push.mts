@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { getAllowedOrigin } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Auth & helpers
@@ -32,14 +33,16 @@ async function checkPushRateLimit(ip: string): Promise<boolean> {
   return false;
 }
 
-function cors(body: any, status = 200) {
+function cors(body: any, status = 200, req?: Request) {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(JSON.stringify(body, null, 2), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Vary': 'Origin',
     },
   });
 }
@@ -63,7 +66,7 @@ function getSubStore() {
 // ---------------------------------------------------------------------------
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return cors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/push', '').replace(/^\/+/, '');
@@ -78,9 +81,9 @@ export default async (req: Request, context: Context) => {
           vapidKey: null,
           message: 'VAPID keys not configured. Push notifications are in demo mode.',
           demo: true
-        });
+        }, 200, req);
       }
-      return cors({ ok: true, vapidKey: key, demo: false });
+      return cors({ ok: true, vapidKey: key, demo: false }, 200, req);
     }
 
     // ── POST /api/push/subscribe — Register a push subscription ──
@@ -88,15 +91,15 @@ export default async (req: Request, context: Context) => {
       // Rate limit
       const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
       if (await checkPushRateLimit(clientIp)) {
-        return cors({ error: 'Too many requests. Please try again later.' }, 429);
+        return cors({ error: 'Too many requests. Please try again later.' }, 429, req);
       }
 
       let body: any;
-      try { body = await req.json(); } catch { return cors({ error: 'Invalid request body' }, 400); }
+      try { body = await req.json(); } catch { return cors({ error: 'Invalid request body' }, 400, req); }
       const { subscription, schoolId, role, userId } = body;
 
       if (!subscription?.endpoint) {
-        return cors({ error: 'Missing subscription endpoint' }, 400);
+        return cors({ error: 'Missing subscription endpoint' }, 400, req);
       }
 
       const store = getSubStore();
@@ -134,7 +137,7 @@ export default async (req: Request, context: Context) => {
         await store.setJSON('idx_global_all', gIds);
       }
 
-      return cors({ ok: true, subscriptionId: subId, message: 'Notifications activées' });
+      return cors({ ok: true, subscriptionId: subId, message: 'Notifications activées' }, 200, req);
     }
 
     // ── DELETE /api/push/unsubscribe — Unregister a subscription ──
@@ -142,7 +145,7 @@ export default async (req: Request, context: Context) => {
       const body = await req.json();
       const { endpoint } = body;
 
-      if (!endpoint) return cors({ error: 'Missing endpoint' }, 400);
+      if (!endpoint) return cors({ error: 'Missing endpoint' }, 400, req);
 
       const store = getSubStore();
       const globalIdx = (await store.get('idx_global_all', { type: 'json' }).catch(() => null)) as string[] | null;
@@ -153,22 +156,22 @@ export default async (req: Request, context: Context) => {
           if (sub?.endpoint === endpoint) {
             sub.active = false;
             await store.setJSON(subId, sub);
-            return cors({ ok: true, message: 'Subscription désactivée' });
+            return cors({ ok: true, message: 'Subscription désactivée' }, 200, req);
           }
         }
       }
 
-      return cors({ ok: true, message: 'Subscription non trouvée (déjà supprimée)' });
+      return cors({ ok: true, message: 'Subscription non trouvée (déjà supprimée)' }, 200, req);
     }
 
     // ── POST /api/push/send — Send push to subscribers (admin only) ──
     if (path === 'send' && req.method === 'POST') {
-      if (!authCheck(req)) return cors({ error: 'Unauthorized' }, 401);
+      if (!authCheck(req)) return cors({ error: 'Unauthorized' }, 401, req);
 
       const body = await req.json();
       const { title, message, type, schoolId, urgent } = body;
 
-      if (!title || !message) return cors({ error: 'Missing title or message' }, 400);
+      if (!title || !message) return cors({ error: 'Missing title or message' }, 400, req);
 
       const store = getSubStore();
       const targetIndex = schoolId ? `idx_${schoolId}` : 'idx_global_all';
@@ -180,7 +183,7 @@ export default async (req: Request, context: Context) => {
           sent: 0,
           message: 'Aucun abonné trouvé. Les notifications seront envoyées quand des utilisateurs s\'abonneront.',
           demo: !VAPID_PRIVATE()
-        });
+        }, 200, req);
       }
 
       // In production with VAPID keys, we'd use web-push library
@@ -207,12 +210,12 @@ export default async (req: Request, context: Context) => {
         message: VAPID_PRIVATE()
           ? `Notification envoyée à ${subIds.length} abonné(s)`
           : `Notification stockée (mode démo). Configurez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY pour l'envoi réel.`
-      });
+      }, 200, req);
     }
 
     // ── GET /api/push/stats — Subscription statistics (admin only) ──
     if (path === 'stats' && req.method === 'GET') {
-      if (!authCheck(req)) return cors({ error: 'Unauthorized' }, 401);
+      if (!authCheck(req)) return cors({ error: 'Unauthorized' }, 401, req);
 
       const store = getSubStore();
       const globalIdx = (await store.get('idx_global_all', { type: 'json' }).catch(() => null)) as string[] | null;
@@ -241,14 +244,14 @@ export default async (req: Request, context: Context) => {
         byRole,
         vapidConfigured: !!VAPID_PUBLIC(),
         pushReady: !!VAPID_PRIVATE()
-      });
+      }, 200, req);
     }
 
-    return cors({ error: 'Endpoint not found', path }, 404);
+    return cors({ error: 'Endpoint not found', path }, 404, req);
 
   } catch (error: any) {
     console.error('Push API error:', error);
-    return cors({ error: 'Internal server error', detail: error.message }, 500);
+    return cors({ error: 'Internal server error', detail: error.message }, 500, req);
   }
 };
 

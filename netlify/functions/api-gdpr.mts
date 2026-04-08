@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { getAllowedOrigin, getClientIp } from './_lib/security.mts';
 
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
@@ -25,14 +26,16 @@ async function checkGdprRateLimit(ip: string): Promise<boolean> {
   return false;
 }
 
-function cors(body: any, status = 200) {
+function cors(body: any, status = 200, req?: Request) {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Vary': 'Origin'
     }
   });
 }
@@ -52,23 +55,23 @@ async function supabaseQuery(table: string, params: string) {
 
 export default async function handler(req: Request, context: Context) {
   if (req.method === 'OPTIONS') {
-    return cors({ ok: true });
+    return cors({ ok: true }, 200, req);
   }
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/gdpr', '').replace(/^\//, '');
 
   // Rate limit all GDPR endpoints
-  const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  const clientIp = getClientIp(req, context);
   if (await checkGdprRateLimit(clientIp)) {
-    return cors({ error: 'Too many requests. Please try again later.' }, 429);
+    return cors({ error: 'Too many requests. Please try again later.' }, 429, req);
   }
 
   // GET /api/gdpr/export?code=SS-XXXXXX — export all data for a tracking code
   if (req.method === 'GET' && path === 'export') {
     const code = url.searchParams.get('code')?.trim().toUpperCase();
     if (!code || !/^SS-[A-Z0-9]{4,8}$/.test(code)) {
-      return cors({ error: 'Invalid tracking code format' }, 400);
+      return cors({ error: 'Invalid tracking code format' }, 400, req);
     }
 
     const exportData: Record<string, any> = { trackingCode: code, exportedAt: new Date().toISOString() };
@@ -103,17 +106,17 @@ export default async function handler(req: Request, context: Context) {
       }
     } catch (e) { /* no photos */ }
 
-    return cors(exportData);
+    return cors(exportData, 200, req);
   }
 
   // POST /api/gdpr/delete-request — request data deletion (soft-delete + audit)
   if (req.method === 'POST' && path === 'delete-request') {
     let body: any;
-    try { body = await req.json(); } catch { return cors({ error: 'Invalid JSON' }, 400); }
+    try { body = await req.json(); } catch { return cors({ error: 'Invalid JSON' }, 400, req); }
 
-    const code = body.code?.trim().toUpperCase();
+    const code = (typeof body.code === 'string' ? body.code : '').trim().toUpperCase();
     if (!code || !/^SS-[A-Z0-9]{4,8}$/.test(code)) {
-      return cors({ error: 'Invalid tracking code format' }, 400);
+      return cors({ error: 'Invalid tracking code format' }, 400, req);
     }
 
     // Mark the report with a deletion request flag
@@ -122,7 +125,7 @@ export default async function handler(req: Request, context: Context) {
         // Check report exists
         const reports = await supabaseQuery('reports', `tracking_code=eq.${encodeURIComponent(code)}&select=id,school_id`);
         if (!reports || reports.length === 0) {
-          return cors({ error: 'Report not found' }, 404);
+          return cors({ error: 'Report not found' }, 404, req);
         }
 
         const reportId = reports[0].id;
@@ -164,16 +167,16 @@ export default async function handler(req: Request, context: Context) {
         return cors({
           success: true,
           message: 'Deletion request recorded. Your data will be processed within 30 days as per GDPR requirements.'
-        });
+        }, 200, req);
       } catch (e) {
-        return cors({ error: 'Failed to process deletion request' }, 500);
+        return cors({ error: 'Failed to process deletion request' }, 500, req);
       }
     }
 
-    return cors({ error: 'Database not configured' }, 503);
+    return cors({ error: 'Database not configured' }, 503, req);
   }
 
-  return cors({ error: 'Not found' }, 404);
+  return cors({ error: 'Not found' }, 404, req);
 }
 
 export const config: Config = {

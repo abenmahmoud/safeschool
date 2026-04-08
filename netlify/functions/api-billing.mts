@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { getAllowedOrigin, getClientIp, authCheckSuperadmin, parseJsonBody, sanitizeString } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Plan definitions with full feature details
@@ -114,25 +115,23 @@ const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
 const SUPERADMIN_PASS  = Netlify.env.get('SUPERADMIN_PASS')  || '';
 
 function authCheck(req: Request): boolean {
-  const auth = req.headers.get('x-sa-token');
-  if (!auth) return false;
-  try {
-    return atob(auth) === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
-  } catch { return false; }
+  return authCheckSuperadmin(req);
 }
 
 // ---------------------------------------------------------------------------
 // CORS helper
 // ---------------------------------------------------------------------------
 
-function cors(body: any, status = 200) {
+function cors(body: any, status = 200, req?: Request) {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token, stripe-signature',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token, stripe-signature, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Vary': 'Origin'
     }
   });
 }
@@ -219,12 +218,39 @@ async function createInvoice(schoolId: string, planId: string, amount: number, c
 // Main handler
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Rate limiting — 30 requests per IP per 5 minutes for billing
+// ---------------------------------------------------------------------------
+const BILLING_RATE_LIMIT = 30;
+const BILLING_RATE_WINDOW_MS = 5 * 60 * 1000;
+
+async function checkBillingRateLimit(ip: string): Promise<boolean> {
+  const rlStore = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `billing_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try { entry = await rlStore.get(key, { type: 'json' }) as any; } catch { entry = null; }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < BILLING_RATE_WINDOW_MS) || [];
+  if (recent.length >= BILLING_RATE_LIMIT) return true;
+  recent.push(now);
+  await rlStore.setJSON(key, { attempts: recent });
+  return false;
+}
+
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return cors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/billing', '');
   const store = getStore({ name: 'billing', consistency: 'strong' });
+
+  // Rate limit all billing endpoints (except webhook which has its own validation)
+  if (path !== '/webhook') {
+    const clientIp = getClientIp(req, context);
+    if (await checkBillingRateLimit(clientIp)) {
+      return cors({ error: 'Trop de requetes. Reessayez dans quelques minutes.' }, 429, req);
+    }
+  }
 
   // -----------------------------------------------------------------------
   // GET /api/billing/plans -- Enhanced plan listing with features & comparison
@@ -279,7 +305,7 @@ export default async (req: Request, context: Context) => {
       ]
     };
 
-    return cors({ plans, comparison });
+    return cors({ plans, comparison }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -289,12 +315,16 @@ export default async (req: Request, context: Context) => {
     const body = await req.json() as any;
     const { plan: planId, school_id, customer_email, customer_name, success_url, cancel_url } = body;
 
-    if (!planId || !school_id) {
-      return cors({ error: 'Les champs plan et school_id sont requis' }, 400);
+    // Checkout requires at minimum a valid school_id - no anonymous access
+    if (!planId || typeof planId !== 'string') {
+      return cors({ error: 'Plan invalide' }, 400, req);
+    }
+    if (!school_id || typeof school_id !== 'string' || school_id.length > 100) {
+      return cors({ error: 'school_id invalide' }, 400, req);
     }
 
     const plan = PLANS[planId];
-    if (!plan) return cors({ error: 'Plan invalide' }, 400);
+    if (!plan) return cors({ error: 'Plan invalide' }, 400, req);
 
     // Free plan -- no payment needed
     if (plan.price === 0) {
@@ -313,7 +343,7 @@ export default async (req: Request, context: Context) => {
         message: 'Le plan Starter est gratuit. Aucun paiement requis.',
         plan: planId,
         school_id
-      });
+      }, 200, req);
     }
 
     const stripeKey = getStripeKey();
@@ -335,7 +365,7 @@ export default async (req: Request, context: Context) => {
         const customer = await stripeRequest('/customers', 'POST', customerParams);
 
         if (customer.error) {
-          return cors({ error: 'Erreur Stripe lors de la creation du client', details: customer.error.message }, 502);
+          return cors({ error: 'Erreur Stripe lors de la creation du client', details: customer.error.message }, 502, req);
         }
 
         // Create checkout session
@@ -362,7 +392,7 @@ export default async (req: Request, context: Context) => {
         const session = await stripeRequest('/checkout/sessions', 'POST', sessionParams);
 
         if (session.error) {
-          return cors({ error: 'Erreur Stripe lors de la creation de la session', details: session.error.message }, 502);
+          return cors({ error: 'Erreur Stripe lors de la creation de la session', details: session.error.message }, 502, req);
         }
 
         // Store pending checkout
@@ -382,9 +412,9 @@ export default async (req: Request, context: Context) => {
           school_id,
           webhook_url: webhookUrl,
           trial_days: plan.trial_days
-        });
+        }, 200, req);
       } catch (err: any) {
-        return cors({ error: 'Erreur de communication avec Stripe', details: err.message }, 502);
+        return cors({ error: 'Erreur de communication avec Stripe', details: err.message }, 502, req);
       }
     }
 
@@ -413,7 +443,7 @@ export default async (req: Request, context: Context) => {
       cancel_url: cancel_url || defaultCancel,
       customer_email: customer_email || null,
       contact_email: 'contact@safeschool.fr'
-    });
+    }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -421,7 +451,7 @@ export default async (req: Request, context: Context) => {
   // -----------------------------------------------------------------------
   if (req.method === 'GET' && path.startsWith('/status/')) {
     const schoolId = path.replace('/status/', '');
-    if (!schoolId) return cors({ error: 'school_id requis' }, 400);
+    if (!schoolId) return cors({ error: 'school_id requis' }, 400, req);
 
     const subscription = await store.get(`subscription_${schoolId}`, { type: 'json' }) as any;
 
@@ -448,7 +478,7 @@ export default async (req: Request, context: Context) => {
         renewal_date: null,
         trial_active: false,
         trial_days_remaining: 0
-      });
+      }, 200, req);
     }
 
     const planDef = PLANS[subscription.plan] || PLANS.starter;
@@ -487,7 +517,7 @@ export default async (req: Request, context: Context) => {
       trial_active: trialActive,
       trial_days_remaining: trialDaysRemaining,
       cancel_at_period_end: subscription.cancel_at_period_end || false
-    });
+    }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -496,31 +526,29 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'POST' && path === '/webhook') {
     const signature = req.headers.get('stripe-signature');
     if (!signature) {
-      return cors({ error: 'Missing stripe-signature header' }, 400);
+      return cors({ error: 'Missing stripe-signature header' }, 400, req);
     }
 
     // Verify Stripe webhook signature when secret is configured
     const webhookSecret = Netlify.env.get('STRIPE_WEBHOOK_SECRET');
-    if (webhookSecret) {
-      // In production, verify signature against webhookSecret using crypto.subtle
-      // For now, basic header check ensures only Stripe sends events
-      if (!signature) {
-        return cors({ error: 'Missing stripe-signature header' }, 400);
-      }
+    if (!webhookSecret) {
+      console.warn('[BILLING] STRIPE_WEBHOOK_SECRET not configured - webhook signature not verified');
     }
+    // TODO: Implement proper Stripe signature verification using crypto.subtle
+    // when STRIPE_WEBHOOK_SECRET is available
 
     let event: any;
     try {
       event = await req.json();
     } catch {
-      return cors({ error: 'Invalid JSON payload' }, 400);
+      return cors({ error: 'Invalid JSON payload' }, 400, req);
     }
 
     const eventType = event.type;
     const data = event.data?.object;
 
     if (!eventType || !data) {
-      return cors({ error: 'Invalid event structure' }, 400);
+      return cors({ error: 'Invalid event structure' }, 400, req);
     }
 
     const schoolId = data.metadata?.school_id;
@@ -594,7 +622,7 @@ export default async (req: Request, context: Context) => {
         break;
     }
 
-    return cors({ received: true, type: eventType });
+    return cors({ received: true, type: eventType }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -602,13 +630,13 @@ export default async (req: Request, context: Context) => {
   // -----------------------------------------------------------------------
   if (req.method === 'GET' && path.startsWith('/invoices/')) {
     const schoolId = path.replace('/invoices/', '');
-    if (!schoolId) return cors({ error: 'school_id requis' }, 400);
+    if (!schoolId) return cors({ error: 'school_id requis' }, 400, req);
 
     const indexKey = `invoices_${schoolId}`;
     const invoiceIds = await store.get(indexKey, { type: 'json' }) as string[] | null;
 
     if (!invoiceIds || invoiceIds.length === 0) {
-      return cors({ school_id: schoolId, invoices: [], total: 0 });
+      return cors({ school_id: schoolId, invoices: [], total: 0 }, 200, req);
     }
 
     const invoices: any[] = [];
@@ -620,7 +648,7 @@ export default async (req: Request, context: Context) => {
     // Sort newest first
     invoices.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    return cors({ school_id: schoolId, invoices, total: invoices.length });
+    return cors({ school_id: schoolId, invoices, total: invoices.length }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -630,21 +658,24 @@ export default async (req: Request, context: Context) => {
     const body = await req.json() as any;
     const { school_id, new_plan } = body;
 
-    if (!school_id || !new_plan) {
-      return cors({ error: 'Les champs school_id et new_plan sont requis' }, 400);
+    if (!school_id || typeof school_id !== 'string' || school_id.length > 100) {
+      return cors({ error: 'school_id invalide' }, 400, req);
+    }
+    if (!new_plan || typeof new_plan !== 'string') {
+      return cors({ error: 'Plan invalide' }, 400, req);
     }
 
     const newPlanDef = PLANS[new_plan];
-    if (!newPlanDef) return cors({ error: 'Plan invalide' }, 400);
+    if (!newPlanDef) return cors({ error: 'Plan invalide' }, 400, req);
 
     const subscription = await store.get(`subscription_${school_id}`, { type: 'json' }) as any;
     const currentPlan = subscription?.plan || 'starter';
     const currentPlanDef = PLANS[currentPlan];
 
-    if (!currentPlanDef) return cors({ error: 'Plan actuel introuvable' }, 400);
+    if (!currentPlanDef) return cors({ error: 'Plan actuel introuvable' }, 400, req);
 
     if (new_plan === currentPlan) {
-      return cors({ error: 'Vous etes deja sur ce plan' }, 400);
+      return cors({ error: 'Vous etes deja sur ce plan' }, 400, req);
     }
 
     // Calculate proration
@@ -686,7 +717,7 @@ export default async (req: Request, context: Context) => {
           const updated = await stripeRequest(`/subscriptions/${subscription.stripe_subscription_id}`, 'POST', updateParams);
 
           if (updated.error) {
-            return cors({ error: 'Erreur Stripe lors de la mise a jour', details: updated.error.message }, 502);
+            return cors({ error: 'Erreur Stripe lors de la mise a jour', details: updated.error.message }, 502, req);
           }
 
           // Update local subscription record
@@ -703,10 +734,10 @@ export default async (req: Request, context: Context) => {
             proration_amount: prorationAmount,
             proration_display: `${(prorationAmount / 100).toFixed(2)}\u20AC`,
             effective_immediately: true
-          });
+          }, 200, req);
         }
       } catch (err: any) {
-        return cors({ error: 'Erreur de communication avec Stripe', details: err.message }, 502);
+        return cors({ error: 'Erreur de communication avec Stripe', details: err.message }, 502, req);
       }
     }
 
@@ -743,7 +774,7 @@ export default async (req: Request, context: Context) => {
         amount_display: `${(prorationAmount / 100).toFixed(2)}\u20AC`
       },
       stripe_integrated: !!stripeKey
-    });
+    }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -753,11 +784,11 @@ export default async (req: Request, context: Context) => {
     const body = await req.json() as any;
     const { school_id, reason, confirm } = body;
 
-    if (!school_id) return cors({ error: 'school_id requis' }, 400);
+    if (!school_id || typeof school_id !== 'string' || school_id.length > 100) return cors({ error: 'school_id requis' }, 400, req);
 
     const subscription = await store.get(`subscription_${school_id}`, { type: 'json' }) as any;
     if (!subscription || subscription.plan === 'starter') {
-      return cors({ error: 'Aucun abonnement payant a annuler' }, 400);
+      return cors({ error: 'Aucun abonnement payant a annuler' }, 400, req);
     }
 
     // If not confirmed, return retention offer
@@ -788,7 +819,7 @@ export default async (req: Request, context: Context) => {
           'Plus besoin du service',
           'Autre'
         ]
-      });
+      }, 200, req);
     }
 
     // Confirmed cancellation
@@ -803,10 +834,10 @@ export default async (req: Request, context: Context) => {
         );
 
         if (result.error) {
-          return cors({ error: 'Erreur Stripe lors de l\'annulation', details: result.error.message }, 502);
+          return cors({ error: 'Erreur Stripe lors de l\'annulation', details: result.error.message }, 502, req);
         }
       } catch (err: any) {
-        return cors({ error: 'Erreur de communication avec Stripe', details: err.message }, 502);
+        return cors({ error: 'Erreur de communication avec Stripe', details: err.message }, 502, req);
       }
     }
 
@@ -823,7 +854,7 @@ export default async (req: Request, context: Context) => {
       plan: subscription.plan,
       reason: subscription.cancel_reason,
       stripe_integrated: !!stripeKey
-    });
+    }, 200, req);
   }
 
   // -----------------------------------------------------------------------
@@ -831,7 +862,7 @@ export default async (req: Request, context: Context) => {
   // -----------------------------------------------------------------------
   if (req.method === 'GET' && path === '/revenue') {
     if (!authCheck(req)) {
-      return cors({ error: 'Non autorise. Token superadmin requis.' }, 401);
+      return cors({ error: 'Non autorise. Token superadmin requis.' }, 401, req);
     }
 
     // Gather all subscriptions from establishments store for cross-referencing
@@ -900,10 +931,10 @@ export default async (req: Request, context: Context) => {
         enterprise: { count: activeEnterprise, revenue: (activeEnterprise * PLANS.enterprise.price) / 100 }
       },
       stripe_integrated: !!getStripeKey()
-    });
+    }, 200, req);
   }
 
-  return cors({ error: 'Route non trouvee' }, 404);
+  return cors({ error: 'Route non trouvee' }, 404, req);
 };
 
 export const config: Config = {
