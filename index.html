@@ -925,6 +925,10 @@ const i18n = {
     haveCode: 'J\'ai un code — voir ma réponse',
     adminDash: 'Dashboard admin',
     trackCase: 'Suivre mon dossier',
+    searchEtab: 'Rechercher un établissement',
+    searchEtabPlaceholder: 'Nom ou ville...',
+    searchEtabNoResult: 'Aucun établissement trouvé',
+    searchEtabResults: 'Résultats',
     // Bottom nav
     navHome: 'Accueil',
     navLearn: 'Apprendre',
@@ -1080,6 +1084,10 @@ const i18n = {
     haveCode: 'I have a code — see my response',
     adminDash: 'Admin Dashboard',
     trackCase: 'Track my case',
+    searchEtab: 'Find your school',
+    searchEtabPlaceholder: 'Name or city...',
+    searchEtabNoResult: 'No school found',
+    searchEtabResults: 'Results',
     navHome: 'Home',
     navLearn: 'Learn',
     navReport: 'Report',
@@ -1911,6 +1919,15 @@ function renderHomePage() {
     </div>
   </div>
   <div style="height:14px"></div>
+  <div class="stitle">${t('searchEtab')}</div>
+  <div style="padding:0 20px">
+    <div style="position:relative">
+      <input type="text" id="home-etab-search" class="fi" placeholder="${t('searchEtabPlaceholder')}" oninput="filterHomeEtab(this.value)" autocomplete="off" style="padding-left:38px;border-radius:var(--r12)">
+      <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none" width="17" height="17" fill="none" stroke="var(--ts)" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </div>
+    <div id="home-etab-results" style="margin-top:10px"></div>
+  </div>
+  <div style="height:14px"></div>
   <div class="sdiv"><span>${t('alreadyReported')}</span></div>
   <div class="flink" onclick="go('myreport')">
     <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -1946,6 +1963,31 @@ function renderHomePage() {
   }
 }
 
+function filterHomeEtab(query) {
+  const container = document.getElementById('home-etab-results');
+  if (!container) return;
+  const q = (query || '').trim().toLowerCase();
+  if (q.length < 2) { container.innerHTML = ''; return; }
+  const results = etabList.filter(e =>
+    (e.name && e.name.toLowerCase().includes(q)) ||
+    (e.city && e.city.toLowerCase().includes(q)) ||
+    (e.address && e.address.toLowerCase().includes(q))
+  ).slice(0, 5);
+  if (results.length === 0) {
+    container.innerHTML = `<p style="text-align:center;font-size:.85rem;color:var(--ts);padding:10px 0">${t('searchEtabNoResult')}</p>`;
+    return;
+  }
+  container.innerHTML = `<p style="font-size:.75rem;color:var(--ts);margin-bottom:6px">${t('searchEtabResults')} (${results.length})</p>` +
+    results.map(e => `
+    <div class="etab-card" onclick="confirmEstablishment('${e.id}')" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;border-radius:var(--r12);border:1px solid var(--border);cursor:pointer;transition:.15s">
+      <div class="etab-icon ${e.type}" style="font-size:1.4rem">${etabTypeIcons[e.type]||'🏢'}</div>
+      <div style="flex:1;min-width:0">
+        <h4 style="font-size:.9rem;margin:0">${e.name}</h4>
+        <p style="font-size:.78rem;color:var(--ts);margin:0">${e.city || ''}</p>
+      </div>
+      <svg width="16" height="16" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`).join('');
+}
 // ═══════════════════════════════════════════
 // TEST / DEMO SHORTCUTS
 // ═══════════════════════════════════════════
