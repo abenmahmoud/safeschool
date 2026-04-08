@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { cors as secureCors, getAllowedOrigin, getClientIp, checkRateLimit, parseJsonBody, sanitizeString } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Rate limiting
@@ -54,14 +55,16 @@ function sanitizeFilename(name: string): string {
   return String(name).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, MAX_FILENAME_LENGTH);
 }
 
-function cors(body: any, status = 200, headers: Record<string, string> = {}) {
+function cors(body: any, status = 200, req?: Request, headers: Record<string, string> = {}) {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': headers['Content-Type'] || 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Vary': 'Origin',
       ...headers
     }
   });
@@ -69,7 +72,7 @@ function cors(body: any, status = 200, headers: Record<string, string> = {}) {
 
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') {
-    return cors({ ok: true });
+    return cors({ ok: true }, 200, req);
   }
 
   const url = new URL(req.url);
@@ -80,16 +83,16 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'POST' && path === '/upload') {
     try {
       // Rate limit check
-      const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      const clientIp = getClientIp(req, context);
       if (await checkUploadRateLimit(clientIp)) {
-        return cors({ error: 'Trop de telechargements. Reessayez plus tard.' }, 429);
+        return cors({ error: 'Trop de telechargements. Reessayez plus tard.' }, 429, req);
       }
 
       let body: any;
       try {
         body = await req.json();
       } catch {
-        return cors({ error: 'Corps de requete invalide' }, 400);
+        return cors({ error: 'Corps de requete invalide' }, 400, req);
       }
 
       const reportId = body.report_id;
@@ -97,16 +100,16 @@ export default async (req: Request, context: Context) => {
 
       // Server-side validation
       if (!reportId || typeof reportId !== 'string' || reportId.length > 100) {
-        return cors({ error: 'report_id invalide' }, 400);
+        return cors({ error: 'report_id invalide' }, 400, req);
       }
       if (!/^[a-zA-Z0-9_-]+$/.test(reportId)) {
-        return cors({ error: 'Format de report_id invalide' }, 400);
+        return cors({ error: 'Format de report_id invalide' }, 400, req);
       }
       if (!photos || !Array.isArray(photos) || photos.length === 0) {
-        return cors({ error: 'report_id et photos requis' }, 400);
+        return cors({ error: 'report_id et photos requis' }, 400, req);
       }
       if (photos.length > 5) {
-        return cors({ error: 'Maximum 5 photos par signalement' }, 400);
+        return cors({ error: 'Maximum 5 photos par signalement' }, 400, req);
       }
 
       const savedPhotos: any[] = [];
@@ -160,51 +163,52 @@ export default async (req: Request, context: Context) => {
       const updatedIndex = [...existing, ...savedPhotos];
       await store.setJSON(indexKey, updatedIndex);
 
-      return cors({ ok: true, count: savedPhotos.length, photos: savedPhotos });
+      return cors({ ok: true, count: savedPhotos.length, photos: savedPhotos }, 200, req);
     } catch (e: any) {
       console.error('Photo upload error:', e);
-      return cors({ error: e.message || 'Erreur upload' }, 500);
+      return cors({ error: e.message || 'Erreur upload' }, 500, req);
     }
   }
 
   // GET /api/photos/list/:reportId - List photos for a report
   if (req.method === 'GET' && path.startsWith('/list/')) {
     const reportId = path.replace('/list/', '');
-    if (!reportId) return cors({ error: 'report_id requis' }, 400);
+    if (!reportId) return cors({ error: 'report_id requis' }, 400, req);
 
     try {
       const indexKey = `${reportId}/_index`;
       const photos = await store.get(indexKey, { type: 'json' }) as any[] || [];
-      return cors({ photos });
+      return cors({ photos }, 200, req);
     } catch {
-      return cors({ photos: [] });
+      return cors({ photos: [] }, 200, req);
     }
   }
 
   // GET /api/photos/get/:key - Get a specific photo
   if (req.method === 'GET' && path.startsWith('/get/')) {
     const key = decodeURIComponent(path.replace('/get/', ''));
-    if (!key) return cors({ error: 'key requis' }, 400);
+    if (!key) return cors({ error: 'key requis' }, 400, req);
 
     try {
       const result = await store.getWithMetadata(key, { type: 'arrayBuffer' });
-      if (!result) return cors({ error: 'Photo non trouvée' }, 404);
+      if (!result) return cors({ error: 'Photo non trouvée' }, 404, req);
 
       const contentType = result.metadata?.contentType || 'image/jpeg';
       return new Response(result.data as ArrayBuffer, {
         status: 200,
         headers: {
           'Content-Type': contentType,
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'public, max-age=86400'
+          'Access-Control-Allow-Origin': getAllowedOrigin(req),
+          'Cache-Control': 'public, max-age=86400',
+          'Vary': 'Origin'
         }
       });
     } catch {
-      return cors({ error: 'Erreur lecture photo' }, 500);
+      return cors({ error: 'Erreur lecture photo' }, 500, req);
     }
   }
 
-  return cors({ error: 'Route non trouvée' }, 404);
+  return cors({ error: 'Route non trouvée' }, 404, req);
 };
 
 export const config: Config = {

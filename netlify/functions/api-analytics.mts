@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { getAllowedOrigin } from './_lib/security.mts';
 
 // --- Types ---
 
@@ -80,14 +81,16 @@ async function checkAnalyticsRateLimit(ip: string): Promise<boolean> {
   return false;
 }
 
-function cors(body: any, status = 200): Response {
+function cors(body: any, status = 200, req?: Request): Response {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Vary': 'Origin',
     },
   });
 }
@@ -169,7 +172,7 @@ function monthKey(ts: string): string {
 
 // --- Endpoint handlers ---
 
-async function handleTrends(): Promise<Response> {
+async function handleTrends(req: Request): Promise<Response> {
   const [allStats, allAlertData, schools] = await Promise.all([
     loadAllStats(),
     loadAllAlerts(),
@@ -270,10 +273,10 @@ async function handleTrends(): Promise<Response> {
       next_month_estimate: nextMonthEstimate,
       risk_schools: riskSchools,
     },
-  });
+  }, 200, req);
 }
 
-async function handleSectors(): Promise<Response> {
+async function handleSectors(req: Request): Promise<Response> {
   const [schools, allAlertData, allStats] = await Promise.all([
     loadAllSchools(),
     loadAllAlerts(),
@@ -388,10 +391,10 @@ async function handleSectors(): Promise<Response> {
     sectors_by_city: sectorsByCity,
     sectors_by_type: sectorsByType,
     hotspots,
-  });
+  }, 200, req);
 }
 
-async function handlePrevention(): Promise<Response> {
+async function handlePrevention(req: Request): Promise<Response> {
   const [allStats, allAlertData, schools] = await Promise.all([
     loadAllStats(),
     loadAllAlerts(),
@@ -579,10 +582,10 @@ async function handlePrevention(): Promise<Response> {
     recommendations,
     risk_score_global: riskScoreGlobal,
     risk_by_school: riskBySchool,
-  });
+  }, 200, req);
 }
 
-async function handleExport(): Promise<Response> {
+async function handleExport(req: Request): Promise<Response> {
   const [allStats, allAlertData, schools] = await Promise.all([
     loadAllStats(),
     loadAllAlerts(),
@@ -685,10 +688,10 @@ async function handleExport(): Promise<Response> {
     },
     format: 'json',
     generated_at: new Date().toISOString(),
-  });
+  }, 200, req);
 }
 
-async function handleHealth(): Promise<Response> {
+async function handleHealth(req: Request): Promise<Response> {
   const checks: HealthCheck[] = [];
   let passCount = 0;
 
@@ -819,20 +822,20 @@ async function handleHealth(): Promise<Response> {
     checks,
     uptime_score: uptimeScore,
     data_quality_score: dataQualityScore,
-  });
+  }, 200, req);
 }
 
 // --- Main handler ---
 
 export default async (req: Request, context: Context): Promise<Response> => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return cors({ ok: true }, 200, req);
 
-  if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+  if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401, req);
 
   // Rate limiting
   const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
   if (await checkAnalyticsRateLimit(clientIp)) {
-    return cors({ error: 'Trop de requetes. Reessayez dans quelques minutes.' }, 429);
+    return cors({ error: 'Trop de requetes. Reessayez dans quelques minutes.' }, 429, req);
   }
 
   const url = new URL(req.url);
@@ -840,29 +843,29 @@ export default async (req: Request, context: Context): Promise<Response> => {
 
   try {
     if (req.method === 'GET' && path === '/trends') {
-      return await handleTrends();
+      return await handleTrends(req);
     }
 
     if (req.method === 'GET' && path === '/sectors') {
-      return await handleSectors();
+      return await handleSectors(req);
     }
 
     if (req.method === 'GET' && path === '/prevention') {
-      return await handlePrevention();
+      return await handlePrevention(req);
     }
 
     if (req.method === 'GET' && path === '/export') {
-      return await handleExport();
+      return await handleExport(req);
     }
 
     if (req.method === 'GET' && path === '/health') {
-      return await handleHealth();
+      return await handleHealth(req);
     }
 
-    return cors({ error: 'Route non trouvee' }, 404);
+    return cors({ error: 'Route non trouvee' }, 404, req);
   } catch (err: any) {
     console.error('Analytics error:', err);
-    return cors({ error: 'Erreur interne', details: err?.message || 'Unknown error' }, 500);
+    return cors({ error: 'Erreur interne', details: err?.message || 'Unknown error' }, 500, req);
   }
 };
 

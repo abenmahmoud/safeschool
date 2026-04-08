@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { getAllowedOrigin } from './_lib/security.mts';
 
 // ── V8 Extra Pro — Environment-driven auth ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
@@ -30,14 +31,16 @@ async function checkStatsRateLimit(ip: string): Promise<boolean> {
   return false;
 }
 
-function cors(body: any, status = 200) {
+function cors(body: any, status = 200, req?: Request) {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Vary': 'Origin',
     }
   });
 }
@@ -93,7 +96,7 @@ async function findSchoolUUID(schoolId: string): Promise<string | null> {
 }
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return cors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/lea-stats', '');
@@ -104,19 +107,19 @@ export default async (req: Request, context: Context) => {
     // Rate limit
     const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
     if (await checkStatsRateLimit(clientIp)) {
-      return cors({ error: 'Too many requests' }, 429);
+      return cors({ error: 'Too many requests' }, 429, req);
     }
 
     try {
       const body = await req.json() as any;
 
       if (!body.schoolId || typeof body.schoolId !== 'string') {
-        return cors({ error: 'schoolId is required' }, 400);
+        return cors({ error: 'schoolId is required' }, 400, req);
       }
 
       if (body.type === 'alert' && body.schoolId) {
         if (!body.cat || typeof body.cat !== 'string') {
-          return cors({ error: 'alert requires cat field' }, 400);
+          return cors({ error: 'alert requires cat field' }, 400, req);
         }
         // Store alert in Blobs
         const alertsKey = `alerts/${body.schoolId}`;
@@ -143,7 +146,7 @@ export default async (req: Request, context: Context) => {
           }).catch(() => {});
         }
 
-        return cors({ ok: true });
+        return cors({ ok: true }, 200, req);
       }
 
       if (body.type === 'stats' && body.schoolId) {
@@ -167,17 +170,17 @@ export default async (req: Request, context: Context) => {
           }, 'on_conflict=school_id').catch(() => {});
         }
 
-        return cors({ ok: true });
+        return cors({ ok: true }, 200, req);
       }
 
-      return cors({ error: 'Invalid type' }, 400);
+      return cors({ error: 'Invalid type' }, 400, req);
     } catch (e) {
-      return cors({ error: 'Invalid request' }, 400);
+      return cors({ error: 'Invalid request' }, 400, req);
     }
   }
 
   // GET endpoints require superadmin auth
-  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401);
+  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
 
   // GET /api/lea-stats/all — Get all school stats (superadmin)
   if (req.method === 'GET' && path === '/all') {
@@ -190,7 +193,7 @@ export default async (req: Request, context: Context) => {
         allStats.push({ schoolId, ...data as any });
       }
     }
-    return cors(allStats);
+    return cors(allStats, 200, req);
   }
 
   // GET /api/lea-stats/alerts — Get all alerts (superadmin)
@@ -204,7 +207,7 @@ export default async (req: Request, context: Context) => {
         allAlerts.push({ schoolId, alerts: data });
       }
     }
-    return cors(allAlerts);
+    return cors(allAlerts, 200, req);
   }
 
   // GET /api/lea-stats/school/:id — Get stats for specific school
@@ -212,7 +215,7 @@ export default async (req: Request, context: Context) => {
     const schoolId = path.replace('/school/', '');
     const stats = await store.get(`stats/${schoolId}`, { type: 'json' });
     const alerts = await store.get(`alerts/${schoolId}`, { type: 'json' }) as any[] || [];
-    return cors({ stats: stats || {}, alerts });
+    return cors({ stats: stats || {}, alerts }, 200, req);
   }
 
   // GET /api/lea-stats/report — Generate aggregated report (superadmin)
@@ -259,10 +262,10 @@ export default async (req: Request, context: Context) => {
       globalSeverity,
       schoolBreakdown,
       generatedAt: new Date().toISOString()
-    });
+    }, 200, req);
   }
 
-  return cors({ error: 'Not found' }, 404);
+  return cors({ error: 'Not found' }, 404, req);
 };
 
 export const config: Config = {

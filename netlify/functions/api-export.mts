@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
+import { getAllowedOrigin } from './_lib/security.mts';
 
 // ---------------------------------------------------------------------------
 // Auth & Rate Limiting
@@ -25,20 +26,22 @@ async function checkExportRateLimit(ip: string): Promise<boolean> {
   return false;
 }
 
-function cors(body: string, status = 200, contentType = 'application/json') {
+function cors(body: string, status = 200, contentType = 'application/json', req?: Request) {
+  const origin = req ? getAllowedOrigin(req) : 'https://darling-muffin-21eb90.netlify.app';
   return new Response(body, {
     status,
     headers: {
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Vary': 'Origin',
     },
   });
 }
 
-function corsJson(body: any, status = 200) {
-  return cors(JSON.stringify(body), status);
+function corsJson(body: any, status = 200, req?: Request) {
+  return cors(JSON.stringify(body), status, 'application/json', req);
 }
 
 function authCheck(req: Request): boolean {
@@ -124,14 +127,14 @@ async function loadNotifications(day?: string) {
 // ---------------------------------------------------------------------------
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return corsJson({ ok: true });
+  if (req.method === 'OPTIONS') return corsJson({ ok: true }, 200, req);
 
-  if (!authCheck(req)) return corsJson({ error: 'Non autorise' }, 401);
+  if (!authCheck(req)) return corsJson({ error: 'Non autorise' }, 401, req);
 
   // Rate limiting
   const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
   if (await checkExportRateLimit(clientIp)) {
-    return corsJson({ error: 'Trop de requetes d\'export. Reessayez dans quelques minutes.' }, 429);
+    return corsJson({ error: 'Trop de requetes d\'export. Reessayez dans quelques minutes.' }, 429, req);
   }
 
   const url = new URL(req.url);
@@ -154,11 +157,11 @@ export default async (req: Request, context: Context) => {
       ]);
 
       if (format === 'json') {
-        return corsJson({ count: schools.length, data: schools });
+        return corsJson({ count: schools.length, data: schools }, 200, req);
       }
 
       const csv = arrayToCSV(headers, rows);
-      return cors(csv, 200, 'text/csv; charset=utf-8');
+      return cors(csv, 200, 'text/csv; charset=utf-8', req);
     }
 
     // =======================================================================
@@ -191,11 +194,11 @@ export default async (req: Request, context: Context) => {
       });
 
       if (format === 'json') {
-        return corsJson({ count: rows.length, headers, data: rows });
+        return corsJson({ count: rows.length, headers, data: rows }, 200, req);
       }
 
       const csv = arrayToCSV(headers, rows);
-      return cors(csv, 200, 'text/csv; charset=utf-8');
+      return cors(csv, 200, 'text/csv; charset=utf-8', req);
     }
 
     // =======================================================================
@@ -221,11 +224,11 @@ export default async (req: Request, context: Context) => {
       const rows = flatAlerts.map(a => [a.schoolId, a.schoolName, a.category, a.severity, a.timestamp]);
 
       if (format === 'json') {
-        return corsJson({ count: flatAlerts.length, data: flatAlerts });
+        return corsJson({ count: flatAlerts.length, data: flatAlerts }, 200, req);
       }
 
       const csv = arrayToCSV(headers, rows);
-      return cors(csv, 200, 'text/csv; charset=utf-8');
+      return cors(csv, 200, 'text/csv; charset=utf-8', req);
     }
 
     // =======================================================================
@@ -242,11 +245,11 @@ export default async (req: Request, context: Context) => {
       ]);
 
       if (format === 'json') {
-        return corsJson({ count: records.length, data: records });
+        return corsJson({ count: records.length, data: records }, 200, req);
       }
 
       const csv = arrayToCSV(headers, rows);
-      return cors(csv, 200, 'text/csv; charset=utf-8');
+      return cors(csv, 200, 'text/csv; charset=utf-8', req);
     }
 
     // =======================================================================
@@ -294,7 +297,7 @@ export default async (req: Request, context: Context) => {
       };
 
       if (format === 'json') {
-        return corsJson(summary);
+        return corsJson(summary, 200, req);
       }
 
       // CSV format for statistics
@@ -318,13 +321,13 @@ export default async (req: Request, context: Context) => {
       ];
 
       const csv = arrayToCSV(headers, rows);
-      return cors(csv, 200, 'text/csv; charset=utf-8');
+      return cors(csv, 200, 'text/csv; charset=utf-8', req);
     }
 
-    return corsJson({ error: 'Route d\'export inconnue. Routes disponibles: /schools, /reports, /alerts, /notifications, /statistics' }, 404);
+    return corsJson({ error: 'Route d\'export inconnue. Routes disponibles: /schools, /reports, /alerts, /notifications, /statistics' }, 404, req);
   } catch (e: any) {
     console.error('[EXPORT] Error:', e?.message || e);
-    return corsJson({ error: 'Erreur lors de l\'export', detail: e?.message }, 500);
+    return corsJson({ error: 'Erreur lors de l\'export', detail: e?.message }, 500, req);
   }
 };
 
