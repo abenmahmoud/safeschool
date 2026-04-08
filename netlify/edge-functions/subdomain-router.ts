@@ -1,55 +1,52 @@
-import type { Context, Config } from '@netlify/edge-functions'
+import type { Context } from '@netlify/edge-functions';
 
-// V8 Pro — Subdomain Router with improved validation and error handling
-export default async (req: Request, context: Context) => {
-  try {
-    const url = new URL(req.url)
-    const hostname = url.hostname
+const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'app.safeschool.fr';
 
-    // Extract subdomain: xxx.safeschool.fr or xxx.safeschool.com
-    const safeschoolMatch = hostname.match(/^([a-z0-9][a-z0-9-]*[a-z0-9])\.(safeschool\.(fr|com|net)|darling-muffin-21eb90\.netlify\.app)$/i)
+function extractHost(req: Request): string {
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || new URL(req.url).hostname;
+  return host.split(':')[0].toLowerCase();
+}
 
-    // Skip if no subdomain, or if it's a reserved subdomain
-    const reserved = ['www', 'app', 'admin', 'api', 'staging', 'dev', 'test', 'mail', 'smtp', 'ftp']
-    if (!safeschoolMatch || reserved.includes(safeschoolMatch[1].toLowerCase())) {
-      return
-    }
+function isTenantHost(host: string): boolean {
+  return host !== TENANT_BASE_DOMAIN && host.endsWith(`.${TENANT_BASE_DOMAIN}`);
+}
 
-    const subdomain = safeschoolMatch[1].toLowerCase()
+function getTenantSlug(host: string): string | null {
+  if (!isTenantHost(host)) return null;
+  const suffix = `.${TENANT_BASE_DOMAIN}`;
+  const slug = host.slice(0, -suffix.length).trim();
+  return /^[a-z0-9-]+$/.test(slug) ? slug : null;
+}
 
-    // For static assets, API calls, and known file extensions, pass through
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.netlify/') ||
-        url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|json|webmanifest|xml|txt|map)$/)) {
-      return
-    }
+export default async (request: Request, context: Context) => {
+  const host = extractHost(request);
+  const tenantSlug = getTenantSlug(host);
 
-    // For HTML pages, inject the subdomain as a query parameter
-    if (url.pathname === '/' || url.pathname === '/index.html') {
-      url.searchParams.set('school', subdomain)
-      const response = await context.next()
-      const html = await response.text()
-      // Safely inject school slug - only alphanumeric and hyphens allowed by regex
-      const injection = `<script>window.__SAFESCHOOL_SLUG='${subdomain}';</script>`
-      const modified = html.replace('<head>', '<head>' + injection)
-      return new Response(modified, {
-        status: 200,
-        headers: response.headers
-      })
-    }
-
-    // For superadmin pages accessed via subdomain, redirect to main domain
-    if (url.pathname.startsWith('/superadmin')) {
-      return
-    }
-
-    return
-  } catch (error) {
-    console.error('[Edge] Subdomain router error:', error)
-    return
+  if (!tenantSlug) {
+    return context.next();
   }
-}
 
-export const config: Config = {
+  const url = new URL(request.url);
+  url.hostname = TENANT_BASE_DOMAIN;
+
+  if (!url.searchParams.has('__tenant')) {
+    url.searchParams.set('__tenant', tenantSlug);
+  }
+
+  const headers = new Headers(request.headers);
+  headers.set('x-tenant-slug', tenantSlug);
+  headers.set('x-original-host', host);
+
+  const rewrittenRequest = new Request(url.toString(), {
+    method: request.method,
+    headers,
+    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    redirect: 'manual',
+  });
+
+  return context.rewrite(url.toString(), { request: rewrittenRequest });
+};
+
+export const config = {
   path: '/*',
-  excludedPath: ['/api/*', '/.netlify/*']
-}
+};
