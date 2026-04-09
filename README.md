@@ -1,4 +1,4 @@
-# SafeSchool 🛡️
+Fix: remove hardcoded Supabase keys from HTML files# SafeSchool 🛡️
 
 Application web anti-harcèlement scolaire.
 
