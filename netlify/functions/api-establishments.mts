@@ -136,6 +136,39 @@ function genSlug(name: string): string {
     .slice(0, 30);
 }
 
+// Register subdomain as Netlify domain alias (non-blocking, best-effort)
+async function addNetlifyDomain(slug: string): Promise<void> {
+  const netlifyToken = Netlify.env.get('NETLIFY_TOKEN') || '';
+  const siteId = Netlify.env.get('NETLIFY_SITE_ID') || '';
+
+  if (!netlifyToken || !siteId) {
+    console.warn('[Establishments] NETLIFY_TOKEN or NETLIFY_SITE_ID not set, domain not added');
+    return;
+  }
+
+  const domain = `${slug}.safeschool.fr`;
+
+  try {
+    const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/domain_aliases`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${netlifyToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ domain }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error(`[Establishments] Netlify domain add error: ${err}`);
+    } else {
+      console.log(`[Establishments] Netlify domain added: ${domain}`);
+    }
+  } catch (e) {
+    console.error('[Establishments] Netlify API error:', e);
+  }
+}
+
 // Sync school to Supabase (non-blocking, best-effort)
 async function syncToSupabase(school: any, store: any): Promise<void> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
@@ -517,6 +550,7 @@ export default async (req: Request, context: Context) => {
       await store.setJSON('_index', index);
 
       syncToSupabase(school, store).catch(() => {});
+      addNetlifyDomain(school.slug).catch(() => {});
 
       return cors(school, 201, req);
     }

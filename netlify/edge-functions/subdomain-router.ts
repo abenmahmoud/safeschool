@@ -1,15 +1,15 @@
 import type { Context, Config } from '@netlify/edge-functions'
 
-// V8 Pro — Subdomain Router with improved validation and error handling
+// V8 Pro — Subdomain Router FIXED
 export default async (req: Request, context: Context) => {
   try {
     const url = new URL(req.url)
     const hostname = url.hostname
 
-    // Extract subdomain: xxx.safeschool.fr or xxx.safeschool.com
-    const safeschoolMatch = hostname.match(/^([a-z0-9][a-z0-9-]*[a-z0-9])\.(safeschool\.(fr|com|net)|darling-muffin-21eb90\.netlify\.app)$/i)
+    const safeschoolMatch = hostname.match(
+      /^([a-z0-9][a-z0-9-]*[a-z0-9])\.(safeschool\.(fr|com|net)|darling-muffin-21eb90\.netlify\.app)$/i
+    )
 
-    // Skip if no subdomain, or if it's a reserved subdomain
     const reserved = ['www', 'app', 'admin', 'api', 'staging', 'dev', 'test', 'mail', 'smtp', 'ftp']
     if (!safeschoolMatch || reserved.includes(safeschoolMatch[1].toLowerCase())) {
       return
@@ -17,32 +17,40 @@ export default async (req: Request, context: Context) => {
 
     const subdomain = safeschoolMatch[1].toLowerCase()
 
-    // For static assets, API calls, and known file extensions, pass through
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.netlify/') ||
-        url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|json|webmanifest|xml|txt|map)$/)) {
+    // Passer les assets statiques sans modification
+    if (
+      url.pathname.startsWith('/api/') ||
+      url.pathname.startsWith('/.netlify/') ||
+      url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|json|webmanifest|xml|txt|map|ts)$/)
+    ) {
       return
     }
 
-    // For HTML pages, inject the subdomain as a query parameter
-    if (url.pathname === '/' || url.pathname === '/index.html') {
-      url.searchParams.set('school', subdomain)
-      const response = await context.next()
-      const html = await response.text()
-      // Safely inject school slug - only alphanumeric and hyphens allowed by regex
-      const injection = `<script>window.__SAFESCHOOL_SLUG='${subdomain}';</script>`
-      const modified = html.replace('<head>', '<head>' + injection)
-      return new Response(modified, {
-        status: 200,
-        headers: response.headers
-      })
-    }
-
-    // For superadmin pages accessed via subdomain, redirect to main domain
+    // Superadmin accessible uniquement depuis app.safeschool.fr
     if (url.pathname.startsWith('/superadmin')) {
       return
     }
 
-    return
+    // ✅ FIX PRINCIPAL : Injecter le slug sur TOUTES les pages HTML
+    const response = await context.next()
+    const contentType = response.headers.get('content-type') || ''
+
+    if (!contentType.includes('text/html')) {
+      return response
+    }
+
+    const html = await response.text()
+    const injection = `<script>window.__SAFESCHOOL_SLUG='${subdomain}';window.__SAFESCHOOL_DOMAIN='${hostname}';</script>`
+    const modified = html.replace('<head>', '<head>' + injection)
+
+    const newHeaders = new Headers(response.headers)
+    newHeaders.delete('content-length')
+
+    return new Response(modified, {
+      status: response.status,
+      headers: newHeaders
+    })
+
   } catch (error) {
     console.error('[Edge] Subdomain router error:', error)
     return
