@@ -4,18 +4,52 @@ import type { Context, Config } from '@netlify/functions';
 // ── V8 Extra Pro — Environment-driven auth ──
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
 const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
+const SITE_URL = Netlify.env.get('SITE_URL') || '';
+const DEPLOY_PRIME_URL = Netlify.env.get('DEPLOY_PRIME_URL') || '';
+const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'app.safeschool.fr';
+const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
-function cors(body: any, status = 200) {
+function normalizeOrigin(value: string): string {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
+}
+
+const allowedOrigins = [SITE_URL, DEPLOY_PRIME_URL, `https://${TENANT_BASE_DOMAIN}`]
+  .map((value) => normalizeOrigin(value))
+  .filter(Boolean);
+const escapedTenantBaseDomain = TENANT_BASE_DOMAIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapedNetlifyTarget = NETLIFY_TARGET.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const tenantOriginRegex = new RegExp(`^https:\\/\\/[a-z0-9-]+\\.${escapedTenantBaseDomain}$`);
+const deployPreviewRegex = new RegExp(`^https:\\/\\/[a-z0-9-]+--${escapedNetlifyTarget}$`);
+
+function getAllowedOrigin(req?: Request): string {
+  if (!req) return allowedOrigins[0] || `https://${TENANT_BASE_DOMAIN}`;
+  const origin = req.headers.get('origin') || '';
+  if (!origin) return allowedOrigins[0] || `https://${TENANT_BASE_DOMAIN}`;
+  if (origin === 'http://localhost:8888' || origin === 'http://localhost:3000' || origin === 'http://localhost:5173') {
+    return origin;
+  }
+  if (allowedOrigins.includes(origin)) return origin;
+  if (tenantOriginRegex.test(origin)) return origin;
+  if (deployPreviewRegex.test(origin)) return origin;
+  return allowedOrigins[0] || `https://${TENANT_BASE_DOMAIN}`;
+}
+
+function cors(body: any, status = 200, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(req),
       'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS'
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+      Vary: 'Origin',
     }
   });
 }
@@ -93,7 +127,7 @@ async function clearRateLimit(ip: string): Promise<void> {
 }
 
 export default async (req: Request, context: Context) => {
-  if (req.method === 'OPTIONS') return cors({ ok: true });
+  if (req.method === 'OPTIONS') return cors({ ok: true }, 200, req);
 
   const url = new URL(req.url);
   const path = url.pathname.replace('/api/superadmin', '');
@@ -107,28 +141,28 @@ export default async (req: Request, context: Context) => {
       return cors({
         error: 'Trop de tentatives. Réessayez dans 15 minutes.',
         retry_after_seconds: RATE_LIMIT_WINDOW_MS / 1000
-      }, 429);
+      }, 429, req);
     }
 
     let body: any;
     try {
       body = await req.json();
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return cors({ error: 'Corps de requête invalide' }, 400, req);
     }
 
     // Input validation
     if (!body.email || typeof body.email !== 'string' || !isValidEmail(body.email)) {
-      return cors({ error: 'Format d\'email invalide' }, 400);
+      return cors({ error: 'Format d\'email invalide' }, 400, req);
     }
     if (!body.password || typeof body.password !== 'string' || body.password.length === 0) {
-      return cors({ error: 'Mot de passe requis' }, 400);
+      return cors({ error: 'Mot de passe requis' }, 400, req);
     }
 
     if (body.email === SUPERADMIN_EMAIL && body.password === SUPERADMIN_PASS) {
       await clearRateLimit(clientIp);
       const token = btoa(`${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`);
-      return cors({ ok: true, token, email: SUPERADMIN_EMAIL });
+      return cors({ ok: true, token, email: SUPERADMIN_EMAIL }, 200, req);
     }
 
     await recordFailedAttempt(clientIp);
@@ -136,11 +170,11 @@ export default async (req: Request, context: Context) => {
     return cors({
       error: 'Identifiants incorrects',
       attempts_remaining: updated.remaining
-    }, 401);
+    }, 401, req);
   }
 
   // All routes below require authentication
-  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401);
+  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
 
   // ─── GET /api/superadmin/dashboard — Global stats ───
   if (req.method === 'GET' && path === '/dashboard') {
@@ -174,7 +208,7 @@ export default async (req: Request, context: Context) => {
       arr: mrr * 12,
       total_reports: totalReports,
       schools
-    });
+    }, 200, req);
   }
 
   // ─── GET /api/superadmin/school/:id/reports — Access school reports ───
@@ -182,8 +216,8 @@ export default async (req: Request, context: Context) => {
     const id = path.split('/')[2];
     const store = getStore({ name: 'establishments', consistency: 'strong' });
     const data = await store.get(`school_${id}`, { type: 'json' }) as any;
-    if (!data) return cors({ error: 'Non trouvé' }, 404);
-    return cors({ school: data, supabase_school_id: data.supabase_id || data.id });
+    if (!data) return cors({ error: 'Non trouvé' }, 404, req);
+    return cors({ school: data, supabase_school_id: data.supabase_id || data.id }, 200, req);
   }
 
   // ─── GET /api/superadmin/reports/latest — Latest auto-generated report ───
@@ -192,11 +226,11 @@ export default async (req: Request, context: Context) => {
     try {
       const latest = await store.get('_latest', { type: 'json' }) as any;
       if (!latest) {
-        return cors({ error: 'Aucun rapport disponible' }, 404);
+        return cors({ error: 'Aucun rapport disponible' }, 404, req);
       }
-      return cors({ report: latest });
+      return cors({ report: latest }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération du rapport' }, 500);
+      return cors({ error: 'Erreur lors de la récupération du rapport' }, 500, req);
     }
   }
 
@@ -219,9 +253,9 @@ export default async (req: Request, context: Context) => {
         }
       }
 
-      return cors({ count: reports.length, reports });
+      return cors({ count: reports.length, reports }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération des rapports' }, 500);
+      return cors({ error: 'Erreur lors de la récupération des rapports' }, 500, req);
     }
   }
 
@@ -243,9 +277,9 @@ export default async (req: Request, context: Context) => {
         }
       }
 
-      return cors({ count: events.length, events });
+      return cors({ count: events.length, events }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération de l\'activité' }, 500);
+      return cors({ error: 'Erreur lors de la récupération de l\'activité' }, 500, req);
     }
   }
 
@@ -255,11 +289,11 @@ export default async (req: Request, context: Context) => {
     try {
       body = await req.json();
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return cors({ error: 'Corps de requête invalide' }, 400, req);
     }
 
     if (!body.type || typeof body.type !== 'string') {
-      return cors({ error: 'Le champ "type" est requis' }, 400);
+      return cors({ error: 'Le champ "type" est requis' }, 400, req);
     }
 
     const store = getStore({ name: 'activity-log', consistency: 'strong' });
@@ -275,7 +309,7 @@ export default async (req: Request, context: Context) => {
     };
 
     await store.setJSON(key, event);
-    return cors({ ok: true, key, event });
+    return cors({ ok: true, key, event }, 200, req);
   }
 
   // ─── GET /api/superadmin/settings — Platform settings ───
@@ -283,9 +317,9 @@ export default async (req: Request, context: Context) => {
     const store = getStore({ name: 'platform-settings', consistency: 'strong' });
     try {
       const settings = await store.get('current', { type: 'json' }) as any;
-      return cors({ settings: settings || {} });
+      return cors({ settings: settings || {} }, 200, req);
     } catch {
-      return cors({ error: 'Erreur lors de la récupération des paramètres' }, 500);
+      return cors({ error: 'Erreur lors de la récupération des paramètres' }, 500, req);
     }
   }
 
@@ -295,11 +329,11 @@ export default async (req: Request, context: Context) => {
     try {
       body = await req.json();
     } catch {
-      return cors({ error: 'Corps de requête invalide' }, 400);
+      return cors({ error: 'Corps de requête invalide' }, 400, req);
     }
 
     if (!body || typeof body !== 'object') {
-      return cors({ error: 'Les paramètres doivent être un objet' }, 400);
+      return cors({ error: 'Les paramètres doivent être un objet' }, 400, req);
     }
 
     const store = getStore({ name: 'platform-settings', consistency: 'strong' });
@@ -315,10 +349,10 @@ export default async (req: Request, context: Context) => {
     const merged = { ...existing, ...body, updated_at: new Date().toISOString() };
     await store.setJSON('current', merged);
 
-    return cors({ ok: true, settings: merged });
+    return cors({ ok: true, settings: merged }, 200, req);
   }
 
-  return cors({ error: 'Route non trouvée' }, 404);
+  return cors({ error: 'Route non trouvée' }, 404, req);
 };
 
 export const config: Config = {

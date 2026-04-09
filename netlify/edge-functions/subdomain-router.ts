@@ -1,21 +1,41 @@
 import type { Context, Config } from '@netlify/edge-functions'
 
-// V8 Pro — Subdomain Router with improved validation and error handling
+const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'app.safeschool.fr'
+const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app'
+const ROOT_DOMAINS = (Netlify.env.get('ROOT_DOMAINS') || 'safeschool.fr,safeschool.com,safeschool.net')
+  .split(',')
+  .map((d) => d.trim().toLowerCase())
+  .filter(Boolean)
+
+function extractSlugFromHost(hostname: string): string | null {
+  const normalizedHost = hostname.toLowerCase()
+  const rootCandidates = [...ROOT_DOMAINS, TENANT_BASE_DOMAIN.toLowerCase(), NETLIFY_TARGET.toLowerCase()]
+
+  for (const root of rootCandidates) {
+    if (!root) continue
+    if (!normalizedHost.endsWith(`.${root}`)) continue
+    const suffix = `.${root}`
+    const subdomainPart = normalizedHost.slice(0, normalizedHost.length - suffix.length)
+    if (!subdomainPart || subdomainPart.includes('.')) continue
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(subdomainPart)) continue
+    return subdomainPart
+  }
+
+  return null
+}
+
+// V9 Pro — Dynamic subdomain router (env-driven, multi-domain)
 export default async (req: Request, context: Context) => {
   try {
     const url = new URL(req.url)
     const hostname = url.hostname
 
-    // Extract subdomain: xxx.safeschool.fr or xxx.safeschool.com
-    const safeschoolMatch = hostname.match(/^([a-z0-9][a-z0-9-]*[a-z0-9])\.(safeschool\.(fr|com|net)|darling-muffin-21eb90\.netlify\.app)$/i)
-
     // Skip if no subdomain, or if it's a reserved subdomain
     const reserved = ['www', 'app', 'admin', 'api', 'staging', 'dev', 'test', 'mail', 'smtp', 'ftp']
-    if (!safeschoolMatch || reserved.includes(safeschoolMatch[1].toLowerCase())) {
+    const subdomain = extractSlugFromHost(hostname)
+    if (!subdomain || reserved.includes(subdomain)) {
       return
     }
-
-    const subdomain = safeschoolMatch[1].toLowerCase()
 
     // For static assets, API calls, and known file extensions, pass through
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.netlify/') ||

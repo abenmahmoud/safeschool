@@ -167,7 +167,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
             <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
               <div style="font-size:1.3rem;margin-bottom:6px">&#128279;</div>
               <div style="font-size:.85rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">2. Configurer le DNS</div>
-              <div style="font-size:.76rem;color:#94a3b8">CNAME vers darling-muffin-21eb90.netlify.app pour le sous-domaine</div>
+              <div style="font-size:.76rem;color:#94a3b8">CNAME vers <span id="guide-dns-target">safeschoolproject.netlify.app</span> pour le sous-domaine</div>
             </div>
             <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,.1)">
               <div style="font-size:1.3rem;margin-bottom:6px">&#128101;</div>
@@ -220,7 +220,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
           <div class="f"><label>Quotas</label><div class="qg" id="qdi"></div></div>
           <div class="db" id="dnsb" style="display:none">
             <h4>Configuration DNS apres creation</h4>
-            <div class="dr"><span class="dt">CNAME</span><span class="dv" id="dsl">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
+            <div class="dr"><span class="dt">CNAME</span><span class="dv" id="dsl">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv" id="dns-target-create">safeschoolproject.netlify.app</span></div>
           </div>
           <div style="display:flex;gap:12px"><button class="btn bg" onclick="createSch()">Creer l'etablissement</button><button class="btn bs" onclick="showPage('sc')">Annuler</button></div>
         </div>
@@ -237,7 +237,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
       <div class="pt">Sous-domaines</div><div class="ps">Configuration DNS pour les sous-domaines</div>
       <div class="card"><div class="ch"><h3>Configuration DNS Wildcard</h3></div><div style="padding:20px">
         <div class="db"><h4>Cloudflare DNS</h4>
-          <div class="dr"><span class="dt">CNAME</span><span class="dv">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
+          <div class="dr"><span class="dt">CNAME</span><span class="dv" id="dns-wildcard-domain">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv" id="dns-target-global">safeschoolproject.netlify.app</span></div>
           <div class="dr" style="margin-top:6px"><span class="dt">A</span><span class="dv">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">75.2.60.5</span></div>
         </div>
       </div></div>
@@ -449,6 +449,8 @@ var TOKEN = '';
 var SCHOOLS = [];
 var PL = {starter:{pr:0,ms:150,mr:30,ma:1,mo:12},pro:{pr:588,ms:9999,mr:9999,ma:3,mo:12},enterprise:{pr:1068,ms:99999,mr:99999,ma:99,mo:12}};
 var ST = {plan:'starter', ePlan:'starter'};
+var TENANT_BASE_DOMAIN = 'app.safeschool.fr';
+var NETLIFY_TARGET = 'safeschoolproject.netlify.app';
 
 // Supabase for direct data access (SAV)
 var SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
@@ -468,6 +470,36 @@ async function api(method, path, body) {
   try { data = await r.json(); } catch(e) { throw new Error('Reponse invalide du serveur'); }
   if (!r.ok) throw new Error(data.error || 'Erreur API');
   return data;
+}
+
+function applyRuntimeConfig() {
+  var wildcard = TENANT_BASE_DOMAIN.split('.').slice(-2).join('.');
+  var wildcardDomain = wildcard ? '*.' + wildcard : '*.safeschool.fr';
+  var sampleDomain = 'nom-lycee.' + TENANT_BASE_DOMAIN;
+  var guideTargetEl = document.getElementById('guide-dns-target');
+  var createTargetEl = document.getElementById('dns-target-create');
+  var globalTargetEl = document.getElementById('dns-target-global');
+  var wildcardEl = document.getElementById('dns-wildcard-domain');
+  if (guideTargetEl) guideTargetEl.textContent = NETLIFY_TARGET;
+  if (createTargetEl) createTargetEl.textContent = NETLIFY_TARGET;
+  if (globalTargetEl) globalTargetEl.textContent = NETLIFY_TARGET;
+  if (wildcardEl) wildcardEl.textContent = wildcardDomain;
+  if (document.getElementById('sdp')) document.getElementById('sdp').textContent = sampleDomain;
+}
+
+async function initRuntimeConfig() {
+  try {
+    var cfg = await api('GET', '/establishments/runtime-config');
+    if (cfg && typeof cfg.tenant_base_domain === 'string' && cfg.tenant_base_domain.trim()) {
+      TENANT_BASE_DOMAIN = cfg.tenant_base_domain.trim();
+    }
+    if (cfg && typeof cfg.netlify_target === 'string' && cfg.netlify_target.trim()) {
+      NETLIFY_TARGET = cfg.netlify_target.trim();
+    }
+  } catch(e) {
+    // Keep defaults when runtime config endpoint is unavailable
+  }
+  applyRuntimeConfig();
 }
 
 // ═══════════ AUTH ═══════════
@@ -498,10 +530,10 @@ document.getElementById('lbtn').addEventListener('click', doLogin);
 document.getElementById('lpw').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
 
 // Check saved session
-(function() {
+initRuntimeConfig().then(function() {
   var t = sessionStorage.getItem('sa_token');
   if (t) { TOKEN = t; document.getElementById('ls').style.display = 'none'; document.getElementById('app').style.display = 'block'; loadDashboard(); }
-})();
+});
 
 // ═══════════ NAVIGATION ═══════════
 var PGS = ['db','sc','cr','sav','dn','bl','baro','analytics','notif','push','health'];
@@ -521,8 +553,13 @@ function fmtD(iso) { return iso ? new Date(iso).toLocaleDateString('fr-FR') : '-
 function dL(iso) { return iso ? Math.ceil((new Date(iso) - new Date()) / 86400000) : 0; }
 function plPr(pl) { return PL[pl] && PL[pl].pr > 0 ? PL[pl].pr + ' EUR/an' : 'Gratuit (annuel)'; }
 function stc(lb, vl, sb, co) { return '<div class="sc" style="--c:'+co+'"><div class="sl">'+lb+'</div><div class="sn">'+vl+'</div><div class="ss">'+sb+'</div></div>'; }
-function schoolDomain(s) { return s.domain || (s.slug ? s.slug + '.app.safeschool.fr' : '-'); }
+function schoolDomain(s) { return s.domain || (s.slug ? s.slug + '.' + TENANT_BASE_DOMAIN : '-'); }
 function schoolUrl(s) { return s.url || ('https://' + schoolDomain(s)); }
+function schoolAdminUrl(s) {
+  var base = schoolUrl(s);
+  if (!base || base === 'https://-') return '/?school=' + (s.slug || '') + '&admin=1';
+  return base + '/?admin=1';
+}
 function shTst(msg, err) {
   var t = document.getElementById('tst');
   t.textContent = msg; t.style.background = err ? '#dc2626' : '#16a34a';
@@ -550,7 +587,7 @@ async function loadDashboard() {
         + '<div style="font-size:.75rem;color:#64748b">'+schoolDomain(x)+' &middot; '+x.plan.toUpperCase()+' &middot; Admin: '+(x.admin_email||'-')+'</div></div>'
         + '<div style="text-align:right"><div style="font-size:.78rem;color:#94a3b8">'+(x.report_count||0)+' signalements</div>'
         + '<div style="font-size:.68rem;color:#64748b">Code: <span style="color:#fbbf24;font-family:monospace">'+(x.admin_code||'-')+'</span></div>'
-        + '<a href="/?school='+x.slug+'&admin=1" target="_blank" style="font-size:.68rem;color:#a5b4fc;text-decoration:none">&rarr; Voir le dashboard admin</a>'
+        + '<a href="'+schoolAdminUrl(x)+'" target="_blank" style="font-size:.68rem;color:#a5b4fc;text-decoration:none">&rarr; Voir le dashboard admin</a>'
         + '</div></div>';
     }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun etablissement. Creez-en un depuis le menu.</p>';
   } catch(e) {
@@ -575,7 +612,7 @@ async function loadSchools() {
         + '<td style="font-size:.8rem;color:'+dc+'">'+fmtD(x.expires_at)+' ('+dl+'j)</td>'
         + '<td><div class="tda">'
         + '<button class="btn bs bsm" onclick="opEd(\''+x.id+'\')">Modifier</button>'
-        + '<a href="/?school='+x.slug+'&admin=1" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff;font-size:.75rem">Admin</a>'
+        + '<a href="'+schoolAdminUrl(x)+'" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff;font-size:.75rem">Admin</a>'
         + '<button class="btn bw bsm" onclick="regenAdmin(\''+x.id+'\')">Regen Code</button>'
         + '<button class="btn bd bsm" onclick="delSch(\''+x.id+'\')">Suppr.</button>'
         + '</div></td></tr>';
@@ -590,7 +627,7 @@ function rstCr() {
   var fields = ['cn','cv','ce','cae','cap'];
   fields.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('csl').value = '';
-  document.getElementById('sdp').textContent = 'nom-lycee.app.safeschool.fr';
+  document.getElementById('sdp').textContent = 'nom-lycee.' + TENANT_BASE_DOMAIN;
   document.getElementById('dnsb').style.display = 'none';
   ST.plan = 'starter';
   document.querySelectorAll('#pgr .pc').forEach(function(c) { c.classList.toggle('on', c.dataset.plan === 'starter'); });
@@ -601,8 +638,8 @@ function onNm() {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
   document.getElementById('csl').value = slug;
-  document.getElementById('sdp').textContent = slug ? slug + '.app.safeschool.fr' : 'nom-lycee.app.safeschool.fr';
-  if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = slug + '.app.safeschool.fr'; }
+  document.getElementById('sdp').textContent = slug ? slug + '.' + TENANT_BASE_DOMAIN : 'nom-lycee.' + TENANT_BASE_DOMAIN;
+  if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = slug + '.' + TENANT_BASE_DOMAIN; }
   else document.getElementById('dnsb').style.display = 'none';
 }
 function onPl(el) {
@@ -655,7 +692,7 @@ function showSucc(s) {
     + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+s.admin_email+'</span></div>'
     + '<div class="sr"><span class="slb">Mot de passe admin</span><span class="sv pwd">'+s.admin_password+'</span></div>'
     + '</div>'
-    + '<div class="db"><h4>DNS Cloudflare</h4><div class="dr"><span class="dt">CNAME</span><span class="dv">'+schoolDomain(s)+'</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">'+(s.dns_target||'safeschoolproject.netlify.app')+'</span></div></div>'
+    + '<div class="db"><h4>DNS Cloudflare</h4><div class="dr"><span class="dt">CNAME</span><span class="dv">'+schoolDomain(s)+'</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">'+(s.dns_target||NETLIFY_TARGET)+'</span></div></div>'
     + '<div style="display:flex;gap:12px;margin-top:12px">'
     + '<button class="btn bsm" onclick="showPage(\'sc\')">Voir les etablissements</button>'
     + '<button class="btn bs bsm" onclick="showPage(\'cr\')">Creer un autre</button>'
@@ -759,7 +796,7 @@ async function loadSavData() {
   // Show school info + load reports from Supabase
   var html = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">'
     + '<a href="'+schoolUrl(school)+'" target="_blank" class="btn bsm bg" style="text-decoration:none">&#127760; Ouvrir l\'app eleve</a>'
-    + '<a href="/?school='+school.slug+'&admin=1" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff">&#128187; Dashboard Admin</a>'
+    + '<a href="'+schoolAdminUrl(school)+'" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff">&#128187; Dashboard Admin</a>'
     + '<button class="btn bsm" onclick="cpTxt(\''+(school.admin_code||'')+'\')">&#128203; Copier code admin</button>'
     + '<button class="btn bsm bw" onclick="regenAdmin(\''+id+'\');setTimeout(function(){loadSavData()},1500)">&#128260; Regenerer code</button>'
     + '</div>'

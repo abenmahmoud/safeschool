@@ -1306,6 +1306,9 @@ let cachedReports = [];
 let cachedStaff = [];
 let cachedLogs = [];
 let etabSearchQuery = '';
+let etabSearchResults = null;
+let etabSearchTimer = null;
+let etabSearchLoading = false;
 
 function dbStatusToUi(s){
   return ({nouveau:'new', en_cours:'in_progress', traite:'resolved', archive:'archived', withdrawal_requested:'archived', anonymized:'archived', closed:'archived'})[s] || s || 'new';
@@ -1664,6 +1667,8 @@ const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'
 
 async function loadEstablishments() {
   try {
+    etabSearchResults = null;
+    etabSearchLoading = false;
     // Primary source: Netlify Blobs API (managed by superadmin)
     let apiSchools = [];
     try {
@@ -1695,6 +1700,8 @@ async function loadEstablishments() {
       blobId: s.id,
       name: s.name,
       slug: s.slug,
+      domain: s.domain || '',
+      url: s.url || '',
       address: s.city || '',
       city: s.city || '',
       type: s.type || 'lycee',
@@ -1752,9 +1759,10 @@ function renderEtabList() {
     </div>`;
     return;
   }
+  const sourceList = Array.isArray(etabSearchResults) ? etabSearchResults : etabList;
   const filteredEtabList = etabSearchQuery
-    ? etabList.filter(e => `${e.name || ''} ${e.slug || ''} ${e.city || ''}`.toLowerCase().includes(etabSearchQuery))
-    : etabList;
+    ? sourceList.filter(e => `${e.name || ''} ${e.slug || ''} ${e.city || ''}`.toLowerCase().includes(etabSearchQuery))
+    : sourceList;
 
   el.innerHTML = `
     <div style="padding:0 0 12px">
@@ -1766,6 +1774,7 @@ function renderEtabList() {
         oninput="setEtabSearch(this.value)"
         style="width:100%"
       >
+      ${etabSearchLoading ? `<p style="font-size:.76rem;color:var(--ts);margin-top:8px">${currentLang === 'en' ? 'Searching…' : 'Recherche…'}</p>` : ''}
     </div>
   ` + (filteredEtabList.length === 0 ? `
     <div style="text-align:center;padding:22px;color:var(--ts);font-size:.86rem">
@@ -1789,9 +1798,44 @@ function renderEtabList() {
     </div>`;
 }
 
-function setEtabSearch(value) {
+async function setEtabSearch(value) {
   etabSearchQuery = String(value || '').trim().toLowerCase();
+  if (etabSearchTimer) clearTimeout(etabSearchTimer);
+  if (etabSearchQuery.length < 2) {
+    etabSearchResults = null;
+    etabSearchLoading = false;
+    renderEtabList();
+    return;
+  }
+  etabSearchLoading = true;
   renderEtabList();
+
+  etabSearchTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/api/establishments/search?q=${encodeURIComponent(etabSearchQuery)}`);
+      if (!r.ok) throw new Error('search_unavailable');
+      const results = await r.json();
+      etabSearchResults = (results || []).map(s => ({
+        id: s.supabase_id || s.id,
+        blobId: s.id,
+        apiId: s.id,
+        name: s.name,
+        slug: s.slug,
+        domain: s.domain || '',
+        url: s.url || '',
+        address: s.city || '',
+        city: s.city || '',
+        type: s.type || 'lycee',
+        plan: s.plan || 'starter',
+        isActive: true
+      }));
+    } catch(e) {
+      etabSearchResults = null;
+    } finally {
+      etabSearchLoading = false;
+      renderEtabList();
+    }
+  }, 180);
 }
 
 // Verification question before selecting establishment
@@ -3527,7 +3571,7 @@ function renderReportsList(){
   if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
 
   const cards=filtered.length===0
-    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.url || (currentEtab.domain ? 'https://' + currentEtab.domain : (currentEtab.slug ? 'https://' + currentEtab.slug + '.app.safeschool.fr' : '-'))}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
     :filtered.map((r,i)=>{
       const idx=reps.indexOf(r);
       const sc={new:{l:'Nouveau',c:'bn'},in_progress:{l:'En cours',c:'bi'},resolved:{l:'Résolu',c:'br'},archived:{l:'Archivé',c:'ba'}};

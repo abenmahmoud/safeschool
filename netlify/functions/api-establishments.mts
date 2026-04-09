@@ -16,6 +16,8 @@ const SUPABASE_SERVICE_KEY =
 //   app.safeschool.fr
 const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'app.safeschool.fr';
 const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app';
+const SITE_URL = Netlify.env.get('SITE_URL') || '';
+const DEPLOY_PRIME_URL = Netlify.env.get('DEPLOY_PRIME_URL') || '';
 
 // ---------------------------------------------------------------------------
 // Rate limiting — 5 login attempts per IP per 15 minutes
@@ -87,26 +89,41 @@ function buildSchoolUrl(slug: string): string {
 
 const escapedTenantBaseDomain = escapeRegex(TENANT_BASE_DOMAIN);
 const tenantOriginRegex = new RegExp(`^https:\\/\\/[a-z0-9-]+\\.${escapedTenantBaseDomain}$`);
+const escapedNetlifyTarget = escapeRegex(NETLIFY_TARGET);
+const deployPreviewRegex = new RegExp(`^https:\\/\\/[a-z0-9-]+--${escapedNetlifyTarget}$`);
 
-const ALLOWED_ORIGINS = [
-  'https://darling-muffin-21eb90.netlify.app',
-  Netlify.env.get('SITE_URL') || '',
-  Netlify.env.get('DEPLOY_PRIME_URL') || '',
-  `https://${TENANT_BASE_DOMAIN}`,
-].filter(Boolean);
+const ALLOWED_ORIGINS = [SITE_URL, DEPLOY_PRIME_URL, `https://${TENANT_BASE_DOMAIN}`]
+  .map((value) => normalizeOrigin(value))
+  .filter(Boolean);
+
+function normalizeOrigin(value: string): string {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
+}
+
+function getDefaultOrigin(): string {
+  const normalizedSite = normalizeOrigin(SITE_URL);
+  if (normalizedSite) return normalizedSite;
+  return `https://${TENANT_BASE_DOMAIN}`;
+}
 
 function getAllowedOrigin(req: Request): string {
   const origin = req.headers.get('origin') || '';
+  if (!origin) return getDefaultOrigin();
+  if (origin === 'http://localhost:8888' || origin === 'http://localhost:3000' || origin === 'http://localhost:5173') {
+    return origin;
+  }
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
   if (tenantOriginRegex.test(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+--darling-muffin-21eb90\.netlify\.app$/.test(origin)) return origin;
-  return ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
+  if (deployPreviewRegex.test(origin)) return origin;
+  return getDefaultOrigin();
 }
 
 function cors(body: any, status = 200, req?: Request) {
-  const allowedOrigin = req
-    ? getAllowedOrigin(req)
-    : ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
+  const allowedOrigin = req ? getAllowedOrigin(req) : getDefaultOrigin();
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -228,6 +245,18 @@ export default async (req: Request, context: Context) => {
         publicInfo.admin_email = (data as any).admin_email;
       }
       return cors(publicInfo, 200, req);
+    }
+
+    if (req.method === 'GET' && path === '/runtime-config') {
+      return cors(
+        {
+          tenant_base_domain: TENANT_BASE_DOMAIN,
+          netlify_target: NETLIFY_TARGET,
+          site_url: SITE_URL || null,
+        },
+        200,
+        req,
+      );
     }
 
     if (req.method === 'GET' && path === '/public') {
