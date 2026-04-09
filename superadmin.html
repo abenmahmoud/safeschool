@@ -209,7 +209,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
           </div>
           <div class="f"><label>Email admin etablissement *</label><input type="email" id="cae" placeholder="admin@lycee-moulin.fr"></div>
           <div class="f"><label>Mot de passe admin</label><input type="text" id="cap" placeholder="Genere automatiquement si vide"></div>
-          <div class="f"><label>URL etablissement</label><div class="sp" id="sdp">app.safeschool.fr/t/nom-lycee</div><input type="hidden" id="csl"></div>
+          <div class="f"><label>Sous-domaine</label><div class="sp" id="sdp">nom-lycee.safeschool.fr</div><input type="hidden" id="csl"></div>
           <div class="f"><label>Plan d'abonnement</label>
             <div class="pg" id="pgr">
               <div class="pc on" data-plan="starter" onclick="onPl(this)"><div class="pn">Starter</div><div class="pp">Gratuit</div><div class="pf">200 eleves<br>50 signalements/mois<br>1 admin<br>3 mois</div></div>
@@ -219,8 +219,8 @@ tr:hover td{background:rgba(99,102,241,.03)}
           </div>
           <div class="f"><label>Quotas</label><div class="qg" id="qdi"></div></div>
           <div class="db" id="dnsb" style="display:none">
-            <h4>Acces applicatif apres creation</h4>
-            <div class="dr"><span class="dt">URL</span><span class="dv" id="dsl">-</span><span style="color:#475569;margin:0 4px">mode</span><span class="dv">/t/slug</span></div>
+            <h4>Configuration DNS apres creation</h4>
+            <div class="dr"><span class="dt">CNAME</span><span class="dv" id="dsl">-</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
           </div>
           <div style="display:flex;gap:12px"><button class="btn bg" onclick="createSch()">Creer l'etablissement</button><button class="btn bs" onclick="showPage('sc')">Annuler</button></div>
         </div>
@@ -234,15 +234,15 @@ tr:hover td{background:rgba(99,102,241,.03)}
       <div id="sav-content"></div>
     </div>
     <div id="p-dn" style="display:none">
-      <div class="pt">Acces etablissements</div><div class="ps">Mode path-based multi-tenant : app.safeschool.fr/t/slug</div>
-      <div class="card"><div class="ch"><h3>Mode d'acces multi-tenant</h3></div><div style="padding:20px">
-        <div class="db"><h4>Acces recommande</h4>
-          <div class="dr"><span class="dt">Base</span><span class="dv">app.safeschool.fr</span><span style="color:#475569;margin:0 4px">tenant</span><span class="dv">/t/&lt;slug&gt;</span></div>
-          <div class="dr" style="margin-top:6px"><span class="dt">Admin</span><span class="dv">/t/&lt;slug&gt;/admin</span><span style="color:#475569;margin:0 4px">auth</span><span class="dv">Supabase</span></div>
+      <div class="pt">Sous-domaines</div><div class="ps">Configuration DNS pour les sous-domaines</div>
+      <div class="card"><div class="ch"><h3>Configuration DNS Wildcard</h3></div><div style="padding:20px">
+        <div class="db"><h4>Cloudflare DNS</h4>
+          <div class="dr"><span class="dt">CNAME</span><span class="dv">*.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div>
+          <div class="dr" style="margin-top:6px"><span class="dt">A</span><span class="dv">safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">75.2.60.5</span></div>
         </div>
       </div></div>
-      <div class="card"><div class="ch"><h3>Acces actifs</h3></div>
-        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Acces</th><th>Plan</th><th>Statut</th><th>Lien</th></tr></thead><tbody id="dntb"></tbody></table></div>
+      <div class="card"><div class="ch"><h3>Sous-domaines actifs</h3></div>
+        <div style="overflow-x:auto"><table><thead><tr><th>Etablissement</th><th>Sous-domaine</th><th>Plan</th><th>Statut</th><th>Lien</th></tr></thead><tbody id="dntb"></tbody></table></div>
       </div>
     </div>
     <div id="p-bl" style="display:none">
@@ -527,9 +527,6 @@ function shTst(msg, err) {
   t.style.display = 'block'; setTimeout(function() { t.style.display = 'none'; }, 3000);
 }
 function cpTxt(txt) { navigator.clipboard.writeText(txt).then(function() { shTst('Copie !'); }); }
-function tenantStudentUrl(slug) { return 'https://app.safeschool.fr/t/' + slug; }
-function tenantAdminUrl(slug) { return 'https://app.safeschool.fr/t/' + slug + '/admin'; }
-function tenantDisplayPath(slug) { return 'app.safeschool.fr/t/' + slug; }
 
 // ═══════════ DASHBOARD ═══════════
 async function loadDashboard() {
@@ -548,10 +545,10 @@ async function loadDashboard() {
       return '<div class="ai" onclick="showSchoolDetail(\''+x.id+'\')">'
         + '<div class="dot" style="background:'+dot+'"></div>'
         + '<div style="flex:1"><div style="color:#e2e8f0;font-weight:600;font-size:.85rem">'+x.name+'</div>'
-        + '<div style="font-size:.75rem;color:#64748b">'+tenantDisplayPath(x.slug)+' &middot; '+x.plan.toUpperCase()+' &middot; Admin: '+(x.admin_email||'-')+'</div></div>'
+        + '<div style="font-size:.75rem;color:#64748b">'+x.slug+'.safeschool.fr &middot; '+x.plan.toUpperCase()+' &middot; Admin: '+(x.admin_email||'-')+'</div></div>'
         + '<div style="text-align:right"><div style="font-size:.78rem;color:#94a3b8">'+(x.report_count||0)+' signalements</div>'
         + '<div style="font-size:.68rem;color:#64748b">Code: <span style="color:#fbbf24;font-family:monospace">'+(x.admin_code||'-')+'</span></div>'
-        + '<a href="'+tenantAdminUrl(x.slug)+'" target="_blank" style="font-size:.68rem;color:#a5b4fc;text-decoration:none">&rarr; Voir le dashboard admin</a>'
+        + '<a href="/?school='+x.slug+'&admin=1" target="_blank" style="font-size:.68rem;color:#a5b4fc;text-decoration:none">&rarr; Voir le dashboard admin</a>'
         + '</div></div>';
     }).join('') : '<p style="color:#64748b;font-size:.85rem">Aucun etablissement. Creez-en un depuis le menu.</p>';
   } catch(e) {
@@ -568,7 +565,7 @@ async function loadSchools() {
       var dl = dL(x.expires_at), dc = dl < 30 ? '#fca5a5' : '#94a3b8';
       return '<tr>'
         + '<td><div style="font-weight:600;color:#f1f5f9">'+x.name+'</div><div style="font-size:.72rem;color:#64748b">'+(x.city||'')+' &middot; '+(x.type||'lycee')+'</div></td>'
-        + '<td><a href="'+tenantStudentUrl(x.slug)+'" target="_blank" style="color:#a5b4fc;font-family:monospace;font-size:.78rem">'+tenantDisplayPath(x.slug)+'</a></td>'
+        + '<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#a5b4fc;font-family:monospace;font-size:.78rem">'+x.slug+'.safeschool.fr</a></td>'
         + '<td><span class="badge b-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
         + '<td><div class="code-box" style="padding:4px 8px;margin:0;font-size:.78rem"><span>'+(x.admin_code||'-')+'</span><button class="btn bsm bs" style="padding:2px 8px;font-size:.68rem" onclick="cpTxt(\''+(x.admin_code||'')+'\')">&nbsp;Copier</button></div></td>'
         + '<td>'+(x.report_count||0)+'</td>'
@@ -576,7 +573,7 @@ async function loadSchools() {
         + '<td style="font-size:.8rem;color:'+dc+'">'+fmtD(x.expires_at)+' ('+dl+'j)</td>'
         + '<td><div class="tda">'
         + '<button class="btn bs bsm" onclick="opEd(\''+x.id+'\')">Modifier</button>'
-        + '<a href="'+tenantAdminUrl(x.slug)+'" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff;font-size:.75rem">Admin</a>'
+        + '<a href="/?school='+x.slug+'&admin=1" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff;font-size:.75rem">Admin</a>'
         + '<button class="btn bw bsm" onclick="regenAdmin(\''+x.id+'\')">Regen Code</button>'
         + '<button class="btn bd bsm" onclick="delSch(\''+x.id+'\')">Suppr.</button>'
         + '</div></td></tr>';
@@ -591,7 +588,7 @@ function rstCr() {
   var fields = ['cn','cv','ce','cae','cap'];
   fields.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('csl').value = '';
-  document.getElementById('sdp').textContent = 'app.safeschool.fr/t/nom-lycee';
+  document.getElementById('sdp').textContent = 'nom-lycee.safeschool.fr';
   document.getElementById('dnsb').style.display = 'none';
   ST.plan = 'starter';
   document.querySelectorAll('#pgr .pc').forEach(function(c) { c.classList.toggle('on', c.dataset.plan === 'starter'); });
@@ -602,8 +599,8 @@ function onNm() {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
   document.getElementById('csl').value = slug;
-  document.getElementById('sdp').textContent = slug ? tenantDisplayPath(slug) : 'app.safeschool.fr/t/nom-lycee';
-  if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = tenantStudentUrl(slug); }
+  document.getElementById('sdp').textContent = slug ? slug + '.safeschool.fr' : 'nom-lycee.safeschool.fr';
+  if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = slug + '.safeschool.fr'; }
   else document.getElementById('dnsb').style.display = 'none';
 }
 function onPl(el) {
@@ -649,14 +646,14 @@ function showSucc(s) {
   el.innerHTML = '<div class="pt">Etablissement cree !</div><div class="ps">'+s.name+'</div>'
     + '<div class="card" style="max-width:600px"><div style="padding:24px">'
     + '<div class="sbox">'
-    + '<div class="sr"><span class="slb">URL eleves</span><span class="sv mono">'+tenantDisplayPath(s.slug)+'</span></div>'
+    + '<div class="sr"><span class="slb">URL eleves</span><span class="sv mono">'+s.slug+'.safeschool.fr</span></div>'
     + '<div class="sr"><span class="slb">Plan</span><span class="sv">'+s.plan.toUpperCase()+' - '+plPr(s.plan)+'</span></div>'
     + '<div class="sr"><span class="slb">Expire le</span><span class="sv">'+fmtD(s.expires_at)+'</span></div>'
     + '<div class="sr"><span class="slb">Code admin</span><span class="sv pwd">'+s.admin_code+'</span></div>'
     + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+s.admin_email+'</span></div>'
     + '<div class="sr"><span class="slb">Mot de passe admin</span><span class="sv pwd">'+s.admin_password+'</span></div>'
     + '</div>'
-    + '<div class="db"><h4>Acces direct</h4><div class="dr"><span class="dt">URL eleves</span><span class="dv">'+tenantStudentUrl(s.slug)+'</span></div><div class="dr" style="margin-top:6px"><span class="dt">URL admin</span><span class="dv">'+tenantAdminUrl(s.slug)+'</span></div></div>'
+    + '<div class="db"><h4>DNS Cloudflare</h4><div class="dr"><span class="dt">CNAME</span><span class="dv">'+s.slug+'.safeschool.fr</span><span style="color:#475569;margin:0 4px">vers</span><span class="dv">darling-muffin-21eb90.netlify.app</span></div></div>'
     + '<div style="display:flex;gap:12px;margin-top:12px">'
     + '<button class="btn bsm" onclick="showPage(\'sc\')">Voir les etablissements</button>'
     + '<button class="btn bs bsm" onclick="showPage(\'cr\')">Creer un autre</button>'
@@ -744,7 +741,7 @@ async function loadSavSelector() {
     if (!SCHOOLS.length) SCHOOLS = await api('GET', '/establishments/');
     var sel = document.getElementById('sav-sel');
     sel.innerHTML = '<option value="">-- Choisir un etablissement --</option>'
-      + SCHOOLS.map(function(s) { return '<option value="'+s.id+'">'+s.name+' ('+tenantDisplayPath(s.slug)+')</option>'; }).join('');
+      + SCHOOLS.map(function(s) { return '<option value="'+s.id+'">'+s.name+' ('+s.slug+'.safeschool.fr)</option>'; }).join('');
   } catch(e) { shTst(e.message, true); }
 }
 
@@ -759,8 +756,8 @@ async function loadSavData() {
 
   // Show school info + load reports from Supabase
   var html = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">'
-    + '<a href="'+tenantStudentUrl(school.slug)+'" target="_blank" class="btn bsm bg" style="text-decoration:none">&#127760; Ouvrir l\'app eleve</a>'
-    + '<a href="'+tenantAdminUrl(school.slug)+'" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff">&#128187; Dashboard Admin</a>'
+    + '<a href="/?school='+school.slug+'" target="_blank" class="btn bsm bg" style="text-decoration:none">&#127760; Ouvrir l\'app eleve</a>'
+    + '<a href="/?school='+school.slug+'&admin=1" target="_blank" class="btn bsm" style="text-decoration:none;background:#6366f1;color:#fff">&#128187; Dashboard Admin</a>'
     + '<button class="btn bsm" onclick="cpTxt(\''+(school.admin_code||'')+'\')">&#128203; Copier code admin</button>'
     + '<button class="btn bsm bw" onclick="regenAdmin(\''+id+'\');setTimeout(function(){loadSavData()},1500)">&#128260; Regenerer code</button>'
     + '</div>'
@@ -768,7 +765,7 @@ async function loadSavData() {
     + '<div class="sbox">'
     + '<div class="sr"><span class="slb">Nom</span><span class="sv">'+school.name+'</span></div>'
     + '<div class="sr"><span class="slb">Ville</span><span class="sv">'+(school.city||'-')+'</span></div>'
-    + '<div class="sr"><span class="slb">Acces etablissement</span><span class="sv mono">'+tenantDisplayPath(school.slug)+'</span></div>'
+    + '<div class="sr"><span class="slb">Sous-domaine</span><span class="sv mono">'+school.slug+'.safeschool.fr</span></div>'
     + '<div class="sr"><span class="slb">Plan</span><span class="sv"><span class="badge b-'+school.plan+'">'+school.plan.toUpperCase()+'</span></span></div>'
     + '<div class="sr"><span class="slb">Email admin</span><span class="sv mono">'+(school.admin_email||'-')+'</span></div>'
     + '<div class="sr"><span class="slb">Code admin</span><span class="sv pwd">'+(school.admin_code||'-')+'</span></div>'
@@ -841,10 +838,10 @@ async function loadDomains() {
       var c = x.status === 'active' ? '#86efac' : x.status === 'trial' ? '#fcd34d' : '#64748b';
       var l = x.status === 'active' ? 'Actif' : x.status === 'trial' ? 'A configurer' : 'Inactif';
       return '<tr><td style="color:#f1f5f9;font-weight:600">'+x.name+'</td>'
-        + '<td><span style="font-family:monospace;font-size:.8rem;color:#a5b4fc">'+tenantDisplayPath(x.slug)</span></td>'
+        + '<td><span style="font-family:monospace;font-size:.8rem;color:#a5b4fc">'+x.slug+'.safeschool.fr</span></td>'
         + '<td><span class="badge b-'+x.plan+'">'+x.plan.toUpperCase()+'</span></td>'
         + '<td><span style="font-size:.78rem;font-weight:700;color:'+c+'">'+l+'</span></td>'
-        + '<td><a href="'+tenantStudentUrl(x.slug)+'" target="_blank" style="color:#6366f1;font-size:.78rem">Ouvrir</a></td></tr>';
+        + '<td><a href="https://'+x.slug+'.safeschool.fr" target="_blank" style="color:#6366f1;font-size:.78rem">Ouvrir</a></td></tr>';
     }).join('');
   } catch(e) { shTst(e.message, true); }
 }
