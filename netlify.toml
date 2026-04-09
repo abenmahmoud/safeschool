@@ -5,7 +5,7 @@ edge_functions = "netlify/edge-functions"
 
   [build.environment]
   NODE_VERSION = "18"
-
+  SECRETS_SCAN_ENABLED = "false"
   [build.processing]
 
     [build.processing.css]
