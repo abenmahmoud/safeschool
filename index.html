@@ -1609,6 +1609,15 @@ let filterStatus = 'all', searchQ = '';
 // ═══════════════════════════════════════════
 const etabTypeIcons = {lycee:'🏫',college:'🏛️',ecole:'📚',autre:'🏢'};
 const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'Autre'};
+function tenantStudentPath(slug){ return '/t/' + slug; }
+function tenantAdminPath(slug){ return '/t/' + slug + '/admin'; }
+function tenantShareUrl(slug){ return window.location.origin + tenantStudentPath(slug); }
+function parseTenantRoute(){
+  const m = window.location.pathname.match(/^\/t\/([a-z0-9-]+)(?:\/(admin))?\/?$/i);
+  if (!m) return { slug: null, autoAdmin: false };
+  return { slug: m[1].toLowerCase(), autoAdmin: m[2] === 'admin' };
+}
+
 
 async function loadEstablishments() {
   try {
@@ -3379,7 +3388,7 @@ function renderReportsList(){
   if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
 
   const cards=filtered.length===0
-    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug ? tenantShareUrl(currentEtab.slug) : window.location.origin}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
     :filtered.map((r,i)=>{
       const idx=reps.indexOf(r);
       const sc={new:{l:'Nouveau',c:'bn'},in_progress:{l:'En cours',c:'bi'},resolved:{l:'Résolu',c:'br'},archived:{l:'Archivé',c:'ba'}};
@@ -3884,9 +3893,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Restaurer la session Supabase Auth si existante
   await restoreSession();
 
-  // Check for subdomain auto-selection (injected by edge function)
-  const subdomainSlug = window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
-  const autoAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
+  // Check for tenant path mode first: /t/:slug or /t/:slug/admin
+  const tenantRoute = parseTenantRoute();
+  const subdomainSlug = tenantRoute.slug || window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
+  const autoAdmin = tenantRoute.autoAdmin || new URLSearchParams(window.location.search).get('admin') === '1';
   if (subdomainSlug) {
     const etab = etabList.find(e => e.slug === subdomainSlug);
     if (etab) {

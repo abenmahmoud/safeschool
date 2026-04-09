@@ -11,10 +11,11 @@ const SUPABASE_SERVICE_KEY =
   Netlify.env.get('SUPABASE_ANON_KEY') ||
   '';
 
-// Base domain used for tenant URLs.
-// Recommended for your current OVH + Netlify setup:
-//   app.safeschool.fr
+// Base host and URL used for tenant access.
+// Path-based multi-tenant mode avoids Netlify wildcard host limitations
+// while staying easy to migrate later to real subdomains if needed.
 const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'app.safeschool.fr';
+const APP_BASE_URL = (Netlify.env.get('APP_BASE_URL') || `https://${TENANT_BASE_DOMAIN}`).replace(/\/$/, '');
 const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app';
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,11 @@ function buildSchoolDomain(slug: string): string {
 }
 
 function buildSchoolUrl(slug: string): string {
-  return `https://${buildSchoolDomain(slug)}`;
+  return `${APP_BASE_URL}/t/${slug}`;
+}
+
+function buildSchoolAdminUrl(slug: string): string {
+  return `${APP_BASE_URL}/t/${slug}/admin`;
 }
 
 const escapedTenantBaseDomain = escapeRegex(TENANT_BASE_DOMAIN);
@@ -209,6 +214,8 @@ export default async (req: Request, context: Context) => {
         is_active: (data as any).is_active,
         domain: (data as any).domain || buildSchoolDomain((data as any).slug),
         url: (data as any).url || buildSchoolUrl((data as any).slug),
+        admin_url: (data as any).admin_url || buildSchoolAdminUrl((data as any).slug),
+        access_mode: 'path',
       };
       if (isAdmin) {
         publicInfo.admin_code = (data as any).admin_code;
@@ -233,6 +240,8 @@ export default async (req: Request, context: Context) => {
           supabase_id: data?.supabase_id || null,
           domain: data?.domain || buildSchoolDomain(e.slug),
           url: data?.url || buildSchoolUrl(e.slug),
+          admin_url: data?.admin_url || buildSchoolAdminUrl(e.slug),
+          access_mode: 'path',
         });
       }
       return cors(results, 200, req);
@@ -288,6 +297,8 @@ export default async (req: Request, context: Context) => {
             admin_email: data.admin_email,
             domain: data.domain || buildSchoolDomain(data.slug),
             url: data.url || buildSchoolUrl(data.slug),
+            admin_url: data.admin_url || buildSchoolAdminUrl(data.slug),
+            access_mode: 'path',
           },
           200,
           req,
@@ -471,6 +482,7 @@ export default async (req: Request, context: Context) => {
 
       const schoolDomain = buildSchoolDomain(slug);
       const schoolUrl = buildSchoolUrl(slug);
+      const schoolAdminUrl = buildSchoolAdminUrl(slug);
 
       const school: any = {
         id,
@@ -478,8 +490,10 @@ export default async (req: Request, context: Context) => {
         slug,
         domain: schoolDomain,
         url: schoolUrl,
+        admin_url: schoolAdminUrl,
         dns_target: NETLIFY_TARGET,
         tenant_base_domain: TENANT_BASE_DOMAIN,
+        app_base_url: APP_BASE_URL,
         city: body.city || '',
         type: body.type || 'lycee',
         email: body.email || '',
@@ -513,6 +527,7 @@ export default async (req: Request, context: Context) => {
         created_at: now,
         domain: school.domain,
         url: school.url,
+        admin_url: school.admin_url,
       });
       await store.setJSON('_index', index);
 
@@ -536,8 +551,12 @@ export default async (req: Request, context: Context) => {
         slug: updatedSlug,
         domain: buildSchoolDomain(updatedSlug),
         url: buildSchoolUrl(updatedSlug),
+        admin_url: buildSchoolAdminUrl(updatedSlug),
         tenant_base_domain: TENANT_BASE_DOMAIN,
+        app_base_url: APP_BASE_URL,
+        app_base_url: APP_BASE_URL,
         dns_target: NETLIFY_TARGET,
+        access_mode: 'path',
         id,
         updated_at: new Date().toISOString(),
       };
@@ -557,6 +576,7 @@ export default async (req: Request, context: Context) => {
           status: updated.status,
           domain: updated.domain,
           url: updated.url,
+          admin_url: updated.admin_url,
         };
         await store.setJSON('_index', index);
       }
