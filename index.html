@@ -1305,6 +1305,10 @@ let etabList = [];
 let cachedReports = [];
 let cachedStaff = [];
 let cachedLogs = [];
+let etabSearchQuery = '';
+let etabSearchResults = null;
+let etabSearchTimer = null;
+let etabSearchLoading = false;
 
 function dbStatusToUi(s){
   return ({nouveau:'new', en_cours:'in_progress', traite:'resolved', archive:'archived', withdrawal_requested:'archived', anonymized:'archived', closed:'archived'})[s] || s || 'new';
@@ -1372,10 +1376,51 @@ function normalizeLogFromDb(l){
   };
 }
 
+function getAdminSchoolCandidates(row) {
+  if (!row || typeof row !== 'object') return [];
+  return [
+    row.school_id,
+    row.establishment_id,
+    row.school_uuid,
+    row.school_blob_id,
+    row.school_slug
+  ].filter(Boolean).map(v => String(v).toLowerCase());
+}
+
+function getCurrentEtabCandidates() {
+  if (!currentEtab) return [];
+  return [
+    currentEtab.id,
+    currentEtab.blobId,
+    currentEtab.apiId,
+    currentEtab.slug
+  ].filter(Boolean).map(v => String(v).toLowerCase());
+}
+
+function isAdminLinkedToCurrentEtab(row) {
+  const adminVals = getAdminSchoolCandidates(row);
+  if (!adminVals.length || !currentEtab) return true;
+  const etabVals = getCurrentEtabCandidates();
+  return adminVals.some(v => etabVals.includes(v));
+}
+
+function getAdminScope() {
+  const role = String(currentAdminUser?.role || '').toLowerCase();
+  const assignedStaffId = currentAdminUser?.staff_id || currentAdminUser?.id || currentAdminUser?.auth_user_id || null;
+  const isScopedMember = !!currentAdminUser && !['admin', 'superadmin', 'owner', 'manager', 'direction'].includes(role);
+  return { role, assignedStaffId, isScopedMember };
+}
+
+function getVisibleReports() {
+  const scope = getAdminScope();
+  if (!scope.isScopedMember) return cachedReports;
+  return cachedReports.filter(r => String(r.assignedTo || '') === String(scope.assignedStaffId || ''));
+}
+
 
 // Local-only state (points, badges, quiz)
 const S = {
-  reports: () => cachedReports,
+  reports: () => getVisibleReports(),
   setReports: async v => { cachedReports = Array.isArray(v) ? v : []; },
   updateReport: async (report) => {
     if (!currentEtab || !report || !report.id) return;
@@ -1537,6 +1582,11 @@ const S = {
   staff: () => cachedStaff,
   setStaff: async v => {
     cachedStaff = Array.isArray(v) ? v : [];
+    if (currentEtab) {
+      try {
+        localStorage.setItem('ss_staff_' + (currentEtab.id || currentEtab.blobId || currentEtab.apiId), JSON.stringify(cachedStaff));
+      } catch (e) { /* ignore local storage failures */ }
+    }
   },
   reloadStaff: async () => {
     if (!currentEtab) return;
@@ -1550,7 +1600,12 @@ const S = {
       cachedStaff = (data || []).map(normalizeStaffFromDb);
     } catch(e) {
       console.warn('Staff load from Supabase failed (table may not exist):', e.message || e);
-      cachedStaff = [];
+      try {
+        var fallback = localStorage.getItem('ss_staff_' + (currentEtab.id || currentEtab.blobId || currentEtab.apiId));
+        cachedStaff = fallback ? JSON.parse(fallback) : [];
+      } catch (lsErr) {
+        cachedStaff = [];
+      }
     }
   },
   points: () => parseInt(localStorage.getItem('ss_pts')||'0'),
@@ -1612,6 +1667,8 @@ const etabTypeLabels = {lycee:'Lycée',college:'Collège',ecole:'École',autre:'
 
 async function loadEstablishments() {
   try {
+    etabSearchResults = null;
+    etabSearchLoading = false;
     // Primary source: Netlify Blobs API (managed by superadmin)
     let apiSchools = [];
     try {
@@ -1643,6 +1700,8 @@ async function loadEstablishments() {
       blobId: s.id,
       name: s.name,
       slug: s.slug,
+      domain: s.domain || '',
+      url: s.url || '',
       address: s.city || '',
       city: s.city || '',
       type: s.type || 'lycee',
@@ -1700,7 +1759,28 @@ function renderEtabList() {
     </div>`;
     return;
   }
-  el.innerHTML = etabList.map(e => `
+  const sourceList = Array.isArray(etabSearchResults) ? etabSearchResults : etabList;
+  const filteredEtabList = etabSearchQuery
+    ? sourceList.filter(e => `${e.name || ''} ${e.slug || ''} ${e.city || ''}`.toLowerCase().includes(etabSearchQuery))
+    : sourceList;
+
+  el.innerHTML = `
+    <div style="padding:0 0 12px">
+      <input
+        type="search"
+        class="search-in"
+        placeholder="${currentLang === 'en' ? 'Search school…' : 'Rechercher un établissement…'}"
+        value="${(etabSearchQuery || '').replace(/"/g, '&quot;')}"
+        oninput="setEtabSearch(this.value)"
+        style="width:100%"
+      >
+      ${etabSearchLoading ? `<p style="font-size:.76rem;color:var(--ts);margin-top:8px">${currentLang === 'en' ? 'Searching…' : 'Recherche…'}</p>` : ''}
+    </div>
+  ` + (filteredEtabList.length === 0 ? `
+    <div style="text-align:center;padding:22px;color:var(--ts);font-size:.86rem">
+      ${currentLang === 'en' ? 'No school matches your search.' : 'Aucun établissement ne correspond à la recherche.'}
+    </div>
+  ` : filteredEtabList.map(e => `
     <div class="etab-card" onclick="confirmEstablishment('${e.id}')">
       <div class="etab-icon ${e.type}">${etabTypeIcons[e.type]||'🏢'}</div>
       <div class="etab-info">
@@ -1711,11 +1791,51 @@ function renderEtabList() {
       </div>
       <svg width="18" height="18" fill="none" stroke="var(--p)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
-  `).join('') + `
+  `).join('')) + `
     <div style="margin-top:14px;text-align:center">
       <p style="font-size:.78rem;color:var(--ts);margin-bottom:8px">${t('notInList')}</p>
       <p style="font-size:.74rem;color:var(--ts)">${t('askAdmin')}</p>
     </div>`;
+}
+
+async function setEtabSearch(value) {
+  etabSearchQuery = String(value || '').trim().toLowerCase();
+  if (etabSearchTimer) clearTimeout(etabSearchTimer);
+  if (etabSearchQuery.length < 2) {
+    etabSearchResults = null;
+    etabSearchLoading = false;
+    renderEtabList();
+    return;
+  }
+  etabSearchLoading = true;
+  renderEtabList();
+
+  etabSearchTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/api/establishments/search?q=${encodeURIComponent(etabSearchQuery)}`);
+      if (!r.ok) throw new Error('search_unavailable');
+      const results = await r.json();
+      etabSearchResults = (results || []).map(s => ({
+        id: s.supabase_id || s.id,
+        blobId: s.id,
+        apiId: s.id,
+        name: s.name,
+        slug: s.slug,
+        domain: s.domain || '',
+        url: s.url || '',
+        address: s.city || '',
+        city: s.city || '',
+        type: s.type || 'lycee',
+        plan: s.plan || 'starter',
+        isActive: true
+      }));
+    } catch(e) {
+      etabSearchResults = null;
+    } finally {
+      etabSearchLoading = false;
+      renderEtabList();
+    }
+  }, 180);
 }
 
 // Verification question before selecting establishment
@@ -1919,7 +2039,7 @@ function renderHomePage() {
   </div>
   <div style="height:16px"></div>
   <div style="padding:0 20px 8px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ ${t('adminDash')}</button>
+    ${shouldShowAdminEntry() ? `<button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ ${t('adminDash')}</button>` : `<button class="btn btn-soft btn-full" onclick="go('help')">🆘 ${t('help')}</button>`}
     <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 ${t('trackCase')}</button>
   </div>
   <div style="height:20px"></div>
@@ -1953,6 +2073,10 @@ function openAdminTestFlow(){
   if (!currentEtab) { showEtabSelector(); return; }
   if (adminIn) { go('dashboard'); return; }
   showAdminLogin();
+}
+function shouldShowAdminEntry() {
+  const params = new URLSearchParams(window.location.search);
+  return adminIn || params.get('admin') === '1' || localStorage.getItem('ss_show_admin') === '1';
 }
 function openSuperAdminPage(){
   window.location.href = 'superadmin.html';
@@ -3129,7 +3253,7 @@ function renderProfile(){
   <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);margin-top:14px">
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
-    <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
+    ${shouldShowAdminEntry() ? '<button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>' : ''}
     <button class="btn btn-ghost btn-full btn-sm" onclick="clearAppCache()" style="color:#dc2626;border-color:rgba(220,38,38,.2)">🗑️ Vider le cache (corriger les bugs)</button>
     <p style="font-size:.68rem;color:var(--ts);text-align:center;margin-top:4px">Version ${SS_APP_VERSION}</p>
   </div>
@@ -3159,6 +3283,7 @@ function showAdminLogin(){
         <span id="al-btn-text">Se connecter</span>
         <span id="al-btn-loading" style="display:none">Connexion en cours...</span>
       </button>
+      <button class="btn btn-ghost btn-full btn-sm" onclick="requestAdminPasswordReset()" style="margin-bottom:8px">Mot de passe oublié</button>
       <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>
     </div>
   </div>`);
@@ -3217,10 +3342,75 @@ async function tryLogin(){
   }
 }
 
+async function requestAdminPasswordReset() {
+  const email = (document.getElementById('al-email')?.value || '').trim().toLowerCase();
+  if (!email) {
+    toast('Saisissez votre email pour recevoir le lien de réinitialisation', 'err');
+    return;
+  }
+  try {
+    const redirectTo = `${window.location.origin}${window.location.pathname}?admin_reset=1`;
+    const { error } = await ssSupabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+    toast('Email de réinitialisation envoyé', 'ok');
+  } catch (err) {
+    toast(err.message || 'Impossible d’envoyer l’email de réinitialisation', 'err');
+  }
+}
+
+function openResetPasswordModal() {
+  if (document.getElementById('reset-pwd-overlay')) return;
+  document.body.insertAdjacentHTML('beforeend', `
+  <div id="reset-pwd-overlay" class="admin-wrap">
+    <div class="admin-card" style="animation:scaleIn .25s ease">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="width:56px;height:56px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 16px rgba(79,70,229,.25)">
+          <span style="font-size:1.5rem">🔑</span>
+        </div>
+        <h2 style="font-size:1.05rem;margin-bottom:4px;color:var(--t)">Nouveau mot de passe</h2>
+        <p style="font-size:.82rem;color:var(--tm)">Définissez un mot de passe fort (12+ caractères)</p>
+      </div>
+      <div id="rp-error" style="display:none;background:var(--rbg);border:1.5px solid rgba(220,38,38,.15);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#991b1b;text-align:center"></div>
+      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="rp-pass" placeholder="Nouveau mot de passe"></div>
+      <div class="fg"><label class="fl">Confirmation</label><input type="password" class="fi" id="rp-pass2" placeholder="Confirmez le mot de passe"></div>
+      <button class="btn btn-p btn-full btn-lg" onclick="submitResetPassword()" style="margin-bottom:10px">Mettre à jour</button>
+      <button class="btn btn-ghost btn-full" onclick="document.getElementById('reset-pwd-overlay').remove()">Annuler</button>
+    </div>
+  </div>`);
+}
+
+async function submitResetPassword() {
+  const p1 = document.getElementById('rp-pass')?.value || '';
+  const p2 = document.getElementById('rp-pass2')?.value || '';
+  const err = document.getElementById('rp-error');
+  if (p1.length < 12) {
+    if (err) { err.textContent = 'Le mot de passe doit contenir au moins 12 caractères.'; err.style.display = ''; }
+    return;
+  }
+  if (p1 !== p2) {
+    if (err) { err.textContent = 'Les mots de passe ne correspondent pas.'; err.style.display = ''; }
+    return;
+  }
+  try {
+    const { error } = await ssSupabase.auth.updateUser({ password: p1 });
+    if (error) throw error;
+    document.getElementById('reset-pwd-overlay')?.remove();
+    toast('Mot de passe mis à jour', 'ok');
+    const u = new URL(window.location.href);
+    u.searchParams.delete('admin_reset');
+    window.history.replaceState({}, '', u.pathname + u.search);
+  } catch (e) {
+    if (err) { err.textContent = e.message || 'Impossible de mettre à jour le mot de passe.'; err.style.display = ''; }
+  }
+}
+
 // ═══════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════
 function renderDashboardV3(){
+  const scope = getAdminScope();
+  const isScopedMember = scope.isScopedMember;
+  const assignedStaffId = scope.assignedStaffId;
   const reps=S.reports();
   const urg=reps.filter(r=>r.urgency===3).length;
   const nw=reps.filter(r=>r.status==='new').length;
@@ -3246,8 +3436,8 @@ function renderDashboardV3(){
         <div style="font-size:.68rem;opacity:.8">Signalements</div>
       </div>
       <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
-        <div style="font-size:1.1rem;font-weight:800">${S.staff().length}</div>
-        <div style="font-size:.68rem;opacity:.8">Membres</div>
+        <div style="font-size:1.1rem;font-weight:800">${isScopedMember ? 1 : S.staff().length}</div>
+        <div style="font-size:.68rem;opacity:.8">${isScopedMember ? 'Mon profil' : 'Membres'}</div>
       </div>
       <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
         <div style="font-size:1.1rem;font-weight:800">${rs}</div>
@@ -3331,6 +3521,7 @@ function renderDashboardV3(){
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           ${urg>0?`<div style="background:rgba(220,38,38,.25);border:1px solid rgba(220,38,38,.4);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">🔴 ${urg} urgent${urg>1?'s':''}</div>`:''}
+          ${isScopedMember ? `<span style="background:rgba(255,255,255,.14);padding:6px 10px;border-radius:10px;font-size:.75rem;font-weight:700;color:#dbeafe">👤 Dossiers assignés</span>` : ''}
           <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">Déconnexion</button>
         </div>
       </div>
@@ -3341,6 +3532,7 @@ function renderDashboardV3(){
     <button class="btn btn-xs btn-soft" onclick="exportCSV()">📥 Export CSV</button>
     <button class="btn btn-xs btn-soft" onclick="printReport()">🖨️ Imprimer rapport</button>
     <button class="btn btn-xs btn-soft" onclick="S.reloadReports().then(()=>{S.reloadStaff().then(()=>{S.reloadLogs().then(renderDashboardV3)})})" title="Actualiser les données">🔄 Actualiser</button>
+    <button class="btn btn-xs btn-soft" onclick="openSupportRequestModal()">🛠️ Demande SAV</button>
     ${reps.length===0?`<button class="btn btn-xs btn-soft" onclick="loadDemoData()" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none">📊 Démo</button>`:`<button class="btn btn-xs btn-ghost" onclick="if(confirm('Effacer les données de démonstration ?'))clearDemoData()" style="font-size:.68rem">Effacer démo</button>`}
   </div>
   <div class="kpi-row">
@@ -3358,18 +3550,18 @@ function renderDashboardV3(){
   </div>` : ''}
   <div class="dash-tabs">
     <button class="dtb active" onclick="switchDash('reports',this)">📋 Signalements</button>
-    <button class="dtb" onclick="switchDash('staff',this)">👥 Équipe</button>
-    <button class="dtb" onclick="switchDash('logs',this)">📜 Journal</button>
+    ${!isScopedMember ? '<button class="dtb" onclick="switchDash(\'staff\',this)">👥 Équipe</button><button class="dtb" onclick="switchDash(\'logs\',this)">📜 Journal</button>' : ''}
   </div>
   <div style="background:#fff;border:1px solid var(--border);border-top:none;margin:0 20px;border-radius:0 0 var(--r16) var(--r16)">
     <div id="dt-reports" class="dtab active">${renderReportsList()}</div>
-    <div id="dt-staff" class="dtab">${renderStaffTab()}</div>
-    <div id="dt-logs" class="dtab">${renderLogsTab()}</div>
+    ${!isScopedMember ? `<div id="dt-staff" class="dtab">${renderStaffTab()}</div><div id="dt-logs" class="dtab">${renderLogsTab()}</div>` : ''}
   </div>
   <div style="height:16px"></div>`;
 }
 
 function renderReportsList(){
+  const scope = getAdminScope();
+  const isScopedMember = scope.isScopedMember;
   const reps=S.reports();
   const staff=S.staff();
   const plan = localStorage.getItem('ss_plan_' + (currentEtab?.id || '')) || currentEtab?.plan || 'starter';
@@ -3379,7 +3571,7 @@ function renderReportsList(){
   if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
 
   const cards=filtered.length===0
-    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">📭</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyés par les élèves apparaîtront ici automatiquement. Partagez l'URL de l'application à vos élèves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">🔗 URL pour les élèves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.url || (currentEtab.domain ? 'https://' + currentEtab.domain : (currentEtab.slug ? 'https://' + currentEtab.slug + '.app.safeschool.fr' : '-'))}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">📊 Charger des données de démonstration</button></div></div>`
     :filtered.map((r,i)=>{
       const idx=reps.indexOf(r);
       const sc={new:{l:'Nouveau',c:'bn'},in_progress:{l:'En cours',c:'bi'},resolved:{l:'Résolu',c:'br'},archived:{l:'Archivé',c:'ba'}};
@@ -3412,19 +3604,17 @@ function renderReportsList(){
           ${r.frequency?`<h5>Fréquence</h5><p>${{once:'Une fois',several:'Plusieurs fois',weekly:'Chaque semaine',daily:'Chaque jour'}[r.frequency]||r.frequency}</p>`:''}
           ${r.isAnonymous===false&&r.reporterName?`<h5>Déclarant</h5><p>${r.reporterName}${r.reporterClass?' · '+r.reporterClass:''}${r.reporterEmail?' · '+r.reporterEmail:''}</p>`:`<h5>Code de suivi</h5><p style="font-family:'Nunito',monospace;font-weight:900;letter-spacing:.1em;font-size:1.1rem;color:var(--p)">${r.code||'—'}</p>`}
           <h5>Assigner à un membre de l'équipe${!isPremium?' <span style="background:#1e1b4b;color:#a5b4fc;padding:1px 6px;border-radius:6px;font-size:.65rem;font-weight:600">PRO</span>':''}</h5>
-          ${isPremium ? `<select class="fsel" id="assign-${idx}" onchange="assignReport(${idx},this.value)" style="font-size:.86rem">
+          ${isPremium && !isScopedMember ? `<select class="fsel" id="assign-${idx}" onchange="assignReport(${idx},this.value)" style="font-size:.86rem">
             <option value="">Non assigné</option>
             ${staff.filter(s=>s.active).map(s=>`<option value="${s.id}" ${r.assignedTo===s.id?'selected':''}>${s.emoji} ${s.name} (${roleLabel(s.role)})</option>`).join('')}
-          </select>` : `<p style="font-size:.82rem;color:var(--ts)">Passez au plan Pro pour assigner les incidents aux membres de l'équipe.</p>`}
+          </select>` : `<p style="font-size:.82rem;color:var(--ts)">${isScopedMember ? 'Assignation gérée par l’administrateur établissement.' : 'Passez au plan Pro pour assigner les incidents aux membres de l\'équipe.'}</p>`}
           <h5>Réponse à l'élève <span style="font-weight:400;font-size:.77rem">(visible via son code)</span></h5>
           <textarea class="fta" id="reply-${idx}" placeholder="Ta réponse sera visible par l'élève…" style="min-height:75px">${r.staffReply||''}</textarea>
           <h5>Notes internes <span style="font-weight:400;font-size:.77rem">(non visibles par l'élève)</span></h5>
           <textarea class="fta" id="notes-${idx}" placeholder="Notes internes pour l'équipe…" style="min-height:60px">${r.staffNotes||''}</textarea>
           <div class="ri-acts">
             <button class="btn btn-sm btn-soft" onclick="saveReply(${idx})">💾 Sauvegarder</button>
-            <button class="btn btn-sm btn-warn" onclick="setStatus(${idx},'in_progress')">▶ En cours</button>
-            <button class="btn btn-sm btn-g" onclick="setStatus(${idx},'resolved')">✓ Résolu</button>
-            <button class="btn btn-sm btn-ghost" onclick="setStatus(${idx},'archived')">📁 Archiver</button>
+            ${isScopedMember ? '' : `<button class="btn btn-sm btn-warn" onclick="setStatus(${idx},'in_progress')">▶ En cours</button><button class="btn btn-sm btn-g" onclick="setStatus(${idx},'resolved')">✓ Résolu</button><button class="btn btn-sm btn-ghost" onclick="setStatus(${idx},'archived')">📁 Archiver</button>`}
           </div>
         </div>
       </div>`;
@@ -3478,6 +3668,10 @@ async function loadReportPhotos(reportId) {
   } catch(e) { console.warn('Photos load failed:', e); }
 }
 function assignReport(idx,staffId){
+  if (getAdminScope().isScopedMember) {
+    toast('Seul l’admin établissement peut modifier les assignations', 'err');
+    return;
+  }
   const reps=S.reports();
   const prev=reps[idx].assignedTo;
   reps[idx].assignedTo=staffId||null;
@@ -3498,7 +3692,7 @@ function saveReply(idx){
   S.addLog(`Réponse sauvegardée pour #${reps[idx].id}`,reps[idx].id);
   // Notify reporter if email available (best effort)
   if(reps[idx].staffReply && reps[idx].reporterEmail){
-    fetch('/api/notify/staff-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportId:reps[idx].id,trackingCode:reps[idx].code||reps[idx].trackingCode,email:reps[idx].reporterEmail})}).catch(()=>{});
+    fetch('/api/notify/staff-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportId:reps[idx].id,trackingCode:reps[idx].code||reps[idx].trackingCode,email:reps[idx].reporterEmail,message:reps[idx].staffReply,schoolId:currentEtab?.id||null})}).catch(()=>{});
   }
   toast('Sauvegardé !','ok');
 }
@@ -3510,7 +3704,80 @@ function setStatus(idx,status){
   reps[idx].history.push({s:status,t:new Date().toISOString(),by:'Admin',note:`Statut : ${old} → ${status}`});
   S.updateReport({...reps[idx], logMsg:`Dossier #${reps[idx].id} → ${status}`});
   S.addLog(`Dossier #${reps[idx].id} → ${status}`,reps[idx].id);
+  if(reps[idx].reporterEmail){
+    fetch('/api/notify/status-update',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        reportId:reps[idx].id,
+        trackingCode:reps[idx].code||reps[idx].trackingCode,
+        newStatus:status,
+        email:reps[idx].reporterEmail,
+        schoolId:currentEtab?.id||null
+      })
+    }).catch(()=>{});
+  }
   renderDashboardV3();toast('Statut mis à jour','ok');
+}
+
+function openSupportRequestModal() {
+  if (!currentEtab) return;
+  if (document.getElementById('support-modal')) return;
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay" id="support-modal" onclick="if(event.target===this)closeSupportRequestModal()">
+      <div class="modal">
+        <div class="mhandle"></div>
+        <h3>Demande SAV établissement</h3>
+        <div class="fg"><label class="fl">Sujet *</label><input type="text" class="fi" id="sav-subject" placeholder="Ex: Problème de connexion équipe"></div>
+        <div class="fg"><label class="fl">Priorité</label>
+          <select id="sav-priority" class="fsel">
+            <option value="normal">Normale</option>
+            <option value="high">Haute</option>
+            <option value="urgent">Urgente</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Message *</label><textarea id="sav-message" class="fta" style="min-height:100px" placeholder="Décrivez le besoin de support..."></textarea></div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" style="flex:1" onclick="closeSupportRequestModal()">Annuler</button>
+          <button class="btn btn-p" style="flex:2" onclick="submitSupportRequest()">Envoyer</button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function closeSupportRequestModal() {
+  document.getElementById('support-modal')?.remove();
+}
+
+async function submitSupportRequest() {
+  if (!currentEtab) return;
+  const subject = (document.getElementById('sav-subject')?.value || '').trim();
+  const message = (document.getElementById('sav-message')?.value || '').trim();
+  const priority = (document.getElementById('sav-priority')?.value || 'normal').trim();
+  if (!subject || !message) {
+    toast('Sujet et message requis', 'err');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/establishments/${currentEtab.blobId || currentEtab.apiId || currentEtab.id}/support-requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject,
+        message,
+        priority,
+        requester_name: currentAdminUser?.full_name || currentAdminUser?.name || currentAdminUser?.email || 'Admin établissement',
+        requester_email: currentAdminUser?.email || '',
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Impossible d’envoyer la demande');
+    closeSupportRequestModal();
+    toast('Demande SAV envoyée au superadmin', 'ok');
+  } catch (e) {
+    toast(e.message || 'Erreur lors de l’envoi', 'err');
+  }
 }
 
 // ── STAFF TAB ──
@@ -3883,6 +4150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Restaurer la session Supabase Auth si existante
   await restoreSession();
+  await handleAdminResetRecovery();
 
   // Check for subdomain auto-selection (injected by edge function)
   const subdomainSlug = window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
@@ -4459,6 +4727,10 @@ async function login(email, password) {
     await ssSupabase.auth.signOut();
     throw new Error('Accès refusé — compte non autorisé');
   }
+  if (currentEtab && !isAdminLinkedToCurrentEtab(adminRow)) {
+    await ssSupabase.auth.signOut();
+    throw new Error('Accès refusé — ce compte n’est pas rattaché à cet établissement');
+  }
 
   currentAdminUser = adminRow;
   return adminRow;
@@ -4489,6 +4761,10 @@ async function restoreSession() {
       .maybeSingle();
 
     if (!adminRow) return false;
+    if (currentEtab && !isAdminLinkedToCurrentEtab(adminRow)) {
+      await ssSupabase.auth.signOut();
+      return false;
+    }
 
     currentAdminUser = adminRow;
     adminIn = true;
@@ -4498,6 +4774,21 @@ async function restoreSession() {
   } catch (e) {
     console.warn('Restauration session échouée:', e);
     return false;
+  }
+}
+
+async function handleAdminResetRecovery() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash || '';
+  const recoveryInHash = hash.includes('type=recovery') || hash.includes('access_token=');
+  if (!params.get('admin_reset') && !recoveryInHash) return;
+  try {
+    const { data } = await ssSupabase.auth.getSession();
+    if (data?.session) {
+      openResetPasswordModal();
+    }
+  } catch (e) {
+    console.warn('Reset recovery check failed:', e);
   }
 }
 

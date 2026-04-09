@@ -28,19 +28,21 @@ const PLANS: Record<string, PlanDef> = {
     name: 'Starter',
     price: 0,
     currency: 'EUR',
-    interval: 'month',
+    interval: 'year',
     trial_days: 0,
     features: [
-      'Jusqu\'a 50 eleves',
-      'Signalements de base',
-      'Tableau de bord simple',
+      'Jusqu\'a 150 eleves',
+      '30 signalements / mois',
+      '1 compte admin',
+      'Signalements confidentiels',
+      'IA Lea (acces limite)',
       'Support par email',
-      'Export PDF'
+      'Module educatif essentiel'
     ],
     limits: {
-      max_students: 50,
+      max_students: 150,
       max_staff: 5,
-      max_reports_month: 20,
+      max_reports_month: 30,
       storage_gb: 1,
       api_calls_month: 1000
     },
@@ -48,22 +50,22 @@ const PLANS: Record<string, PlanDef> = {
   },
   pro: {
     name: 'Pro',
-    price: 4900,
+    price: 58800,
     currency: 'EUR',
-    interval: 'month',
+    interval: 'year',
     trial_days: 14,
     popular: true,
     features: [
       'Eleves illimites',
       'Signalements illimites',
-      '1 compte admin',
-      'Statistiques avancees',
+      'Jusqu\'a 3 comptes admin',
+      'Suivi et attribution des incidents',
+      'Statistiques essentielles',
       'Tableau de bord complet',
       'Support prioritaire',
-      'Export PDF & CSV',
-      'Alertes en temps reel',
+      'Notifications email',
       'Sous-domaine dedie',
-      'Barometre IA bien-etre'
+      'Facturation annuelle'
     ],
     limits: {
       max_students: 9999,
@@ -75,30 +77,25 @@ const PLANS: Record<string, PlanDef> = {
     stripe_price_id: null
   },
   enterprise: {
-    name: 'Enterprise',
-    price: 0,
+    name: 'Premium',
+    price: 106800,
     currency: 'EUR',
-    interval: 'month',
-    trial_days: 30,
+    interval: 'year',
+    trial_days: 14,
     features: [
-      'Eleves illimites',
-      'Toutes fonctionnalites Pro',
-      'Nombre d\'admins selon devis',
-      'Acces complet aux statistiques',
-      'IA avancee & predictive',
-      'Tableau de bord multi-etablissement',
-      'Support dedie & SLA 99.9%',
-      'Integration Pronote / EMS',
-      'Formation equipe incluse',
-      'API illimitee',
-      'Personnalisation marque blanche',
-      'Audit & conformite RGPD'
+      'Tout le plan Pro',
+      'Admins illimites',
+      'Barometre IA avance',
+      'Exports et rapports enrichis',
+      'Support prioritaire',
+      'Onboarding accompagne',
+      'Formation equipe'
     ],
     limits: {
       max_students: -1,   // unlimited
       max_staff: -1,
       max_reports_month: -1,
-      storage_gb: 100,
+      storage_gb: 50,
       api_calls_month: -1
     },
     stripe_price_id: null
@@ -234,8 +231,8 @@ export default async (req: Request, context: Context) => {
       id,
       name: plan.name,
       price: plan.price,
-      price_display: id === 'enterprise' ? 'Sur devis' : plan.price === 0 ? 'Gratuit' : `${(plan.price / 100).toFixed(0)}\u20AC/mois`,
-      price_annual_display: id === 'enterprise' ? 'Sur devis' : plan.price === 0 ? 'Gratuit' : `${((plan.price * 10) / 100).toFixed(0)}\u20AC/an`,
+      price_display: plan.price === 0 ? 'Gratuit' : `${(plan.price / 100).toFixed(0)}\u20AC/an`,
+      price_annual_display: plan.price === 0 ? 'Gratuit' : `${(plan.price / 100).toFixed(0)}\u20AC/an`,
       currency: plan.currency,
       interval: plan.interval,
       trial_days: plan.trial_days,
@@ -243,7 +240,7 @@ export default async (req: Request, context: Context) => {
       limits: plan.limits,
       popular: plan.popular || false,
       stripe_price_id: plan.stripe_price_id,
-      cta: id === 'enterprise' ? 'Demander un devis' : plan.price === 0 ? 'Commencer gratuitement' : plan.popular ? 'Essai gratuit' : 'Contacter les ventes'
+      cta: plan.price === 0 ? 'Commencer gratuitement' : plan.popular ? 'Essai gratuit' : 'Contacter les ventes'
     }));
 
     const comparison = {
@@ -251,8 +248,8 @@ export default async (req: Request, context: Context) => {
         {
           name: 'Eleves & Personnel',
           items: [
-            { label: 'Nombre d\'eleves', starter: '200', pro: 'Illimite', enterprise: 'Illimite' },
-            { label: 'Comptes admin', starter: '1', pro: '1', enterprise: 'Selon devis' }
+            { label: 'Nombre d\'eleves', starter: '150', pro: 'Illimite', enterprise: 'Illimite' },
+            { label: 'Comptes admin', starter: '1', pro: '3', enterprise: 'Illimites' }
           ]
         },
         {
@@ -263,7 +260,7 @@ export default async (req: Request, context: Context) => {
             { label: 'IA avancee', starter: false, pro: true, enterprise: true },
             { label: 'Alertes temps reel', starter: false, pro: true, enterprise: true },
             { label: 'Barometre IA bien-etre', starter: false, pro: true, enterprise: true },
-            { label: 'Multi-etablissement', starter: false, pro: false, enterprise: true },
+            { label: 'Multi-etablissement', starter: false, pro: false, enterprise: false },
             { label: 'Marque blanche', starter: false, pro: false, enterprise: true },
             { label: 'Acces complet statistiques Supabase', starter: false, pro: false, enterprise: true }
           ]
