@@ -128,6 +128,22 @@ export default async function handler(req: Request, context: Context) {
         const reportId = reports[0].id;
         const schoolId = reports[0].school_id;
 
+        // Keep immutable deletion trail for superadmin even if data gets anonymized/deleted later
+        try {
+          const archiveStore = getStore({ name: 'gdpr-deletions', consistency: 'strong' });
+          const reportSnapshot = await supabaseQuery('reports', `id=eq.${encodeURIComponent(reportId)}&select=*`);
+          await archiveStore.setJSON(`deletion_${reportId}_${new Date().toISOString().replace(/[:.]/g, '-')}`, {
+            tracking_code: code,
+            report_id: reportId,
+            school_id: schoolId,
+            requested_at: new Date().toISOString(),
+            requested_from_ip: clientIp,
+            snapshot: Array.isArray(reportSnapshot) && reportSnapshot.length > 0 ? reportSnapshot[0] : null,
+          });
+        } catch {
+          // Non-blocking archive path
+        }
+
         // Update status to indicate deletion requested
         await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${reportId}`, {
           method: 'PATCH',

@@ -157,7 +157,7 @@ export default async (req: Request, context: Context) => {
         schools.push(data);
         totalReports += data.report_count || 0;
         if (data.plan === 'pro' && data.status === 'active') mrr += 49;
-        // Enterprise is "sur devis" — custom pricing, not included in automatic MRR
+        if (data.plan === 'enterprise' && data.status === 'active') mrr += 89;
       }
     }
 

@@ -1,46 +1,59 @@
-# SafeSchool — paquet de correction ciblée
+# SafeSchool — configuration production (OVH + Netlify)
 
-Ce paquet corrige les deux blocages déjà confirmés :
+Ce guide résume les points à valider pour une mise en production propre avec séparation superadmin/établissements, authentification robuste et conformité RGPD.
 
-1. `crypto is not defined` dans `netlify/functions/api-establishments.mts`
-2. génération de tenants en `slug.safeschool.fr` au lieu de `slug.app.safeschool.fr`
+## 1) Domaine et DNS OVH
 
-## Fichiers à remplacer
+- Domaine applicatif recommandé : `app.safeschool.fr`
+- CNAME OVH :
+  - `app` -> `safeschoolproject.netlify.app.`
+  - `*` -> `safeschoolproject.netlify.app.`
 
-- `netlify/functions/api-establishments.mts` → remplacer par `api-establishments-fixed.mts`
-- `netlify/edge-functions/subdomain-router.ts` → remplacer par `subdomain-router-fixed.ts`
-
-## Variables Netlify à vérifier
+## 2) Variables Netlify (runtime)
 
 - `TENANT_BASE_DOMAIN=app.safeschool.fr`
+- `NETLIFY_TARGET=safeschoolproject.netlify.app`
 - `SITE_URL=https://app.safeschool.fr`
-- `SUPABASE_URL=...`
-- `SUPABASE_SERVICE_ROLE_KEY=...`
 - `SUPERADMIN_EMAIL=...`
 - `SUPERADMIN_PASS=...`
+- `SUPABASE_URL=...`
+- `SUPABASE_SERVICE_ROLE_KEY=...`
+- `SUPABASE_ANON_KEY=...`
 
-## DNS OVH attendus
+## 3) Réinitialisation mot de passe (admin établissement)
 
-- `app` → `CNAME` vers `safeschoolproject.netlify.app.`
-- `*` → `CNAME` vers `safeschoolproject.netlify.app.`
+Le front admin local utilise Supabase Auth avec envoi d'email de reset.
 
-## Ce qu'il faut aussi vérifier dans le front
+- Dans Supabase Auth > URL Configuration :
+  - `Site URL`: `https://app.safeschool.fr`
+  - `Redirect URLs`: inclure `https://app.safeschool.fr/?admin_reset=1`
+- Dans Supabase Auth > SMTP (OVH) :
+  - `Host`: `ssl0.ovh.net` (ou votre serveur SMTP OVH)
+  - `Port`: `587` (STARTTLS) ou `465` (SSL)
+  - `Username`: adresse email d'envoi
+  - `Password`: mot de passe SMTP applicatif
+  - `Sender name`: `SafeSchool`
+  - `Sender email`: `no-reply@votre-domaine`
 
-Faire une recherche globale sur :
+## 4) Règles d'authentification recommandées (RGPD)
 
-- `.safeschool.fr`
-- `window.location.hostname`
-- `host.split('.')`
-- `admin-login`
+- Mot de passe fort (12+ caractères)
+- Vérification de rattachement compte admin -> établissement avant accès dashboard
+- Limitation de débit sur endpoints de login
+- Session courte côté admin et déconnexion automatique en cas de session invalide
+- Journalisation des actions sensibles (réponses, statut, demandes RGPD)
 
-Et corriger toute génération de lien établissement pour utiliser :
+## 5) Conservation et traçabilité
 
-- `\`${slug}.app.safeschool.fr\``
+- Suppression établissement : archivage automatique côté Netlify Blobs (`establishments-archive`)
+- Demande RGPD suppression : snapshot archivé (`gdpr-deletions`) avant marquage de retrait
+- SAV : tickets persistés dans `support-requests`, visibles côté superadmin avec réponse
 
-au lieu de :
+## 6) Vérifications avant mise en ligne
 
-- `\`${slug}.safeschool.fr\``
-
-## Limite importante
-
-Le projet complet a été fourni en `.rar`, qui n'a pas pu être entièrement extrait dans cet environnement. Ce paquet corrige donc directement les fichiers déjà identifiés comme critiques, mais ne remplace pas un audit complet du front si d'autres composants génèrent encore l'ancien domaine.
+- Création établissement par superadmin -> lien établissement fonctionnel
+- Recherche d'établissement depuis la page d'accueil
+- Admin établissement : traitement incidents + notes internes
+- Membre équipe : vue limitée aux incidents attribués
+- Notifications (nouveau signalement, changement statut, réponse)
+- Export et statistiques superadmin opérationnels

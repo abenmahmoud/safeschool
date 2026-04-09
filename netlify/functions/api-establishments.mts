@@ -136,6 +136,19 @@ function genSlug(name: string): string {
     .slice(0, 30);
 }
 
+function getArchivedStore() {
+  return getStore({ name: 'establishments-archive', consistency: 'strong' });
+}
+
+function getSupportStore() {
+  return getStore({ name: 'support-requests', consistency: 'strong' });
+}
+
+function genSupportTicketId(schoolId: string): string {
+  const token = Math.random().toString(36).slice(2, 10).toUpperCase();
+  return `sav_${schoolId}_${Date.now()}_${token}`;
+}
+
 // Sync school to Supabase (non-blocking, best-effort)
 async function syncToSupabase(school: any, store: any): Promise<void> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
@@ -236,6 +249,32 @@ export default async (req: Request, context: Context) => {
         });
       }
       return cors(results, 200, req);
+    }
+
+    if (req.method === 'GET' && path === '/search') {
+      const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+      const active = index.filter((e: any) => e.is_active);
+      const hits = !q
+        ? active.slice(0, 30)
+        : active.filter((e: any) => {
+            const hay = `${e.name || ''} ${e.slug || ''} ${e.city || ''}`.toLowerCase();
+            return hay.includes(q);
+          }).slice(0, 30);
+      return cors(
+        hits.map((e: any) => ({
+          id: e.id,
+          name: e.name,
+          slug: e.slug,
+          city: e.city || '',
+          type: e.type || 'lycee',
+          plan: e.plan || 'starter',
+          domain: e.domain || buildSchoolDomain(e.slug),
+          url: e.url || buildSchoolUrl(e.slug),
+        })),
+        200,
+        req,
+      );
     }
 
     if (req.method === 'POST' && path.startsWith('/admin-login/')) {
@@ -425,7 +464,7 @@ export default async (req: Request, context: Context) => {
       return cors(schools, 200, req);
     }
 
-    if (req.method === 'GET' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
+    if (req.method === 'GET' && path !== '/support-requests' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
       const id = path.slice(1);
       const data = await store.get(`school_${id}`, { type: 'json' });
       if (!data) return cors({ error: 'Non trouvé' }, 404, req);
@@ -465,7 +504,7 @@ export default async (req: Request, context: Context) => {
       const adminCode = genAdminCode();
       const now = new Date().toISOString();
       const plan = body.plan || 'starter';
-      const planDurations: Record<string, number> = { starter: 3, pro: 12, enterprise: 24 };
+      const planDurations: Record<string, number> = { starter: 12, pro: 12, enterprise: 12 };
       const expDate = new Date();
       expDate.setMonth(expDate.getMonth() + (planDurations[plan] || 3));
 
@@ -489,9 +528,9 @@ export default async (req: Request, context: Context) => {
         admin_code: adminCode,
         admin_email: body.admin_email || body.email || '',
         admin_password: body.admin_password || adminCode,
-        max_students: { starter: 200, pro: 9999, enterprise: 99999 }[plan] || 200,
-        max_reports: { starter: 50, pro: 9999, enterprise: 99999 }[plan] || 50,
-        max_admins: { starter: 1, pro: 2, enterprise: 99 }[plan] || 1,
+        max_students: { starter: 150, pro: 9999, enterprise: 99999 }[plan] || 150,
+        max_reports: { starter: 30, pro: 9999, enterprise: 99999 }[plan] || 30,
+        max_admins: { starter: 1, pro: 3, enterprise: 99 }[plan] || 1,
         created_at: now,
         expires_at: expDate.toISOString(),
         report_count: 0,
@@ -566,11 +605,79 @@ export default async (req: Request, context: Context) => {
 
     if (req.method === 'DELETE' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
       const id = path.slice(1);
+      const existing = (await store.get(`school_${id}`, { type: 'json' })) as any;
+      if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
+      const archiveStore = getArchivedStore();
+      const archivedAt = new Date().toISOString();
+      await archiveStore.setJSON(`school_${id}_${archivedAt.replace(/[:.]/g, '-')}`, {
+        ...existing,
+        archived_at: archivedAt,
+        archived_reason: 'deleted_by_superadmin',
+      });
       await store.delete(`school_${id}`);
       const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
       const filtered = index.filter((e: any) => e.id !== id);
       await store.setJSON('_index', filtered);
-      return cors({ deleted: true }, 200, req);
+      return cors({ deleted: true, archived: true }, 200, req);
+    }
+
+    // School-side SAV request creation (admin local / team)
+    if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/support-requests$/)) {
+      const id = path.split('/')[1];
+      const existing = (await store.get(`school_${id}`, { type: 'json' })) as any;
+      if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return cors({ error: 'Corps invalide' }, 400, req);
+      }
+      const subject = sanitize(body.subject || '').slice(0, 180);
+      const message = sanitize(body.message || '').slice(0, 4000);
+      const requesterEmail = (body.requester_email || '').trim().toLowerCase();
+      const requesterName = sanitize(body.requester_name || '').slice(0, 120);
+      const priority = ['low', 'normal', 'high', 'urgent'].includes(body.priority) ? body.priority : 'normal';
+
+      if (!subject || !message) {
+        return cors({ error: 'Sujet et message requis' }, 400, req);
+      }
+      if (requesterEmail && !isValidEmail(requesterEmail)) {
+        return cors({ error: 'Email invalide' }, 400, req);
+      }
+
+      const supportStore = getSupportStore();
+      const now = new Date().toISOString();
+      const ticketId = genSupportTicketId(id);
+      const ticket = {
+        id: ticketId,
+        school_id: id,
+        school_slug: existing.slug,
+        school_name: existing.name,
+        subject,
+        message,
+        priority,
+        status: 'open',
+        requester_name: requesterName || 'Membre etablissement',
+        requester_email: requesterEmail || '',
+        created_at: now,
+        updated_at: now,
+        replies: [],
+      };
+
+      await supportStore.setJSON(`ticket_${ticketId}`, ticket);
+      const schoolIndexKey = `school_${id}_tickets`;
+      const schoolTicketIds =
+        ((await supportStore.get(schoolIndexKey, { type: 'json' }).catch(() => null)) as string[] | null) || [];
+      schoolTicketIds.unshift(ticketId);
+      await supportStore.setJSON(schoolIndexKey, schoolTicketIds.slice(0, 500));
+
+      const globalIndexKey = '_tickets';
+      const allTicketIds =
+        ((await supportStore.get(globalIndexKey, { type: 'json' }).catch(() => null)) as string[] | null) || [];
+      allTicketIds.unshift(ticketId);
+      await supportStore.setJSON(globalIndexKey, allTicketIds.slice(0, 3000));
+
+      return cors({ ok: true, ticket }, 201, req);
     }
 
     if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/staff-codes$/)) {
@@ -603,6 +710,58 @@ export default async (req: Request, context: Context) => {
       existing.admin_password = existing.admin_code;
       await store.setJSON(`school_${id}`, existing);
       return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password }, 200, req);
+    }
+
+    // Superadmin-only SAV inbox
+    if (req.method === 'GET' && path === '/support-requests') {
+      const supportStore = getSupportStore();
+      const allTicketIds =
+        ((await supportStore.get('_tickets', { type: 'json' }).catch(() => null)) as string[] | null) || [];
+      const schoolFilter = (url.searchParams.get('school_id') || '').trim();
+      const statusFilter = (url.searchParams.get('status') || '').trim();
+      const limit = Math.min(Math.max(Number(url.searchParams.get('limit') || '100'), 1), 500);
+      const out: any[] = [];
+      for (const ticketId of allTicketIds.slice(0, 1500)) {
+        const t = (await supportStore.get(`ticket_${ticketId}`, { type: 'json' }).catch(() => null)) as any;
+        if (!t) continue;
+        if (schoolFilter && t.school_id !== schoolFilter) continue;
+        if (statusFilter && t.status !== statusFilter) continue;
+        out.push(t);
+        if (out.length >= limit) break;
+      }
+      return cors({ total: out.length, tickets: out }, 200, req);
+    }
+
+    if (req.method === 'POST' && path.match(/^\/support-requests\/[^/]+\/reply$/)) {
+      const ticketId = path.split('/')[2];
+      const supportStore = getSupportStore();
+      const ticket = (await supportStore.get(`ticket_${ticketId}`, { type: 'json' })) as any;
+      if (!ticket) return cors({ error: 'Ticket non trouvé' }, 404, req);
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return cors({ error: 'Corps invalide' }, 400, req);
+      }
+      const message = sanitize(body.message || '').slice(0, 4000);
+      if (!message) return cors({ error: 'Message requis' }, 400, req);
+      const now = new Date().toISOString();
+      const reply = {
+        id: `reply_${now.replace(/[:.]/g, '-')}`,
+        message,
+        author: sanitize(body.author || 'superadmin').slice(0, 120),
+        created_at: now,
+      };
+      const replies = Array.isArray(ticket.replies) ? ticket.replies : [];
+      replies.push(reply);
+      const updated = {
+        ...ticket,
+        status: body.close === true ? 'closed' : 'answered',
+        replies,
+        updated_at: now,
+      };
+      await supportStore.setJSON(`ticket_${ticketId}`, updated);
+      return cors({ ok: true, ticket: updated }, 200, req);
     }
 
     return cors({ error: 'Route non trouvée' }, 404, req);
