@@ -445,6 +445,7 @@ html.dark .dm-switch::after { left:25px; }
 #pg-select-etab{display:flex;flex-direction:column;min-height:100vh;background:linear-gradient(150deg,#eef2ff 0%,#f5f3ff 60%,#fdf4ff 100%)}
 .etab-header{padding:36px 20px 20px;text-align:center}
 .etab-header .wbadge{display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.12);color:var(--p);font-size:.77rem;font-weight:700;padding:5px 13px;border-radius:20px;margin-bottom:14px;border:1px solid rgba(79,70,229,.15)}
+.etab-search-wrap{padding:10px 20px 2px}.etab-search-box{display:flex;align-items:center;gap:8px;background:#f4f5f7;border-radius:12px;padding:9px 14px;border:1.5px solid transparent;transition:all .18s}.etab-search-box:focus-within{background:#fff;border-color:rgba(0,0,0,.12)}.etab-search-icon{width:16px;height:16px;color:#9ca3af;flex-shrink:0}.etab-search-inp{flex:1;border:none;background:transparent;font-size:15px;color:#111;outline:none;min-width:0;font-family:inherit}.etab-search-inp::placeholder{color:#b0b7c3}.etab-search-clr{background:none;border:none;color:#c0c4ce;font-size:16px;cursor:pointer;padding:0;line-height:1;display:none}
 .etab-list{padding:0 20px;display:flex;flex-direction:column;gap:12px;flex:1}
 .etab-card{background:#fff;border-radius:var(--r16);padding:20px 18px;display:flex;align-items:center;gap:16px;border:2px solid var(--border);cursor:pointer;transition:.25s cubic-bezier(.34,1.56,.64,1)}
 .etab-card:hover{transform:translateY(-3px);box-shadow:var(--s2);border-color:var(--p2)}
@@ -668,9 +669,11 @@ html.dark .dm-switch::after { left:25px; }
     <h1 id="etab-title"></h1>
     <p style="margin-top:6px;max-width:300px;margin-left:auto;margin-right:auto" id="etab-subtitle"></p>
   </div>
+  <div class="etab-search-wrap" id="etab-search-wrap"><div class="etab-search-box"><svg class="etab-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg><input type="search" id="etab-search-inp" class="etab-search-inp" placeholder="Nom, ville, code postal..." autocomplete="off"/><button class="etab-search-clr" id="etab-search-clr">&#x2715;</button></div></div>
   <div class="etab-list" id="etab-list">
     <div class="etab-loading"><div class="spinner"></div><p>Chargement des établissements…</p></div>
   </div>
+  <p id="etab-no-result" style="display:none;text-align:center;padding:24px 20px 4px;color:#b0b7c3;font-size:14px;">Aucun établissement trouvé</p>
   <div class="etab-footer">
     <p style="font-size:.76rem;color:var(--ts)" id="etab-footer-text"></p>
   </div>
@@ -3932,6 +3935,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show establishment selector
     document.getElementById('pg-select-etab').style.display = 'flex';
     renderEtabList();
+  (function(){var inp=document.getElementById('etab-search-inp');var clr=document.getElementById('etab-search-clr');if(!inp)return;function f(){var q=inp.value.trim().toLowerCase();var cards=document.querySelectorAll('#etab-list .etab-card');var n=0;cards.forEach(function(c){var s=!q||(c.textContent||'').toLowerCase().includes(q);c.style.display=s?'':'none';if(s)n++;});clr.style.display=q?'block':'none';var e=document.getElementById('etab-no-result');if(e)e.style.display=n===0&&q?'block':'none';}inp.addEventListener('input',f);clr.addEventListener('click',function(){inp.value='';f();inp.focus();});})();
   }
 });
 
