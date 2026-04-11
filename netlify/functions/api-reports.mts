@@ -101,9 +101,9 @@ export default async function handler(req, context) {
     const codeWithPrefix = code.startsWith('SS-') ? code : `SS-${code}`;
     const cached = fromCache(`report:${codeClean}`);
     if (cached) return cors({ report: cached });
-    let rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(codeWithPrefix)}&select=id,tracking_code,status,type,urgence,created_at,updated_at,school_id`);
+    let rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(codeWithPrefix)}&select=id,tracking_code,status,type,urgency,created_at,updated_at,school_id`);
     if (!rows || rows.length === 0) {
-      rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(codeClean)}&select=id,tracking_code,status,type,urgence,created_at,updated_at,school_id`);
+      rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(codeClean)}&select=id,tracking_code,status,type,urgency,created_at,updated_at,school_id`);
     }
     if (!rows || rows.length === 0) return cors({ error: 'Signalement introuvable', debug: { url_ok: !!SUPABASE_URL, key_ok: !!SUPABASE_KEY } }, 404);
     toCache(`report:${codeClean}`, rows[0]);
