@@ -559,6 +559,15 @@ html.dark .dm-switch::after { left:25px; }
 .admin-wrap{position:fixed;inset:0;background:linear-gradient(135deg,#1e1b4b,#312e81,#4f46e5);display:flex;align-items:center;justify-content:center;padding:24px;z-index:1000}
 .admin-card{background:#fff;border-radius:var(--r24);padding:36px 28px;width:100%;max-width:370px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .admin-logo{width:60px;height:60px;background:linear-gradient(135deg,var(--p),var(--p2));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 18px;box-shadow:0 8px 24px rgba(79,70,229,.35)}
+
+/* ── Responsive fix : viewport adaptatif ── */
+html,body{height:100%;max-height:100%;overflow:hidden}
+#app{height:100%;max-height:100%;overflow:hidden;display:flex;flex-direction:column}
+.page{flex:1 1 0%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+@media(max-height:720px){.welcome{padding:10px 20px 8px!important}.stitle{padding-top:8px!important;padding-bottom:6px!important}.agrid{gap:8px!important}.flink{padding-top:8px!important;padding-bottom:8px!important;margin-top:2px!important}.sdiv{padding-bottom:6px!important}}
+@media(max-height:800px) and (min-height:721px){.welcome{padding:14px 20px 10px!important}.stitle{padding-top:10px!important;padding-bottom:8px!important}}
+@media(min-width:769px){#app{max-width:480px;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.08)}}
+/* ── fin responsive fix ── */
 </style>
 
 <style id="ss-v3-css">
