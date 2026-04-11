@@ -356,7 +356,31 @@ force = false
 [[redirects]]
 from = "/*"
 to = "/index.html"
+[[redirects]]
+from = "/api/reports"
+to = "/.netlify/functions/api-reports"
 status = 200
+force = false
+
+  [redirects.query]
+  
+    [redirects.conditions]
+    
+      [redirects.headers]
+      
+      [[redirects]]
+      from = "/api/reports/*"
+      to = "/.netlify/functions/api-reports"
+      status = 200
+      force = false
+      
+        [redirects.query]
+        
+          [redirects.conditions]
+          
+            [redirects.headers]
+            
+            status = 200
 force = false
 
   [redirects.query]
