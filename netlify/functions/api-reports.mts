@@ -66,17 +66,28 @@ async function sbFetch(path, opts = {}) {
 }
 
 async function resolveSchool(slug) {
-  const cached = fromCache(`school_slug:${slug}`);
+  const cacheKey = `school_slug:${slug}`;
+  const cached = fromCache(cacheKey);
   if (cached) return cached;
-  const store = getStore({ name: 'establishments', consistency: 'strong' });
-  const index = (await store.get('_index', { type: 'json' })) || [];
-  const entry = index.find((e) => e.slug === slug && e.is_active);
-  if (!entry) return null;
-  const data = await store.get(`school_${entry.id}`, { type: 'json' });
-  if (!data) return null;
-  const school = { id: data.id, name: data.name, slug: data.slug, admin_email: data.admin_email, supabase_id: data.supabase_id };
-  toCache(`school_slug:${slug}`, school);
-  return school;
+  // Chercher dans Supabase en priorité
+  const rows = await sbFetch(`schools?slug=eq.${encodeURIComponent(slug)}&select=id,name,slug,admin_email&limit=1`);
+  if (rows && rows.length > 0) {
+    const school = { id: rows[0].id, name: rows[0].name, slug: rows[0].slug, admin_email: rows[0].admin_email, supabase_id: rows[0].id };
+    toCache(cacheKey, school);
+    return school;
+  }
+  // Fallback Blobs
+  try {
+    const store = getStore({ name: 'establishments', consistency: 'strong' });
+    const index = (await store.get('_index', { type: 'json' })) || [];
+    const entry = index.find((e) => e.slug === slug && e.is_active);
+    if (!entry) return null;
+    const bdata = await store.get(`school_${entry.id}`, { type: 'json' });
+    if (!bdata) return null;
+    const school = { id: bdata.id, name: bdata.name, slug: bdata.slug, admin_email: bdata.admin_email, supabase_id: bdata.supabase_id || bdata.id };
+    toCache(cacheKey, school);
+    return school;
+  } catch(e) { return null; }
 }
 
 export default async function handler(req, context) {
