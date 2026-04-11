@@ -458,6 +458,8 @@ html.dark .dm-switch::after { left:25px; }
 .etab-info h3{font-size:1rem;color:var(--t);margin-bottom:2px}
 .etab-info p{font-size:.8rem;color:var(--tm)}
 .etab-type-badge{font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:10px;display:inline-block;margin-top:4px}
+/* Cacher badge PRO - garder uniquement type etablissement */
+.etab-type-badge+.etab-type-badge{display:none!important}
 .etab-footer{padding:18px 20px;text-align:center}
 .etab-current{display:flex;align-items:center;gap:8px;background:var(--pbg);border:1.5px solid rgba(79,70,229,.15);border-radius:var(--r12);padding:8px 14px;margin:0 20px;cursor:pointer;transition:.2s}
 .etab-current:hover{background:var(--p);color:#fff;border-color:var(--p)}
@@ -560,11 +562,11 @@ html.dark .dm-switch::after { left:25px; }
 .admin-card{background:#fff;border-radius:var(--r24);padding:36px 28px;width:100%;max-width:370px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .admin-logo{width:60px;height:60px;background:linear-gradient(135deg,var(--p),var(--p2));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 18px;box-shadow:0 8px 24px rgba(79,70,229,.35)}
 
-/* ── Responsive fix : viewport adaptatif ── */
-html,body{height:100%;max-height:100%;overflow:hidden}
-#app{height:100%;max-height:100%;overflow:hidden;display:flex;flex-direction:column}
-.page{flex:1 1 0%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
-@media(max-height:720px){.welcome{padding:10px 20px 8px!important}.stitle{padding-top:8px!important;padding-bottom:6px!important}.agrid{gap:8px!important}.flink{padding-top:8px!important;padding-bottom:8px!important;margin-top:2px!important}.sdiv{padding-bottom:6px!important}}
+/* ── Responsive fix v2 : scroll natif fluide ── */
+html{height:100%}
+body{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#app{min-height:100%;display:flex;flex-direction:column}
+@media(max-height:720px){.welcome{padding:10px 20px 8px!important}.stitle{padding-top:8px!important;padding-bottom:6px!important}.agrid{gap:8px!important}.flink{padding-top:8px!important;padding-bottom:8px!important;margin-top:2px!important}}
 @media(max-height:800px) and (min-height:721px){.welcome{padding:14px 20px 10px!important}.stitle{padding-top:10px!important;padding-bottom:8px!important}}
 @media(min-width:769px){#app{max-width:480px;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.08)}}
 /* ── fin responsive fix ── */
