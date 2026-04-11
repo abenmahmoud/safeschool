@@ -1,113 +1,191 @@
-import type { Context } from "@netlify/functions";
-import { createClient } from "@supabase/supabase-js";
+import { getStore } from '@netlify/blobs';
+import type { Context, Config } from '@netlify/functions';
+import crypto from 'node:crypto';
 
-const SUPABASE_URL = Netlify.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_KEY = Netlify.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const RESEND_API_KEY = Netlify.env.get("RESEND_API_KEY");
-const FROM_EMAIL = Netlify.env.get("NOTIFY_FROM_EMAIL") || "notifications@safeschool.fr";
+const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
+const SUPABASE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
+const RESEND_API_KEY = Netlify.env.get('RESEND_API_KEY') || '';
+const FROM_EMAIL = Netlify.env.get('NOTIFY_FROM_EMAIL') || 'notifications@safeschool.fr';
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 
-const _cache = new Map();
-const TTL = 60000;
-const fromCache = (k) => { const c = _cache.get(k); return c && Date.now() - c.ts < TTL ? c.data : null; };
-const toCache = (k, d) => _cache.set(k, { data: d, ts: Date.now() });
+// Cache mémoire 60s pour slugs et signalements
+const _cache = new Map<string, { data: any; ts: number }>();
+const TTL = 60_000;
+const fromCache = (k: string) => { const c = _cache.get(k); return c && Date.now() - c.ts < TTL ? c.data : null; };
+const toCache = (k: string, d: any) => _cache.set(k, { data: d, ts: Date.now() });
 
-function genCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let c = "SS-";
+function genCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = 'SS-';
   for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
   return c;
 }
 
-export default async function handler(req, context) {
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Content-Type": "application/json",
-  };
-  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: cors });
+function authCheck(req: Request): boolean {
+  if (!SUPERADMIN_EMAIL || !SUPERADMIN_PASS) return false;
+  const auth = req.headers.get('x-sa-token');
+  if (!auth) return false;
+  try { return atob(auth) === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`; } catch { return false; }
+}
+
+function cors(body: any, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
+    },
+  });
+}
+
+// Appel Supabase REST direct (sans SDK)
+async function sbFetch(path: string, opts: RequestInit = {}) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+      ...(opts.headers || {}),
+    },
+  });
+  if (!res.ok) { console.error('Supabase error:', res.status, await res.text().catch(() => '')); return null; }
+  return res.json().catch(() => null);
+}
+
+// Résoudre school_id depuis Blobs via slug
+async function resolveSchool(slug: string) {
+  const cacheKey = `school_slug:${slug}`;
+  let cached = fromCache(cacheKey);
+  if (cached) return cached;
+  
+  const store = getStore({ name: 'establishments', consistency: 'strong' });
+  const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+  const entry = index.find((e: any) => e.slug === slug && e.is_active);
+  if (!entry) return null;
+  
+  const data = await store.get(`school_${entry.id}`, { type: 'json' }) as any;
+  if (!data) return null;
+  
+  const school = { id: data.id, name: data.name, slug: data.slug, admin_email: data.admin_email, supabase_id: data.supabase_id };
+  toCache(cacheKey, school);
+  return school;
+}
+
+export default async function handler(req: Request, context: Context) {
+  if (req.method === 'OPTIONS') return cors({}, 200);
 
   const url = new URL(req.url);
-  const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  if (req.method === "GET") {
-    const code = url.searchParams.get("code");
-    if (!code) return new Response(JSON.stringify({ error: "Code requis" }), { status: 400, headers: cors });
-    let report = fromCache("r:" + code);
-    if (!report) {
-      const { data, error } = await sb.from("reports")
-        .select("id,tracking_code,status,type,urgence,created_at,updated_at,school_id,responses(message,created_at,author_role)")
-        .eq("tracking_code", code).single();
-      if (error || !data) return new Response(JSON.stringify({ error: "Introuvable" }), { status: 404, headers: cors });
-      toCache("r:" + code, data);
-      report = data;
-    }
-    return new Response(JSON.stringify({ report }), { status: 200, headers: cors });
+  // GET /api/reports?code=SS-XXXXXX — suivi signalement
+  if (req.method === 'GET') {
+    const code = url.searchParams.get('code');
+    if (!code) return cors({ error: 'Code requis' }, 400);
+
+    const cached = fromCache(`report:${code}`);
+    if (cached) return cors({ report: cached });
+
+    // Chercher dans Supabase
+    const rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(code)}&select=id,tracking_code,status,type,urgence,created_at,updated_at,school_id`);
+    if (!rows || rows.length === 0) return cors({ error: 'Signalement introuvable' }, 404);
+    toCache(`report:${code}`, rows[0]);
+    return cors({ report: rows[0] });
   }
 
-  if (req.method === "POST") {
-    let body;
-    try { body = await req.json(); } catch {
-      return new Response(JSON.stringify({ error: "JSON invalide" }), { status: 400, headers: cors });
-    }
-    const { school_id, slug, type, urgence, description, anonymous, email, phone, documents } = body;
+  // POST /api/reports — soumettre signalement
+  if (req.method === 'POST') {
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'JSON invalide' }, 400); }
 
-    let sid = school_id;
-    if (!sid && slug) {
-      let school = fromCache("slug:" + slug);
-      if (!school) {
-        const { data } = await sb.from("schools").select("id,admin_email,name").eq("slug", slug).single();
-        if (data) { toCache("slug:" + slug, data); school = data; }
-      }
-      sid = school?.id;
+    const { school_id, slug, type, urgence, description, anonymous, email, phone } = body;
+    if (!type || !description) return cors({ error: 'type et description requis' }, 400);
+
+    // Résoudre l'établissement
+    let school: any = null;
+    if (slug) {
+      school = await resolveSchool(slug);
+      if (!school) return cors({ error: `Etablissement "${slug}" introuvable` }, 404);
     }
-    if (!sid) return new Response(JSON.stringify({ error: "Etablissement introuvable" }), { status: 400, headers: cors });
-    if (!type || !description) return new Response(JSON.stringify({ error: "type et description requis" }), { status: 400, headers: cors });
+
+    const sid = school?.supabase_id || school?.id || school_id;
+    if (!sid) return cors({ error: 'school_id requis' }, 400);
 
     const tracking_code = genCode();
-    const { data: report, error } = await sb.from("reports").insert({
-      school_id: sid, tracking_code, type,
-      urgence: urgence || "moyen", description,
+    const reportData = {
+      tracking_code,
+      type,
+      urgence: urgence || 'moyen',
+      description,
       anonymous: anonymous !== false,
       reporter_email: anonymous !== false ? null : (email || null),
       reporter_phone: anonymous !== false ? null : (phone || null),
-      status: "nouveau", documents: documents || [],
-    }).select().single();
+      status: 'nouveau',
+      school_id: sid,
+    };
 
-    if (error) return new Response(JSON.stringify({ error: "Erreur DB", details: error.message }), { status: 500, headers: cors });
+    // Insérer en Supabase via REST
+    const inserted = await sbFetch('reports', {
+      method: 'POST',
+      body: JSON.stringify(reportData),
+    });
 
+    if (!inserted || !inserted[0]) {
+      // Fallback Blobs si Supabase indisponible
+      console.warn('Supabase insert failed, using Blobs fallback');
+      const store = getStore({ name: 'reports', consistency: 'strong' });
+      const report = { ...reportData, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+      await store.setJSON(`report_${tracking_code}`, report);
+    }
+
+    const report_id = inserted?.[0]?.id || tracking_code;
+
+    // Notifications en background
     context.waitUntil((async () => {
       try {
-        const { data: school } = await sb.from("schools").select("admin_email,name").eq("id", sid).single();
-        if (!school?.admin_email || !RESEND_API_KEY) return;
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { Authorization: "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            from: FROM_EMAIL, to: school.admin_email,
-            subject: "Nouveau signalement [" + (urgence||"moyen").toUpperCase() + "] - " + school.name,
-            html: "<div style='font-family:sans-serif'><div style='background:#dc2626;color:white;padding:20px'><h2>Nouveau signalement</h2><p>Code : <strong>" + tracking_code + "</strong></p></div><div style='padding:20px;background:#f9fafb'><p><b>Type :</b> " + type + "</p><p><b>Urgence :</b> " + (urgence||"moyen") + "</p><p><b>Description :</b> " + description.substring(0,400) + "</p><p style='text-align:center'><a href='https://app.safeschool.fr/admin?code=" + tracking_code + "' style='background:#dc2626;color:white;padding:12px 24px;border-radius:6px;text-decoration:none'>Voir le signalement</a></p></div></div>",
-          }),
-        });
-        if (anonymous === false && email) {
-          await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: { Authorization: "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
+        const adminEmail = school?.admin_email;
+        if (adminEmail && RESEND_API_KEY) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              from: FROM_EMAIL, to: email,
-              subject: "Signalement recu - Code " + tracking_code,
-              html: "<div style='font-family:sans-serif'><div style='background:#2563eb;color:white;padding:20px'><h2>Signalement recu</h2></div><div style='padding:20px;background:#f9fafb'><p>Votre signalement a ete transmis.</p><p><b>Code de suivi : <span style='color:#dc2626;font-size:1.4em;letter-spacing:3px'>" + tracking_code + "</span></b></p><p style='text-align:center'><a href='https://app.safeschool.fr?code=" + tracking_code + "' style='background:#2563eb;color:white;padding:12px 24px;border-radius:6px;text-decoration:none'>Suivre mon dossier</a></p></div></div>",
+              from: FROM_EMAIL,
+              to: adminEmail,
+              subject: `Nouveau signalement [${(urgence || 'moyen').toUpperCase()}] - ${school?.name || 'Etablissement'}`,
+              html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#dc2626;color:white;padding:20px;border-radius:8px 8px 0 0"><h2 style="margin:0">Nouveau signalement</h2><p>Code : <strong>${tracking_code}</strong></p></div><div style="padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px"><p><b>Type :</b> ${type}</p><p><b>Urgence :</b> ${urgence || 'moyen'}</p><p><b>Description :</b> ${description.substring(0, 400)}</p><p style="text-align:center;margin-top:20px"><a href="https://app.safeschool.fr/admin?code=${tracking_code}" style="background:#dc2626;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">Voir le signalement</a></p></div></div>`,
             }),
           });
         }
-      } catch(e) { console.error("notify error", e); }
+        if (anonymous === false && email && RESEND_API_KEY) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: FROM_EMAIL,
+              to: email,
+              subject: `Signalement recu - Code ${tracking_code}`,
+              html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#2563eb;color:white;padding:20px;border-radius:8px 8px 0 0"><h2 style="margin:0">Signalement recu</h2></div><div style="padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px"><p>Votre signalement a ete transmis.</p><p><b>Code de suivi : <span style="color:#dc2626;font-size:1.3em;letter-spacing:3px">${tracking_code}</span></b></p><p style="text-align:center;margin-top:20px"><a href="https://app.safeschool.fr?code=${tracking_code}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:6px;text-decoration:none">Suivre mon dossier</a></p></div></div>`,
+            }),
+          });
+        }
+      } catch (e) { console.error('notify error', e); }
     })());
 
-    return new Response(JSON.stringify({
-      success: true, tracking_code, report_id: report.id,
-      message: anonymous !== false ? "Signalement enregistre. Notez votre code." : "Email de confirmation envoye.",
-    }), { status: 201, headers: cors });
+    return cors({
+      success: true,
+      tracking_code,
+      report_id,
+      message: anonymous !== false ? 'Signalement enregistre. Notez votre code.' : 'Email de confirmation envoye.',
+    }, 201);
   }
 
-  return new Response(JSON.stringify({ error: "Methode non supportee" }), { status: 405, headers: cors });
+  return cors({ error: 'Methode non supportee' }, 405);
 }
+
+export const config: Config = {
+  path: ['/api/reports', '/api/reports/*'],
+};
