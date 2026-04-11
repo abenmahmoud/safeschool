@@ -70,9 +70,9 @@ async function resolveSchool(slug) {
   const cached = fromCache(cacheKey);
   if (cached) return cached;
   // Chercher dans Supabase en priorité
-  const rows = await sbFetch(`schools?slug=eq.${encodeURIComponent(slug)}&select=id,name,slug,admin_email&limit=1`);
+  const rows = await sbFetch(`schools?slug=eq.${encodeURIComponent(slug)}&select=id,name,slug&limit=1`);
   if (rows && rows.length > 0) {
-    const school = { id: rows[0].id, name: rows[0].name, slug: rows[0].slug, admin_email: rows[0].admin_email, supabase_id: rows[0].id };
+    const school = { id: rows[0].id, name: rows[0].name, slug: rows[0].slug, admin_email: null, supabase_id: rows[0].id };
     toCache(cacheKey, school);
     return school;
   }
