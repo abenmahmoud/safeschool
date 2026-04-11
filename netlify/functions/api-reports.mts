@@ -142,12 +142,34 @@ export default async function handler(req, context) {
 
     context.waitUntil((async () => {
       try {
-        if (school?.admin_email && RESEND_API_KEY) {
-          await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: FROM_EMAIL, to: school.admin_email, subject: `Nouveau signalement - ${school?.name||''}`, html: `<p>Code: ${tracking_code}</p>` }),
-          });
+        if (RESEND_API_KEY) {
+          // Notifier l'admin de l'école si email disponible
+          const toEmail = school?.admin_email || null;
+          if (toEmail) {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: FROM_EMAIL,
+                to: toEmail,
+                subject: `🚨 Nouveau signalement [${(urgence||'moyen').toUpperCase()}] - ${school?.name||''}`,
+                html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#dc2626;color:white;padding:20px;border-radius:8px 8px 0 0"><h2 style="margin:0">Nouveau signalement SafeSchool</h2></div><div style="padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px"><p><b>Code de suivi :</b> <span style="font-size:1.2em;color:#dc2626;font-weight:bold">${tracking_code}</span></p><p><b>Type :</b> ${type}</p><p><b>Urgence :</b> ${urgence||'moyen'}</p><p><b>Description :</b> ${description.substring(0,400)}</p><p style="text-align:center;margin-top:20px"><a href="https://app.safeschool.fr/admin?code=${tracking_code}" style="background:#dc2626;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">Voir le signalement →</a></p></div></div>`
+              }),
+            });
+          }
+          // Confirmer au signalant non-anonyme
+          if (anonymous === false && email) {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: FROM_EMAIL,
+                to: email,
+                subject: `Votre signalement a été reçu - Code ${tracking_code}`,
+                html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#2563eb;color:white;padding:20px;border-radius:8px 8px 0 0"><h2 style="margin:0">Signalement reçu</h2></div><div style="padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px"><p>Votre signalement a bien été transmis à l'établissement.</p><p><b>Votre code de suivi :</b></p><p style="font-size:1.5em;color:#dc2626;font-weight:bold;letter-spacing:3px">${tracking_code}</p><p>Conservez ce code pour suivre l'avancement de votre dossier.</p><p style="text-align:center;margin-top:20px"><a href="https://app.safeschool.fr?code=${tracking_code}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:6px;text-decoration:none">Suivre mon dossier →</a></p></div></div>`
+              }),
+            });
+          }
         }
       } catch(e) { console.error('notify error', e.message); }
     })());
