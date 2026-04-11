@@ -101,7 +101,7 @@ export default async function handler(req, context) {
 
     const inserted = await sbFetch('reports', {
       method: 'POST',
-      body: JSON.stringify({ tracking_code, type, urgence: urgence || 'moyen', description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), reporter_phone: anonymous !== false ? null : (phone || null), status: 'nouveau', school_id: sid }),
+      body: JSON.stringify({ tracking_code, type, urgency: urgence || 'moyen', description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), reporter_phone: anonymous !== false ? null : (phone || null), status: 'nouveau', school_id: sid }),
     });
 
     if (!inserted || !inserted[0]) {
