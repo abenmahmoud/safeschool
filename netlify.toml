@@ -39,10 +39,21 @@ for = "/api/*"
   [headers.values]
   Cache-Control = "no-store, no-cache, must-revalidate"
 
+# Admin caché - chemin secret
 [[redirects]]
-from = "/superadmin"
+from = "/gestion-interne-ss-2026"
 to = "/superadmin.html"
 status = 200
+
+[[redirects]]
+from = "/superadmin"
+to = "/404.html"
+status = 301
+
+[[redirects]]
+from = "/superadmin.html"
+to = "/404.html"
+status = 301
 
 [[redirects]]
 from = "/pricing"
