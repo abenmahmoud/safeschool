@@ -15,6 +15,12 @@ const TTL = 60000;
 const fromCache = (k) => { const c = _cache.get(k); return c && Date.now() - c.ts < TTL ? c.data : null; };
 const toCache = (k, d) => _cache.set(k, { data: d, ts: Date.now() });
 
+
+function mapUrgence(u) {
+  const m = { 'faible': 'faible', 'moyen': 'moyenne', 'moyenne': 'moyenne', 'eleve': 'haute', 'haute': 'haute', 'high': 'haute', 'medium': 'moyenne', 'low': 'faible' };
+  return m[u] || 'moyenne';
+}
+
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let c = 'SS-';
@@ -101,7 +107,7 @@ export default async function handler(req, context) {
 
     const inserted = await sbFetch('reports', {
       method: 'POST',
-      body: JSON.stringify({ tracking_code, type, urgency: urgence || 'moyen', description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), status: 'nouveau', school_id: sid }),
+      body: JSON.stringify({ tracking_code, type, urgency: mapUrgence(urgence || 'moyen'), description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), status: 'nouveau', school_id: sid }),
     });
 
     if (!inserted || !inserted[0]) {
