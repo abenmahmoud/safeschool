@@ -42,7 +42,7 @@ for = "/api/*"
 # Admin caché - chemin secret uniquement
 [[redirects]]
 from = "/gestion-interne-ss-2026"
-to = "/superadmin.html"
+to = "/gestion-interne-ss-2026.html"
 status = 200
 
 [[redirects]]
