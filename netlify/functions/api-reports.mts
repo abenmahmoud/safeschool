@@ -16,6 +16,17 @@ const fromCache = (k) => { const c = _cache.get(k); return c && Date.now() - c.t
 const toCache = (k, d) => _cache.set(k, { data: d, ts: Date.now() });
 
 
+function mapType(t) {
+  const m = {
+    'harcelement': 'autre', 'harcèlement': 'autre',
+    'harcelement_physique': 'physique', 'physique': 'physique',
+    'harcelement_verbal': 'verbal', 'verbal': 'verbal',
+    'cyber': 'cyber', 'cyberharcelement': 'cyber', 'cyberharcèlement': 'cyber',
+    'exclusion': 'exclusion', 'autre': 'autre'
+  };
+  return m[t] || 'autre';
+}
+
 function mapUrgence(u) {
   const m = { 'faible': 'faible', 'moyen': 'moyenne', 'moyenne': 'moyenne', 'eleve': 'haute', 'haute': 'haute', 'high': 'haute', 'medium': 'moyenne', 'low': 'faible' };
   return m[u] || 'moyenne';
@@ -107,7 +118,7 @@ export default async function handler(req, context) {
 
     const inserted = await sbFetch('reports', {
       method: 'POST',
-      body: JSON.stringify({ tracking_code, type, urgency: mapUrgence(urgence || 'moyen'), description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), status: 'nouveau', school_id: sid }),
+      body: JSON.stringify({ tracking_code, type: mapType(type), urgency: mapUrgence(urgence || 'moyen'), description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), status: 'nouveau', school_id: sid }),
     });
 
     if (!inserted || !inserted[0]) {
