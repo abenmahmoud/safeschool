@@ -3935,7 +3935,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show establishment selector
     document.getElementById('pg-select-etab').style.display = 'flex';
     renderEtabList();
-  (function(){var inp=document.getElementById('etab-search-inp');var clr=document.getElementById('etab-search-clr');if(!inp)return;function f(){var q=inp.value.trim().toLowerCase();var cards=document.querySelectorAll('#etab-list .etab-card');var n=0;cards.forEach(function(c){var s=!q||(c.textContent||'').toLowerCase().includes(q);c.style.display=s?'':'none';if(s)n++;});clr.style.display=q?'block':'none';var e=document.getElementById('etab-no-result');if(e)e.style.display=n===0&&q?'block':'none';}inp.addEventListener('input',f);clr.addEventListener('click',function(){inp.value='';f();inp.focus();});})();
+  initEtabSearch();
   }
 });
 
@@ -4573,6 +4573,8 @@ ssSupabase.auth.onAuthStateChange((event, session) => {
   window.__SS_ERROR_LOG = getErrorLog;
   window.__SS_CLEAR_ERRORS = function() { localStorage.removeItem(ERROR_LOG_KEY); };
 })();
+
+function initEtabSearch(){var inp=document.getElementById('etab-search-inp');var clr=document.getElementById('etab-search-clr');if(!inp||inp.dataset.ss)return;inp.dataset.ss='1';function f(){var q=inp.value.trim().toLowerCase();var cards=document.querySelectorAll('#etab-list .etab-card');var n=0;cards.forEach(function(c){var s=!q||(c.textContent||'').toLowerCase().includes(q);c.style.display=s?'':'none';if(s)n++;});if(clr)clr.style.display=q?'block':'none';var e=document.getElementById('etab-no-result');if(e)e.style.display=n===0&&q?'block':'none';}inp.addEventListener('input',f);if(clr)clr.addEventListener('click',function(){inp.value='';f();inp.focus();});}
 </script>
 
 </body>
