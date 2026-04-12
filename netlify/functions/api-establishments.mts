@@ -14,7 +14,7 @@ const SUPABASE_SERVICE_KEY =
 // Base domain used for tenant URLs.
 // Recommended for your current OVH + Netlify setup:
 //   app.safeschool.fr
-const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'app.safeschool.fr';
+const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'safeschool.fr';
 const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app';
 
 // ---------------------------------------------------------------------------
@@ -85,6 +85,32 @@ function buildSchoolUrl(slug: string): string {
   return `https://${buildSchoolDomain(slug)}`;
 }
 
+
+// Auto-register subdomain on Netlify when establishment is created
+async function registerNetlifyDomain(slug: string): Promise<void> {
+  const token = Netlify.env.get('NETLIFY_TOKEN');
+    const siteId = Netlify.env.get('NETLIFY_SITE_ID');
+      if (!token || !siteId) {
+          console.warn('[DNS] NETLIFY_TOKEN or NETLIFY_SITE_ID missing — skipping domain registration');
+              return;
+                }
+                  const domain = buildSchoolDomain(slug);
+                    try {
+                        const res = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/domain_aliases`, {
+                              method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ domain })
+                                              });
+                                                  if (res.ok) {
+                                                        console.log(`[DNS] Netlify domain registered: ${domain}`);
+                                                            } else {
+                                                                  const err = await res.text();
+                                                                        console.warn(`[DNS] Netlify domain registration failed for ${domain}:`, err);
+                                                                            }
+                                                                              } catch (e) {
+                                                                                  console.warn(`[DNS] Netlify domain registration error for ${domain}:`, e);
+                                                                                    }
+                                                                                    }
 const escapedTenantBaseDomain = escapeRegex(TENANT_BASE_DOMAIN);
 const tenantOriginRegex = new RegExp(`^https:\\/\\/[a-z0-9-]+\\.${escapedTenantBaseDomain}$`);
 
@@ -398,6 +424,7 @@ export default async (req: Request, context: Context) => {
             const finalUUID = Array.isArray(supaData) && supaData.length > 0 ? supaData[0].id : newUUID;
             schoolData.supabase_id = finalUUID;
             await store.setJSON(`school_${schoolData.id}`, schoolData);
+            await registerNetlifyDomain(schoolData.slug);
             return cors({ uuid: finalUUID, source: 'created' }, 200, req);
           }
           console.warn('Supabase insert failed:', res.status, await res.text().catch(() => ''));
