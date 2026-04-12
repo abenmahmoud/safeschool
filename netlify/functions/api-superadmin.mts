@@ -319,29 +319,27 @@ export default async (req: Request, context: Context) => {
     return cors({ ok: true, settings: merged });
   }
 
-    if (path === '/dns-catchup' && req.method === 'POST') {
-          if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
-              const token = Netlify.env.get('NETLIFY_API_TOKEN') || '';
-                  const siteId = Netlify.env.get('NETLIFY_SITE_ID') || '';
-                      if (!token || !siteId) return cors({ error: 'Config manquante' }, 500);
-                          const bd = await req.json().catch(() => ({})) as any;
-                              const slugs: string[] = bd.slugs || [];
-                                  const results: any[] = [];
-                                      for (const slug of slugs) {
-                                            const domain = slug + '.safeschool.fr';
-                                                  const r = await fetch('https://api.netlify.com/api/v1/sites/' + siteId + '/domain_aliases', {
-                                                          method: 'POST',
-                                                                  headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                                                                          body: JSON.stringify({ domain })
-                                                                                });
-                                                                                      results.push({ slug, status: r.status });
-                                                                                          }
-                                                                                              return cors({ results });
-                                                                                                }
+if (path === '/dns-catchup' && req.method === 'POST') {
+    if (!authCheck(req)) return cors({ error: 'Non autorise' }, 401);
+    const token = Netlify.env.get('NETLIFY_API_TOKEN') || '';
+    const siteId = Netlify.env.get('NETLIFY_SITE_ID') || '';
+    if (!token || !siteId) return cors({ error: 'Config manquante' }, 500);
+    const bd = await req.json().catch(() => ({})) as any;
+    const slugs: string[] = bd.slugs || [];
+    const results: any[] = [];
+    for (const slug of slugs) {
+      const domain = slug + '.safeschool.fr';
+      const r = await fetch('https://api.netlify.com/api/v1/sites/' + siteId + '/domain_aliases', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain })
+      });
+      results.push({ slug, status: r.status });
     }
+    return cors({ results });
+  }
   return cors({ error: 'Route non trouvée' }, 404);
-
-
+};
   
 export const config: Config = {
   path: ['/api/superadmin', '/api/superadmin/*']
