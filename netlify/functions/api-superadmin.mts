@@ -125,6 +125,7 @@ export default async (req: Request, context: Context) => {
       return cors({ error: 'Mot de passe requis' }, 400);
     }
 
+    console.log('[DEBUG] email_match:', body.email === SUPERADMIN_EMAIL, '| pass_len_received:', body.password?.length, '| pass_len_env:', SUPERADMIN_PASS?.length, '| pass_match:', body.password === SUPERADMIN_PASS);
     if (body.email === SUPERADMIN_EMAIL && body.password === SUPERADMIN_PASS) {
       await clearRateLimit(clientIp);
       const token = btoa(`${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`);
