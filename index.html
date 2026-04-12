@@ -3193,39 +3193,1368 @@ function showAdminLogin(){
 }
 
 async function tryLogin(){
-  const emailEl = document.getElementById('al-email');
-  const passEl = document.getElementById('al-pass');
-  const slug = localStorage.getItem('ss_current_etab_slug');
-  if(!emailEl || !passEl || !slug) return;
-  const email = emailEl.value.trim();
-  const pass = passEl.value.trim();
-  if(!email || !pass){ alert('Email et mot de passe requis'); return; }
+  const email = document.getElementById('al-email').value.trim().toLowerCase();
+  const password = document.getElementById('al-pass').value;
+  const errorEl = document.getElementById('al-error');
   const btn = document.getElementById('al-submit-btn');
-  if(btn){ btn.disabled=true; btn.textContent='Connexion...'; }
-  try{
-    const res = await fetch('/api/establishments/admin-login/'+slug,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email, password: pass})
-    });
-    const data = await res.json();
-    if(data.ok){
-      localStorage.setItem('ss_admin_data', JSON.stringify({
-        school_id: data.school_id, name: data.name, plan: data.plan,
-        admin_email: data.admin_email, slug: slug
-      }));
-      localStorage.setItem('ss_admin_mode','1');
-      if(typeof renderDashboardV3==='function') renderDashboardV3(data);
-      else window.location.reload();
-    } else {
-      const errEl = document.querySelector('.al-error-msg');
-      if(errEl) errEl.textContent = data.error||'Identifiants incorrects';
-      if(btn){ btn.disabled=false; btn.textContent='Se connecter'; }
+  const btnText = document.getElementById('al-btn-text');
+  const btnLoading = document.getElementById('al-btn-loading');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Veuillez remplir tous les champs.';
+    errorEl.style.display = '';
+    return;
+  }
+
+  // Ãtat de chargement
+  if(btn) btn.disabled = true;
+  if(btnText) btnText.style.display = 'none';
+  if(btnLoading) btnLoading.style.display = '';
+  if(errorEl) errorEl.style.display = 'none';
+
+  try {
+    const adminRow = await login(email, password);
+    adminIn = true;
+    document.getElementById('admin-overlay')?.remove();
+    document.getElementById('ni-dashboard').style.display = '';
+    document.getElementById('pg-dashboard').style.display = 'flex';
+
+    // Charger les donnÃ©es du dashboard
+    try {
+      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+    } catch(reloadErr) { console.warn('Chargement donnÃ©es (non-bloquant):', reloadErr); }
+
+    go('dashboard');
+    toast('ConnectÃ© Â· Admin' + (currentEtab ? ' ' + currentEtab.name : ''), 'ok');
+  } catch (err) {
+    // RÃ©initialiser le bouton
+    if(btn) btn.disabled = false;
+    if(btnText) btnText.style.display = '';
+    if(btnLoading) btnLoading.style.display = 'none';
+
+    // Afficher l'erreur
+    const msg = err.message || 'Ãchec de la connexion';
+    if(errorEl) {
+      errorEl.textContent = msg === 'Invalid login credentials'
+        ? 'Identifiants incorrects. VÃ©rifiez votre email et mot de passe.'
+        : msg;
+      errorEl.style.display = '';
     }
-  } catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='Se connecter'; }
   }
 }
-  
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// DASHBOARD
+// âââââââââââââââââââââââââââââââââââââââââââ
+function renderDashboardV3(){
+  const reps=S.reports();
+  const urg=reps.filter(r=>r.urgency===3).length;
+  const nw=reps.filter(r=>r.status==='new').length;
+  const ip=reps.filter(r=>r.status==='in_progress').length;
+  const rs=reps.filter(r=>r.status==='resolved').length;
+  const plan = localStorage.getItem('ss_plan_' + (currentEtab?.id || '')) || currentEtab?.plan || 'starter';
+  const isPremium = plan === 'pro' || plan === 'enterprise';
+
+  // School info card for newly created establishments
+  const schoolInfoHtml = currentEtab ? `
+  <div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:var(--r16);padding:18px;margin:10px 20px 14px;color:#fff">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <span style="font-size:1.6rem">${etabTypeIcons[currentEtab.type]||'ð«'}</span>
+      <div style="flex:1">
+        <h3 style="font-size:1rem;color:#fff;margin-bottom:2px">${currentEtab.name}</h3>
+        <p style="font-size:.78rem;opacity:.8">${etabTypeLabels[currentEtab.type]||'Ãtablissement'}${currentEtab.city?' Â· '+currentEtab.city:''}</p>
+      </div>
+      <span style="background:rgba(255,255,255,.2);padding:4px 12px;border-radius:10px;font-size:.75rem;font-weight:700">${plan.toUpperCase()}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:800">${reps.length}</div>
+        <div style="font-size:.68rem;opacity:.8">Signalements</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:800">${S.staff().length}</div>
+        <div style="font-size:.68rem;opacity:.8">Membres</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:800">${rs}</div>
+        <div style="font-size:.68rem;opacity:.8">RÃ©solus</div>
+      </div>
+    </div>
+  </div>` : '';
+
+  // Premium: Advanced statistics
+  let statsHtml = '';
+  if (isPremium && reps.length > 0) {
+    const byType = {};
+    const byDay = {};
+    const byUrgency = {1:0, 2:0, 3:0};
+    const avgResolutionTimes = [];
+    reps.forEach(r => {
+      const t = r.harassmentType || r.type || 'other';
+      byType[t] = (byType[t] || 0) + 1;
+      const day = (r.createdAt || '').slice(0, 10);
+      if (day) byDay[day] = (byDay[day] || 0) + 1;
+      byUrgency[r.urgency || 1]++;
+      if (r.status === 'resolved' && r.createdAt) {
+        const created = new Date(r.createdAt);
+        const now = new Date();
+        avgResolutionTimes.push((now - created) / (1000 * 60 * 60 * 24));
+      }
+    });
+    const avgDays = avgResolutionTimes.length ? Math.round(avgResolutionTimes.reduce((a,b) => a+b, 0) / avgResolutionTimes.length) : 'â';
+    const resolutionRate = reps.length > 0 ? Math.round(rs / reps.length * 100) : 0;
+
+    statsHtml = `
+    <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:var(--r16);padding:18px;margin:0 20px 16px;color:#fff">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:1.1rem">ð</span>
+        <h3 style="font-size:.95rem;color:#fff">Statistiques avancÃ©es</h3>
+        <span style="margin-left:auto;font-size:.7rem;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:10px;font-weight:600">PRO</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:900">${resolutionRate}%</div>
+          <div style="font-size:.7rem;opacity:.7">Taux rÃ©solution</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:900">${avgDays}</div>
+          <div style="font-size:.7rem;opacity:.7">Jours moy. rÃ©sol.</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:900">${urg}</div>
+          <div style="font-size:.7rem;opacity:.7">Cas urgents</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n]) => `<span style="background:rgba(255,255,255,.12);padding:4px 10px;border-radius:8px;font-size:.75rem;font-weight:600">${tlabel(t)}: ${n}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <span style="font-size:.72rem;opacity:.6">Urgence:</span>
+        <span style="color:#16a34a;font-size:.72rem;font-weight:700">Faible: ${byUrgency[1]}</span>
+        <span style="color:#f59e0b;font-size:.72rem;font-weight:700">Moyen: ${byUrgency[2]}</span>
+        <span style="color:#dc2626;font-size:.72rem;font-weight:700">Urgent: ${byUrgency[3]}</span>
+      </div>
+    </div>`;
+  }
+
+  // Subscription badge
+  const planBadge = isPremium
+    ? `<span style="background:rgba(255,255,255,.15);padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:700;margin-left:8px">${plan.toUpperCase()}</span>`
+    : `<span style="background:rgba(255,255,255,.1);padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600;margin-left:8px;opacity:.7">STARTER</span>`;
+
+  document.getElementById('dashboard-body').innerHTML=`
+  <div class="dash-top" style="padding:18px 20px 16px;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4f46e5 100%);position:relative;overflow:hidden">
+    <div style="position:absolute;right:-40px;top:-40px;width:140px;height:140px;background:rgba(255,255,255,.06);border-radius:50%"></div>
+    <div style="position:absolute;left:50%;bottom:-20px;width:80px;height:80px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+    <div style="position:relative;z-index:1">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <h1 style="color:#fff;font-size:1.3rem">Dashboard</h1>
+            ${planBadge}
+          </div>
+          <p style="color:rgba(255,255,255,.6);font-size:.8rem">${currentEtab?currentEtab.name:'Gestion des signalements'}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${urg>0?`<div style="background:rgba(220,38,38,.25);border:1px solid rgba(220,38,38,.4);padding:6px 12px;border-radius:10px;font-size:.78rem;font-weight:700;color:#fca5a5;display:flex;align-items:center;gap:5px;animation:pulse 2s infinite">ð´ ${urg} urgent${urg>1?'s':''}</div>`:''}
+          <button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff" onclick="adminLogout()">DÃ©connexion</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  ${schoolInfoHtml}
+  <div style="padding:8px 20px 0;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-xs btn-soft" onclick="exportCSV()">ð¥ Export CSV</button>
+    <button class="btn btn-xs btn-soft" onclick="printReport()">ð¨ï¸ Imprimer rapport</button>
+    <button class="btn btn-xs btn-soft" onclick="S.reloadReports().then(()=>{S.reloadStaff().then(()=>{S.reloadLogs().then(renderDashboardV3)})})" title="Actualiser les donnÃ©es">ð Actualiser</button>
+    ${reps.length===0?`<button class="btn btn-xs btn-soft" onclick="loadDemoData()" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none">ð DÃ©mo</button>`:`<button class="btn btn-xs btn-ghost" onclick="if(confirm('Effacer les donnÃ©es de dÃ©monstration ?'))clearDemoData()" style="font-size:.68rem">Effacer dÃ©mo</button>`}
+  </div>
+  <div class="kpi-row">
+    <div class="kpi ku" onclick="setFilter('all')"><div class="kpi-n">${urg}</div><div class="kpi-l">â¡ Urgents</div></div>
+    <div class="kpi kn" onclick="setFilter('new')"><div class="kpi-n">${nw}</div><div class="kpi-l">ðµ Nouveaux</div></div>
+    <div class="kpi kp" onclick="setFilter('in_progress')"><div class="kpi-n">${ip}</div><div class="kpi-l">ð¡ En cours</div></div>
+    <div class="kpi kr" onclick="setFilter('resolved')"><div class="kpi-n">${rs}</div><div class="kpi-l">â RÃ©solus</div></div>
+    <div class="kpi" onclick="setFilter('all')"><div class="kpi-n">${reps.length}</div><div class="kpi-l">Total</div></div>
+  </div>
+  ${statsHtml}
+  ${!isPremium && reps.length > 0 ? `
+  <div style="margin:0 20px 14px;padding:14px 16px;background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:var(--r12);display:flex;align-items:center;gap:12px;cursor:pointer">
+    <span style="font-size:1.3rem">â­</span>
+    <div style="flex:1"><p style="color:#fff;font-size:.85rem;font-weight:600">Passez au plan Pro</p><p style="color:rgba(255,255,255,.6);font-size:.76rem">Statistiques avancÃ©es, attribution incidents, gestion codes membres</p></div>
+  </div>` : ''}
+  <div class="dash-tabs">
+    <button class="dtb active" onclick="switchDash('reports',this)">ð Signalements</button>
+    <button class="dtb" onclick="switchDash('staff',this)">ð¥ Ãquipe</button>
+    <button class="dtb" onclick="switchDash('logs',this)">ð Journal</button>
+  </div>
+  <div style="background:#fff;border:1px solid var(--border);border-top:none;margin:0 20px;border-radius:0 0 var(--r16) var(--r16)">
+    <div id="dt-reports" class="dtab active">${renderReportsList()}</div>
+    <div id="dt-staff" class="dtab">${renderStaffTab()}</div>
+    <div id="dt-logs" class="dtab">${renderLogsTab()}</div>
+  </div>
+  <div style="height:16px"></div>`;
+}
+
+function renderReportsList(){
+  const reps=S.reports();
+  const staff=S.staff();
+  const plan = localStorage.getItem('ss_plan_' + (currentEtab?.id || '')) || currentEtab?.plan || 'starter';
+  const isPremium = plan === 'pro' || plan === 'enterprise';
+  let filtered=reps;
+  if(filterStatus!=='all')filtered=filtered.filter(r=>r.status===filterStatus);
+  if(searchQ)filtered=filtered.filter(r=>(r.description||'').toLowerCase().includes(searchQ.toLowerCase())||(r.location||'').toLowerCase().includes(searchQ.toLowerCase()));
+
+  const cards=filtered.length===0
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--ts)"><div style="font-size:2.5rem;margin-bottom:11px">ð­</div><h3 style="font-size:1rem;color:var(--t);margin-bottom:8px">Aucun signalement pour le moment</h3><p style="font-size:.86rem;max-width:280px;margin:0 auto">Les signalements envoyÃ©s par les Ã©lÃ¨ves apparaÃ®tront ici automatiquement. Partagez l'URL de l'application Ã  vos Ã©lÃ¨ves pour commencer.</p>${currentEtab?`<div style="margin-top:16px;padding:12px;background:var(--pbg);border-radius:var(--r12);border:1.5px solid rgba(79,70,229,.12)"><p style="font-size:.82rem;color:var(--p);font-weight:600">ð URL pour les Ã©lÃ¨ves</p><p style="font-size:.8rem;color:var(--tm);margin-top:4px;font-family:monospace">${currentEtab.slug?currentEtab.slug+'.safeschool.fr':'safeschool.fr/?school='+currentEtab.slug}</p></div>`:''}<div style="margin-top:18px"><button class="btn btn-soft btn-full" onclick="loadDemoData()" style="max-width:260px;margin:0 auto">ð Charger des donnÃ©es de dÃ©monstration</button></div></div>`
+    :filtered.map((r,i)=>{
+      const idx=reps.indexOf(r);
+      const sc={new:{l:'Nouveau',c:'bn'},in_progress:{l:'En cours',c:'bi'},resolved:{l:'RÃ©solu',c:'br'},archived:{l:'ArchivÃ©',c:'ba'}};
+      const s=sc[r.status]||sc.new;
+      const assigned=r.assignedTo?staff.find(st=>st.id===r.assignedTo):null;
+      return `
+      <div class="ri ${r.urgency===3?'urg':''}" id="ri-${idx}">
+        <div class="ri-head" onclick="toggleRI(${idx})">
+          <div class="ri-meta">
+            <div class="ri-tags">
+              <span class="badge ${s.c}">${s.l}</span>
+              ${r.urgency===3?`<span class="badge bu">Urgent</span>`:r.urgency===2?`<span class="badge bi">SÃ©rieux</span>`:''}
+              <span class="badge" style="background:var(--bg);color:var(--tm)">${tlabel(r.harassmentType)}</span>
+            </div>
+            <div class="ri-desc">${r.description?r.description.slice(0,55)+'â¦':'Sans description'}</div>
+            <div class="ri-sub">
+              <span>${r.location||'Lieu ?'}</span><span>Â·</span>
+              <span>${r.isAnonymous!==false?'Anonyme':'IdentifiÃ©(e)'}</span>
+              ${r.reporterClass?`<span>Â· ${r.reporterClass}</span>`:''}
+              ${assigned?`<span style="color:var(--p)">Â· ð¤ ${assigned.name.split(' ')[0]}</span>`:''}
+            </div>
+          </div>
+          <div class="ri-date">${fmtDate(r.createdAt,true)}<br><span style="color:var(--ts)">${fmtTime(r.createdAt)}</span></div>
+        </div>
+        <div class="ri-expand" id="re-${idx}">
+          <h5>Description</h5>
+          <p>${r.description||'Non renseignÃ©e'}</p>
+          <div id="inline-photos-${r.id}" class="rpt-photos-container"></div>
+          ${r.location?`<h5>Lieu</h5><p>${r.location}</p>`:''}
+          ${r.frequency?`<h5>FrÃ©quence</h5><p>${{once:'Une fois',several:'Plusieurs fois',weekly:'Chaque semaine',daily:'Chaque jour'}[r.frequency]||r.frequency}</p>`:''}
+          ${r.isAnonymous===false&&r.reporterName?`<h5>DÃ©clarant</h5><p>${r.reporterName}${r.reporterClass?' Â· '+r.reporterClass:''}${r.reporterEmail?' Â· '+r.reporterEmail:''}</p>`:`<h5>Code de suivi</h5><p style="font-family:'Nunito',monospace;font-weight:900;letter-spacing:.1em;font-size:1.1rem;color:var(--p)">${r.code||'â'}</p>`}
+          <h5>Assigner Ã  un membre de l'Ã©quipe${!isPremium?' <span style="background:#1e1b4b;color:#a5b4fc;padding:1px 6px;border-radius:6px;font-size:.65rem;font-weight:600">PRO</span>':''}</h5>
+          ${isPremium ? `<select class="fsel" id="assign-${idx}" onchange="assignReport(${idx},this.value)" style="font-size:.86rem">
+            <option value="">Non assignÃ©</option>
+            ${staff.filter(s=>s.active).map(s=>`<option value="${s.id}" ${r.assignedTo===s.id?'selected':''}>${s.emoji} ${s.name} (${roleLabel(s.role)})</option>`).join('')}
+          </select>` : `<p style="font-size:.82rem;color:var(--ts)">Passez au plan Pro pour assigner les incidents aux membres de l'Ã©quipe.</p>`}
+          <h5>RÃ©ponse Ã  l'Ã©lÃ¨ve <span style="font-weight:400;font-size:.77rem">(visible via son code)</span></h5>
+          <textarea class="fta" id="reply-${idx}" placeholder="Ta rÃ©ponse sera visible par l'Ã©lÃ¨veâ¦" style="min-height:75px">${r.staffReply||''}</textarea>
+          <h5>Notes internes <span style="font-weight:400;font-size:.77rem">(non visibles par l'Ã©lÃ¨ve)</span></h5>
+          <textarea class="fta" id="notes-${idx}" placeholder="Notes internes pour l'Ã©quipeâ¦" style="min-height:60px">${r.staffNotes||''}</textarea>
+          <div class="ri-acts">
+            <button class="btn btn-sm btn-soft" onclick="saveReply(${idx})">ð¾ Sauvegarder</button>
+            <button class="btn btn-sm btn-warn" onclick="setStatus(${idx},'in_progress')">â¶ En cours</button>
+            <button class="btn btn-sm btn-g" onclick="setStatus(${idx},'resolved')">â RÃ©solu</button>
+            <button class="btn btn-sm btn-ghost" onclick="setStatus(${idx},'archived')">ð Archiver</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+  return `
+  <div style="padding:14px 14px 10px;display:flex;gap:9px;flex-wrap:wrap">
+    <input type="text" class="search-in" style="min-width:160px" placeholder="ð Rechercherâ¦" value="${searchQ}" oninput="searchQ=this.value;refreshReports()">
+    <select class="filter-sel" onchange="setFilter(this.value)">
+      <option value="all" ${filterStatus==='all'?'selected':''}>Tous les statuts</option>
+      <option value="new" ${filterStatus==='new'?'selected':''}>Nouveaux</option>
+      <option value="in_progress" ${filterStatus==='in_progress'?'selected':''}>En cours</option>
+      <option value="resolved" ${filterStatus==='resolved'?'selected':''}>RÃ©solus</option>
+      <option value="archived" ${filterStatus==='archived'?'selected':''}>ArchivÃ©s</option>
+    </select>
+  </div>
+  <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:10px">${cards}</div>`;
+}
+
+function refreshReports(){document.getElementById('dt-reports').innerHTML=renderReportsList()}
+function setFilter(s){filterStatus=s;refreshReports()}
+function toggleRI(idx){
+  const el = document.getElementById('ri-'+idx);
+  if (!el) return;
+  el.classList.toggle('open');
+  // Load photos when expanding
+  if (el.classList.contains('open')) {
+    const reps = S.reports();
+    const r = reps[idx];
+    if (r && r.id) loadReportPhotos(r.id);
+  }
+}
+async function loadReportPhotos(reportId) {
+  const container = document.getElementById('inline-photos-' + reportId);
+  if (!container || container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+  try {
+    const res = await fetch('/api/photos/list/' + reportId);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.photos || data.photos.length === 0) return;
+    let html = '<h5 style="margin-top:10px">ð PiÃ¨ces jointes (' + data.photos.length + ')</h5><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">';
+    data.photos.forEach(function(p) {
+      const url = '/api/photos/get/' + encodeURIComponent(p.key);
+      html += '<a href="' + url + '" target="_blank" style="display:block;width:72px;height:72px;border-radius:8px;overflow:hidden;border:2px solid var(--border)">'
+        + '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover" alt="' + (p.name || 'photo') + '">'
+        + '</a>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch(e) { console.warn('Photos load failed:', e); }
+}
+function assignReport(idx,staffId){
+  const reps=S.reports();
+  const prev=reps[idx].assignedTo;
+  reps[idx].assignedTo=staffId||null;
+  if(!reps[idx].history)reps[idx].history=[];
+  const st=staffId?S.staff().find(s=>s.id===staffId):null;
+  reps[idx].history.push({s:'assigned',t:new Date().toISOString(),by:'Admin',note:`AssignÃ© Ã  ${st?st.name:'personne'}`});
+  S.updateReport({...reps[idx], logMsg:`Dossier #${reps[idx].id} assignÃ© Ã  ${st?st.name:'personne'}`});
+  S.addLog(`Dossier #${reps[idx].id} assignÃ© Ã  ${st?st.name:'personne'}`,reps[idx].id);
+  toast(st?`AssignÃ© Ã  ${st.name}`:'Assignation retirÃ©e','ok');
+}
+function saveReply(idx){
+  const reps=S.reports();
+  reps[idx].staffReply=document.getElementById('reply-'+idx)?.value||'';
+  reps[idx].staffNotes=document.getElementById('notes-'+idx)?.value||'';
+  if(!reps[idx].history)reps[idx].history=[];
+  if(reps[idx].staffReply)reps[idx].history.push({s:'replied',t:new Date().toISOString(),by:'Admin',note:'RÃ©ponse envoyÃ©e Ã  l\'Ã©lÃ¨ve'});
+  S.updateReport({...reps[idx], logMsg:`RÃ©ponse sauvegardÃ©e pour #${reps[idx].id}`});
+  S.addLog(`RÃ©ponse sauvegardÃ©e pour #${reps[idx].id}`,reps[idx].id);
+  // Notify reporter if email available (best effort)
+  if(reps[idx].staffReply && reps[idx].reporterEmail){
+    fetch('/api/notify/staff-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reportId:reps[idx].id,trackingCode:reps[idx].code||reps[idx].trackingCode,email:reps[idx].reporterEmail})}).catch(()=>{});
+  }
+  toast('SauvegardÃ© !','ok');
+}
+function setStatus(idx,status){
+  const reps=S.reports();
+  const old=reps[idx].status;
+  reps[idx].status=status;
+  if(!reps[idx].history)reps[idx].history=[];
+  reps[idx].history.push({s:status,t:new Date().toISOString(),by:'Admin',note:`Statut : ${old} â ${status}`});
+  S.updateReport({...reps[idx], logMsg:`Dossier #${reps[idx].id} â ${status}`});
+  S.addLog(`Dossier #${reps[idx].id} â ${status}`,reps[idx].id);
+  renderDashboardV3();toast('Statut mis Ã  jour','ok');
+}
+
+// ââ STAFF TAB ââ
+function renderStaffTab(){
+  const staff=S.staff();
+  const emptyMsg = staff.length === 0 ? `
+    <div style="text-align:center;padding:24px 16px;color:var(--ts)">
+      <div style="font-size:2rem;margin-bottom:8px">ð¥</div>
+      <h4 style="color:var(--t);font-size:.92rem;margin-bottom:6px">Aucun membre dans l'Ã©quipe</h4>
+      <p style="font-size:.82rem;max-width:280px;margin:0 auto">Ajoutez les membres du personnel Ã©ducatif qui traiteront les signalements (CPE, infirmier(e), rÃ©fÃ©rent harcÃ¨lementâ¦)</p>
+    </div>` : '';
+  return `
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="btn btn-p btn-full" onclick="openStaffModal(null)" style="margin-bottom:4px">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter un membre
+    </button>
+    ${emptyMsg}
+    ${staff.map(s=>`
+    <div class="staff-card">
+      <div class="staff-av" style="background:${roleBg(s.role)}">${s.emoji}</div>
+      <div class="staff-info">
+        <h3>${s.name}</h3>
+        <p>${s.phone||'â'} Â· ${s.email||'â'}</p>
+        <span class="staff-badge ${roleColor(s.role)}">${roleLabel(s.role)}</span>
+        ${!s.active?`<span class="staff-badge" style="background:#f1f5f9;color:var(--ts);margin-left:5px">Inactif</span>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-xs btn-soft" onclick="openStaffModal('${s.id}')">âï¸</button>
+        <button class="btn btn-xs btn-ghost" onclick="toggleStaffActive('${s.id}')" style="font-size:.7rem">${s.active?'â¸':'â¶'}</button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+function roleBg(r){return{cpe:'#eef2ff',dir:'#fffbeb',inf:'#ecfdf5',ref:'#f0f9ff',psy:'#fdf4ff'}[r]||'#eef2ff'}
+function toggleStaffActive(id){
+  const staff=S.staff();
+  const s=staff.find(x=>x.id===id);
+  if(s){s.active=!s.active;S.setStaff(staff);refreshStaff();toast(s.active?`${s.name} activÃ©(e)`:`${s.name} dÃ©sactivÃ©(e)`);}
+}
+function refreshStaff(){document.getElementById('dt-staff').innerHTML=renderStaffTab()}
+
+function openStaffModal(id){
+  const s=id?S.staff().find(x=>x.id===id):null;
+  editStaffId=id;
+  document.body.insertAdjacentHTML('beforeend',`
+  <div class="modal-overlay" id="staff-modal" onclick="if(event.target===this)closeStaffModal()">
+    <div class="modal">
+      <div class="mhandle"></div>
+      <h3>${s?'Modifier un membre':'Ajouter un membre'}</h3>
+      <div class="fg">
+        <label class="fl">Ãmoji / Avatar</label>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          ${['ð©âð«','ð¨âð«','ð','ð¥','ð¡ï¸','ð®','ð§ââï¸','ð¼','ð§âð»','ð'].map(e=>`<button onclick="document.getElementById('st-emoji').value='${e}';this.closest('.fg').querySelectorAll('button').forEach(b=>b.style.opacity='.4');this.style.opacity='1'" style="font-size:1.6rem;background:${s?.emoji===e?'var(--pbg)':'#fff'};border:2px solid ${s?.emoji===e?'var(--p)':'var(--border)'};border-radius:10px;padding:5px 8px;opacity:${s?.emoji===e?'1':'.5'};transition:.2s">${e}</button>`).join('')}
+        </div>
+        <input type="hidden" id="st-emoji" value="${s?.emoji||'ð©âð«'}">
+      </div>
+      <div class="fg"><label class="fl">PrÃ©nom et Nom *</label><input type="text" class="fi" id="st-name" value="${s?.name||''}" placeholder="Mme Martin Sophie" required></div>
+      <div class="fg">
+        <label class="fl">RÃ´le *</label>
+        <select class="fsel" id="st-role">
+          <option value="cpe" ${s?.role==='cpe'?'selected':''}>CPE â Conseiller Principal d'Ãducation</option>
+          <option value="dir" ${s?.role==='dir'?'selected':''}>Direction â Proviseur / Directeur</option>
+          <option value="inf" ${s?.role==='inf'?'selected':''}>InfirmiÃ¨re / Infirmier scolaire</option>
+          <option value="ref" ${s?.role==='ref'?'selected':''}>RÃ©fÃ©rent harcÃ¨lement</option>
+          <option value="psy" ${s?.role==='psy'?'selected':''}>Psychologue scolaire</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">TÃ©lÃ©phone</label><input type="tel" class="fi" id="st-phone" value="${s?.phone||''}" placeholder="06 00 00 00 00"></div>
+      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="st-email" value="${s?.email||''}" placeholder="prenom.nom@lycee.fr"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" style="flex:1" onclick="closeStaffModal()">Annuler</button>
+        <button class="btn btn-p" style="flex:2" onclick="saveStaff()">ð¾ ${s?'Modifier':'Ajouter'}</button>
+      </div>
+      ${s?`<button class="btn btn-ghost btn-full" style="margin-top:10px;color:var(--r);border-color:rgba(220,38,38,.2)" onclick="deleteStaff('${s.id}')">ðï¸ Supprimer ce profil</button>`:''}
+    </div>
+  </div>`);
+  // Set emoji selector state
+  const emojiVal=s?.emoji||'ð©âð«';
+  document.querySelectorAll('#staff-modal .fg button').forEach(b=>{
+    if(b.textContent.trim()===emojiVal){b.style.opacity='1';b.style.borderColor='var(--p)';b.style.background='var(--pbg)'}
+    else{b.style.opacity='.5';b.style.borderColor='var(--border)';b.style.background='#fff'}
+  });
+}
+function closeStaffModal(){document.getElementById('staff-modal')?.remove()}
+function saveStaff(){
+  const name=document.getElementById('st-name').value.trim();
+  if(!name){toast('Le nom est obligatoire','err');return}
+  const staff=S.staff();
+  const entry={
+    id:editStaffId||'s'+Date.now(),
+    name,
+    role:document.getElementById('st-role').value,
+    emoji:document.getElementById('st-emoji').value,
+    phone:document.getElementById('st-phone').value,
+    email:document.getElementById('st-email').value,
+    active:true
+  };
+  if(editStaffId){
+    const idx=staff.findIndex(s=>s.id===editStaffId);
+    if(idx>=0)staff[idx]={...staff[idx],...entry};
+    toast('Profil mis Ã  jour','ok');
+  } else {
+    staff.push(entry);
+    toast(`${entry.name} ajoutÃ©(e) !`,'ok');
+  }
+  S.setStaff(staff);
+  closeStaffModal();
+  refreshStaff();
+  S.addLog(`Profil ${editStaffId?'modifiÃ©':'crÃ©Ã©'} : ${name}`);
+}
+function deleteStaff(id){
+  if(!confirm('Supprimer ce profil ?'))return;
+  const staff=S.staff().filter(s=>s.id!==id);
+  S.setStaff(staff);
+  closeStaffModal();refreshStaff();toast('Profil supprimÃ©');
+}
+
+// ââ LOGS TAB ââ
+function renderLogsTab(){
+  const logs=S.logs();
+  if(!logs.length)return`<div style="text-align:center;padding:32px;color:var(--ts)"><div style="font-size:1.8rem;margin-bottom:8px">ð</div><p style="font-size:.86rem">Aucune activitÃ© enregistrÃ©e pour le moment.</p><p style="font-size:.78rem;margin-top:4px">Les actions (signalements, rÃ©ponses, modifications) seront consignÃ©es ici automatiquement.</p></div>`;
+  return`<div>${logs.map(l=>`
+  <div class="alog-item">
+    <div class="alog-dot"></div>
+    <div class="alog-text">
+      <p>${l.msg}</p>
+      <span>${new Date(l.t).toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+    </div>
+  </div>`).join('')}</div>`;
+}
+
+function switchDash(tab,btn){
+  document.querySelectorAll('.dtb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('dt-'+tab).classList.add('active');
+  dashTab=tab;
+}
+// Terms of Service modal
+function showTermsModal() {
+  document.getElementById('terms-modal')?.remove();
+  document.body.insertAdjacentHTML('beforeend', `
+  <div class="modal-overlay" id="terms-modal" onclick="if(event.target===this)document.getElementById('terms-modal').remove()">
+    <div class="modal" style="max-height:85dvh;overflow-y:auto">
+      <div class="mhandle"></div>
+      <h3>Conditions d'utilisation et Politique de confidentialitÃ© â SafeSchool</h3>
+      <div style="font-size:.85rem;color:var(--tm);line-height:1.7">
+        <h4 style="margin:12px 0 6px;color:var(--t)">1. Objet et responsable du traitement</h4>
+        <p>SafeSchool est une plateforme de signalement du harcÃ¨lement scolaire Ã©ditÃ©e et opÃ©rÃ©e par son fondateur en qualitÃ© de responsable de traitement au sens du RÃ¨glement GÃ©nÃ©ral sur la Protection des DonnÃ©es (RGPD - RÃ¨glement UE 2016/679). La plateforme permet aux Ã©lÃ¨ves, parents et personnels de signaler des situations de harcÃ¨lement de maniÃ¨re anonyme ou identifiÃ©e.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">2. DonnÃ©es collectÃ©es et bases lÃ©gales</h4>
+        <p><strong>Signalements anonymes :</strong> type d'incident, lieu, frÃ©quence, urgence, description, et donnÃ©es statistiques optionnelles (niveau, classe, tranche d'Ã¢ge, genre, durÃ©e). Aucune donnÃ©e d'identification n'est collectÃ©e. Base lÃ©gale : intÃ©rÃªt lÃ©gitime (protection des mineurs).</p>
+        <p><strong>Signalements identifiÃ©s :</strong> en plus des donnÃ©es ci-dessus, prÃ©nom, nom, classe, email (si fourni volontairement). Base lÃ©gale : consentement explicite du dÃ©clarant.</p>
+        <p><strong>Conversations avec LÃ©a (assistant IA) :</strong> seules les catÃ©gories thÃ©matiques et niveaux de sÃ©vÃ©ritÃ© sont enregistrÃ©s Ã  des fins statistiques. Le contenu textuel des messages n'est PAS conservÃ© sur nos serveurs. Base lÃ©gale : intÃ©rÃªt lÃ©gitime (prÃ©vention et amÃ©lioration du service).</p>
+        <p><strong>DonnÃ©es de navigation :</strong> aucun cookie de tracking, aucune analyse comportementale, aucun pixel espion. Seul l'identifiant d'Ã©tablissement est stockÃ© localement sur ton appareil.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">3. FinalitÃ©s du traitement</h4>
+        <ul style="padding-left:16px">
+          <li>Traitement des signalements par l'Ã©quipe Ã©ducative habilitÃ©e</li>
+          <li>Suivi de dossier via code de suivi anonyme</li>
+          <li>Statistiques agrÃ©gÃ©es et anonymisÃ©es pour la prÃ©vention</li>
+          <li>BaromÃ¨tre de bien-Ãªtre pour les Ã©tablissements (donnÃ©es anonymisÃ©es uniquement)</li>
+          <li>Maintenance et support technique (SAV) par le fondateur</li>
+        </ul>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">4. DurÃ©e de conservation</h4>
+        <p><strong>Signalements :</strong> conservÃ©s 12 mois maximum en base active, puis anonymisÃ©s (suppression de toute donnÃ©e identifiante) pour les statistiques agrÃ©gÃ©es. Les signalements archivÃ©s sont automatiquement anonymisÃ©s aprÃ¨s 6 mois.</p>
+        <p><strong>Statistiques LÃ©a :</strong> donnÃ©es agrÃ©gÃ©es conservÃ©es 90 jours glissants. Aucun contenu de message n'est conservÃ©.</p>
+        <p><strong>DonnÃ©es locales :</strong> les donnÃ©es stockÃ©es sur ton appareil (code de suivi, prÃ©fÃ©rences) sont sous ton contrÃ´le. Tu peux les supprimer via les paramÃ¨tres de ton navigateur.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">5. Destinataires des donnÃ©es</h4>
+        <p>Les signalements sont accessibles uniquement Ã  :</p>
+        <ul style="padding-left:16px">
+          <li>L'Ã©quipe Ã©ducative habilitÃ©e de l'Ã©tablissement concernÃ© (CPE, direction, rÃ©fÃ©rent harcÃ¨lement)</li>
+          <li>Le fondateur de la plateforme Ã  des fins de maintenance et support technique</li>
+        </ul>
+        <p>Aucune donnÃ©e n'est transmise Ã  des tiers commerciaux, publicitaires ou hors UE.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">6. HÃ©bergement et sÃ©curitÃ©</h4>
+        <p>Les donnÃ©es sont hÃ©bergÃ©es au sein de l'Union EuropÃ©enne via des prestataires conformes au RGPD (Netlify pour l'application, Supabase pour la base de donnÃ©es). Les communications sont chiffrÃ©es en transit (HTTPS/TLS). L'accÃ¨s aux donnÃ©es est protÃ©gÃ© par authentification.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">7. Tes droits (RGPD)</h4>
+        <p>ConformÃ©ment aux articles 15 Ã  22 du RGPD, tu disposes des droits suivants :</p>
+        <ul style="padding-left:16px">
+          <li><strong>Droit d'accÃ¨s :</strong> obtenir la confirmation que des donnÃ©es te concernant sont traitÃ©es et en obtenir une copie</li>
+          <li><strong>Droit de rectification :</strong> corriger des donnÃ©es inexactes</li>
+          <li><strong>Droit Ã  l'effacement :</strong> demander la suppression de tes donnÃ©es</li>
+          <li><strong>Droit Ã  la limitation :</strong> restreindre le traitement de tes donnÃ©es</li>
+          <li><strong>Droit Ã  la portabilitÃ© :</strong> rÃ©cupÃ©rer tes donnÃ©es dans un format structurÃ©</li>
+          <li><strong>Droit d'opposition :</strong> t'opposer au traitement de tes donnÃ©es</li>
+          <li><strong>Droit de retrait du consentement :</strong> retirer ton consentement Ã  tout moment</li>
+        </ul>
+        <p>Pour exercer ces droits, contacte le responsable de traitement via l'adresse email de contact de la plateforme. Tu as Ã©galement le droit d'introduire une rÃ©clamation auprÃ¨s de la <strong>CNIL</strong> (cnil.fr).</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">8. Mineurs</h4>
+        <p>SafeSchool est conÃ§u pour Ãªtre utilisÃ© par des mineurs dans un cadre scolaire. Le consentement est recueilli directement auprÃ¨s de l'utilisateur. Pour les utilisateurs de moins de 15 ans, le consentement parental peut Ãªtre requis conformÃ©ment Ã  l'article 8 du RGPD et Ã  la loi Informatique et LibertÃ©s.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">9. Assistant IA LÃ©a</h4>
+        <p>LÃ©a est un assistant automatisÃ© (IA) conÃ§u pour Ã©couter, orienter et accompagner. Elle ne remplace pas un professionnel de santÃ© ou un psychologue. En cas de danger immÃ©diat, contacte le <strong>17</strong> (police) ou le <strong>15</strong> (SAMU). Les conversations avec LÃ©a ne sont pas enregistrÃ©es textuellement â seules les catÃ©gories thÃ©matiques sont analysÃ©es Ã  des fins statistiques.</p>
+
+        <h4 style="margin:12px 0 6px;color:var(--t)">10. Modifications</h4>
+        <p>Ces conditions peuvent Ãªtre mises Ã  jour. En cas de modification substantielle, les utilisateurs en seront informÃ©s via l'application. La version en vigueur est toujours accessible depuis le formulaire de signalement.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-p btn-full" onclick="document.getElementById('terms-modal').remove()">J'ai compris</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// PROFILE with case numbers
+// âââââââââââââââââââââââââââââââââââââââââââ
+function getUserReportHistory() {
+  try { return JSON.parse(localStorage.getItem('ss_my_reports') || '[]'); } catch(e) { return []; }
+}
+function saveToReportHistory(code, caseNumber) {
+  const history = getUserReportHistory();
+  history.unshift({ code, caseNumber, date: new Date().toISOString(), etab: currentEtab?.name || '' });
+  localStorage.setItem('ss_my_reports', JSON.stringify(history.slice(0, 20)));
+}
+
+function adminLogout(){ logout(); }
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// DEMO DATA FOR PRESENTATION
+// âââââââââââââââââââââââââââââââââââââââââââ
+function loadDemoData(){
+  const now = new Date();
+  const demoReports = [
+    {id:'demo-1',code:'SS-XK9T2M',trackingCode:'SS-XK9T2M',description:'Un Ã©lÃ¨ve de ma classe se fait insulter tous les jours Ã  la rÃ©crÃ©ation. Il est traitÃ© de noms et personne ne veut lui parler. Je l\'ai vu pleurer plusieurs fois.',location:'Cour de rÃ©crÃ©ation',frequency:'daily',harassmentType:'verbal',urgency:3,status:'new',isAnonymous:true,reporterClass:'3Ã¨me B',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*60*2).toISOString(),history:[]},
+    {id:'demo-2',code:'SS-PQ7RN3',trackingCode:'SS-PQ7RN3',description:'Des Ã©lÃ¨ves de terminale poussent et bousculent rÃ©guliÃ¨rement un camarade dans les couloirs entre les cours.',location:'Couloir bÃ¢timent B',frequency:'weekly',harassmentType:'physical',urgency:3,status:'in_progress',isAnonymous:false,reporterName:'Marie L.',reporterClass:'1Ã¨re S2',reporterEmail:'marie.l@eleve.fr',staffReply:'Merci pour ton signalement courageux. Nous avons identifiÃ© la situation et pris des mesures.',staffNotes:'Convocation des Ã©lÃ¨ves concernÃ©s prÃ©vue lundi. Parents informÃ©s.',createdAt:new Date(now-1000*60*60*24).toISOString(),history:[{s:'in_progress',t:new Date(now-1000*60*60*12).toISOString(),by:'Mme Martin',note:'Prise en charge du dossier'}]},
+    {id:'demo-3',code:'SS-LM4VB8',trackingCode:'SS-LM4VB8',description:'Un groupe crÃ©e des faux comptes sur les rÃ©seaux sociaux pour se moquer d\'une Ã©lÃ¨ve. Ils publient des photos modifiÃ©es et des commentaires mÃ©chants.',location:'En ligne / rÃ©seaux sociaux',frequency:'several',harassmentType:'cyber',urgency:2,status:'in_progress',isAnonymous:true,reporterClass:'2nde 4',staffReply:'Nous prenons cette situation trÃ¨s au sÃ©rieux. Un signalement a Ã©tÃ© fait aux plateformes concernÃ©es.',staffNotes:'Capture d\'Ã©cran rÃ©cupÃ©rÃ©es. Signalement Pharos en cours. Entretien prÃ©vu avec la famille.',createdAt:new Date(now-1000*60*60*48).toISOString(),history:[]},
+    {id:'demo-4',code:'SS-RT6WK1',trackingCode:'SS-RT6WK1',description:'Depuis la rentrÃ©e, un groupe d\'Ã©lÃ¨ves refuse systÃ©matiquement de travailler ou de s\'asseoir Ã  cÃ´tÃ© d\'un camarade. Il se retrouve toujours seul.',location:'Salle de classe 204',frequency:'daily',harassmentType:'exclusion',urgency:2,status:'new',isAnonymous:true,reporterClass:'4Ã¨me C',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*60*6).toISOString(),history:[]},
+    {id:'demo-5',code:'SS-YH2NF5',trackingCode:'SS-YH2NF5',description:'Un Ã©lÃ¨ve reÃ§oit des messages de menaces par SMS d\'un numÃ©ro inconnu. Il a peur de venir Ã  l\'Ã©cole.',location:'Hors Ã©tablissement / SMS',frequency:'several',harassmentType:'cyber',urgency:3,status:'resolved',isAnonymous:false,reporterName:'Thomas R.',reporterClass:'3Ã¨me A',staffReply:'La situation a Ã©tÃ© rÃ©solue. L\'auteur a Ã©tÃ© identifiÃ© et sanctionnÃ©. Tu peux revenir en toute sÃ©curitÃ©.',staffNotes:'Auteur identifiÃ©: Ã©lÃ¨ve de 3Ã¨me D. Conseil de discipline prÃ©vu. Parents rencontrÃ©s. Suivi psy mis en place.',createdAt:new Date(now-1000*60*60*72).toISOString(),history:[{s:'in_progress',t:new Date(now-1000*60*60*60).toISOString(),by:'M. Dupont',note:'EnquÃªte lancÃ©e'},{s:'resolved',t:new Date(now-1000*60*60*24).toISOString(),by:'Mme Martin',note:'RÃ©solu â mesures prises'}]},
+    {id:'demo-6',code:'SS-GN8JC4',trackingCode:'SS-GN8JC4',description:'Je suis victime de moqueries sur mon physique tous les jours Ã  la cantine. Plusieurs Ã©lÃ¨ves participent et Ã§a me rend trÃ¨s triste.',location:'Cantine',frequency:'daily',harassmentType:'verbal',urgency:2,status:'in_progress',isAnonymous:true,reporterClass:'5Ã¨me B',staffReply:'Tu as eu raison de nous Ã©crire. Personne ne mÃ©rite d\'Ãªtre traitÃ© ainsi. Nous agissons.',staffNotes:'Surveillance renforcÃ©e Ã  la cantine. MÃ©diation programmÃ©e jeudi.',createdAt:new Date(now-1000*60*60*36).toISOString(),history:[]},
+    {id:'demo-7',code:'SS-BW5TP9',trackingCode:'SS-BW5TP9',description:'Des Ã©lÃ¨ves cachent les affaires d\'un camarade et lui volent son goÃ»ter rÃ©guliÃ¨rement.',location:'Vestiaires EPS',frequency:'weekly',harassmentType:'physical',urgency:1,status:'resolved',isAnonymous:true,reporterClass:'6Ã¨me A',staffReply:'Merci pour ton signalement. La situation a Ã©tÃ© rÃ©glÃ©e avec les Ã©lÃ¨ves concernÃ©s.',staffNotes:'Entretien avec les 3 Ã©lÃ¨ves. Parents informÃ©s. Situation apaisÃ©e.',createdAt:new Date(now-1000*60*60*120).toISOString(),history:[{s:'resolved',t:new Date(now-1000*60*60*96).toISOString(),by:'M. CPE',note:'RÃ©solu'}]},
+    {id:'demo-8',code:'SS-MK3QR7',trackingCode:'SS-MK3QR7',description:'Un Ã©lÃ¨ve menace rÃ©guliÃ¨rement un autre de le frapper Ã  la sortie de l\'Ã©cole.',location:'Devant l\'Ã©tablissement',frequency:'several',harassmentType:'physical',urgency:3,status:'new',isAnonymous:false,reporterName:'Prof. de math',reporterEmail:'prof.math@lycee.fr',staffReply:'',staffNotes:'',createdAt:new Date(now-1000*60*30).toISOString(),history:[]},
+  ];
+  const demoStaff = [
+    {id:'staff-1',name:'Sophie Martin',email:'s.martin@lycee.fr',phone:'06 12 34 56 78',role:'cpe',active:true,emoji:'ð©âð«',createdAt:new Date(now-1000*60*60*24*30).toISOString()},
+    {id:'staff-2',name:'Jean Dupont',email:'j.dupont@lycee.fr',phone:'06 98 76 54 32',role:'dir',active:true,emoji:'ð¨âð«',createdAt:new Date(now-1000*60*60*24*30).toISOString()},
+    {id:'staff-3',name:'Claire Leroy',email:'c.leroy@lycee.fr',phone:'06 55 44 33 22',role:'ref',active:true,emoji:'ð¡ï¸',createdAt:new Date(now-1000*60*60*24*15).toISOString()},
+    {id:'staff-4',name:'Dr. BÃ©nard',email:'d.benard@lycee.fr',phone:'06 11 22 33 44',role:'psy',active:true,emoji:'ð§ââï¸',createdAt:new Date(now-1000*60*60*24*10).toISOString()},
+  ];
+  cachedReports = demoReports;
+  cachedStaff = demoStaff;
+  cachedLogs = [
+    {id:'log-1',msg:'Dossier #demo-2 â en_cours',rid:'demo-2',t:new Date(now-1000*60*60*12).toISOString(),actor:'admin',action:'status_change'},
+    {id:'log-2',msg:'RÃ©ponse sauvegardÃ©e pour #demo-5',rid:'demo-5',t:new Date(now-1000*60*60*24).toISOString(),actor:'admin',action:'reply'},
+    {id:'log-3',msg:'Dossier #demo-5 â rÃ©solu',rid:'demo-5',t:new Date(now-1000*60*60*24).toISOString(),actor:'admin',action:'status_change'},
+    {id:'log-4',msg:'Nouveau signalement #demo-1',rid:'demo-1',t:new Date(now-1000*60*60*2).toISOString(),actor:'system',action:'new_report'},
+    {id:'log-5',msg:'Nouveau signalement #demo-8 (urgent)',rid:'demo-8',t:new Date(now-1000*60*30).toISOString(),actor:'system',action:'new_report'},
+  ];
+  renderDashboardV3();
+  toast('DonnÃ©es de dÃ©monstration chargÃ©es','ok');
+}
+function clearDemoData(){
+  cachedReports = [];
+  cachedStaff = [];
+  cachedLogs = [];
+  renderDashboardV3();
+  toast('DonnÃ©es de dÃ©monstration effacÃ©es');
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// CSV EXPORT
+// âââââââââââââââââââââââââââââââââââââââââââ
+function exportCSV(){
+  const reps=S.reports();
+  if(!reps.length){toast('Aucun signalement Ã  exporter','err');return}
+  const headers=['Date','Heure','Type','Urgence','Statut','Lieu','Classe','Description','Anonyme','Code suivi','RÃ©ponse staff','Notes internes'];
+  const rows=reps.map(r=>[
+    r.createdAt?new Date(r.createdAt).toLocaleDateString('fr-FR'):'',
+    r.createdAt?new Date(r.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'',
+    tlabel(r.harassmentType||r.type),
+    {1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'Faible',
+    {new:'Nouveau',in_progress:'En cours',resolved:'RÃ©solu',archived:'ArchivÃ©'}[r.status]||r.status,
+    (r.location||'').replace(/"/g,'""'),
+    (r.reporterClass||'').replace(/"/g,'""'),
+    (r.description||'').replace(/"/g,'""').replace(/\n/g,' '),
+    r.isAnonymous!==false?'Oui':'Non',
+    r.code||r.trackingCode||'',
+    (r.staffReply||'').replace(/"/g,'""').replace(/\n/g,' '),
+    (r.staffNotes||'').replace(/"/g,'""').replace(/\n/g,' ')
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(c=>'"'+c+'"').join(';')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`safeschool_${currentEtab?.name||'export'}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  toast('Export CSV tÃ©lÃ©chargÃ© !','ok');
+  S.addLog('Export CSV effectuÃ©');
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// PRINT REPORT
+// âââââââââââââââââââââââââââââââââââââââââââ
+function printReport(){
+  const reps=S.reports();
+  const etabName=currentEtab?.name||'SafeSchool';
+  const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const byType={},byStatus={new:0,in_progress:0,resolved:0,archived:0};
+  reps.forEach(r=>{
+    const t=r.harassmentType||r.type||'other';byType[t]=(byType[t]||0)+1;
+    if(byStatus[r.status]!==undefined)byStatus[r.status]++;
+  });
+  const urg=reps.filter(r=>r.urgency===3).length;
+  const resRate=reps.length>0?Math.round(byStatus.resolved/reps.length*100):0;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Rapport SafeSchool â ${etabName}</title>
+  <style>body{font-family:'Segoe UI',sans-serif;max-width:800px;margin:40px auto;color:#1e293b;padding:20px}
+  h1{color:#4f46e5;font-size:1.8rem;border-bottom:3px solid #4f46e5;padding-bottom:10px}
+  h2{color:#312e81;margin-top:28px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+  .kpi{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center}
+  .kpi-n{font-size:2rem;font-weight:900;color:#4f46e5}.kpi-l{font-size:.82rem;color:#64748b}
+  table{width:100%;border-collapse:collapse;margin:14px 0}
+  th{background:#4f46e5;color:#fff;padding:10px;text-align:left;font-size:.85rem}
+  td{padding:9px 10px;border-bottom:1px solid #e2e8f0;font-size:.85rem}
+  tr:nth-child(even){background:#f8fafc}
+  .footer{margin-top:40px;border-top:1px solid #e2e8f0;padding-top:14px;color:#94a3b8;font-size:.78rem;text-align:center}
+  @media print{body{margin:0;padding:10px}.kpi{break-inside:avoid}}</style></head><body>
+  <h1>Rapport SafeSchool â ${etabName}</h1>
+  <p style="color:#64748b">GÃ©nÃ©rÃ© le ${now} Â· Document confidentiel</p>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-n">${reps.length}</div><div class="kpi-l">Total signalements</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#dc2626">${urg}</div><div class="kpi-l">Urgents</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#16a34a">${resRate}%</div><div class="kpi-l">Taux rÃ©solution</div></div>
+    <div class="kpi"><div class="kpi-n" style="color:#f59e0b">${byStatus.in_progress}</div><div class="kpi-l">En cours</div></div>
+  </div>
+  <h2>RÃ©partition par type</h2>
+  <table><thead><tr><th>Type</th><th>Nombre</th><th>%</th></tr></thead><tbody>
+  ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`<tr><td>${tlabel(t)}</td><td>${n}</td><td>${Math.round(n/reps.length*100)}%</td></tr>`).join('')}
+  </tbody></table>
+  <h2>Derniers signalements</h2>
+  <table><thead><tr><th>Date</th><th>Type</th><th>Urgence</th><th>Statut</th><th>Description</th></tr></thead><tbody>
+  ${reps.slice(0,20).map(r=>`<tr><td>${fmtDate(r.createdAt,true)}</td><td>${tlabel(r.harassmentType||r.type)}</td><td>${{1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'â'}</td><td>${{new:'Nouveau',in_progress:'En cours',resolved:'RÃ©solu',archived:'ArchivÃ©'}[r.status]||'â'}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.description||'').slice(0,80)}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="footer">SafeSchool â Plateforme anti-harcÃ¨lement scolaire Â· Confidentiel Â· RGPD (UE 2016/679)<br>Ce rapport est rÃ©servÃ© Ã  l'usage interne de l'Ã©quipe Ã©ducative.</div>
+  </body></html>`);
+  w.document.close();
+  w.print();
+  S.addLog('Rapport imprimÃ©');
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// INIT
+// âââââââââââââââââââââââââââââââââââââââââââ
+document.addEventListener('DOMContentLoaded', async () => {
+  // Close lang dropdowns on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.lang-dropdown')) {
+      document.querySelectorAll('.lang-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+  });
+  // Apply saved language
+  document.documentElement.lang = currentLang;
+  renderHomePage();
+  applyLanguage();
+
+  // Hide main app, show establishment selector first
+  document.querySelector('.ebar').style.display = 'none';
+  document.querySelector('.bnav').style.display = 'none';
+  document.getElementById('etab-current-bar').style.display = 'none';
+
+  // Load establishments
+  await loadEstablishments();
+
+  // Restaurer la session Supabase Auth si existante
+  await restoreSession();
+
+  // Check for subdomain auto-selection (injected by edge function)
+  const subdomainSlug = window.__SAFESCHOOL_SLUG || new URLSearchParams(window.location.search).get('school');
+  const autoAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
+  if (subdomainSlug) {
+    const etab = etabList.find(e => e.slug === subdomainSlug);
+    if (etab) {
+      await selectEstablishment(etab.id);
+      // Auto-open admin dashboard if admin=1 and user has an active Supabase session
+      if (autoAdmin) {
+        const restored = await restoreSession();
+        if (restored) {
+          try {
+            await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
+          } catch(reloadErr) { console.warn('Chargement donnÃ©es (non-bloquant):', reloadErr); }
+          go('dashboard');
+          toast('ConnectÃ© Â· Admin', 'ok');
+        } else {
+          showAdminLogin();
+        }
+      }
+      return;
+    }
+  }
+
+  // Check if user had a previously selected establishment
+  const savedEtabId = localStorage.getItem('ss_current_etab');
+  if (savedEtabId) {
+    // Try matching by ID first, then by slug (IDs may change between sessions)
+    let matched = etabList.find(e => e.id === savedEtabId || e.slug === savedEtabId || e.apiId === savedEtabId || e.blobId === savedEtabId);
+    // Also try matching by saved slug (IDs may change between sessions/deployments)
+    if (!matched) {
+      const savedSlug = localStorage.getItem('ss_current_etab_slug');
+      if (savedSlug) {
+        matched = etabList.find(e => e.slug === savedSlug);
+      }
+    }
+    if (matched) {
+      await selectEstablishment(matched.id);
+    } else {
+      // Saved establishment no longer exists, clear and show selector
+      localStorage.removeItem('ss_current_etab');
+      document.getElementById('pg-select-etab').style.display = 'flex';
+      renderEtabList();
+    }
+  } else {
+    // Show establishment selector
+    document.getElementById('pg-select-etab').style.display = 'flex';
+    renderEtabList();
+  initEtabSearch();
+  }
+});
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V9 â SERVICE WORKER & PWA + CACHE BUSTING
+// âââââââââââââââââââââââââââââââââââââââââââ
+const SS_APP_VERSION = 'v9-fix-02';
+
+// Proactive cache cleanup on version change
+(async function clearOldCaches() {
+  try {
+    var storedVersion = localStorage.getItem('ss_app_version');
+    if (storedVersion !== SS_APP_VERSION) {
+      console.log('[SafeSchool] Version change detected:', storedVersion, '->', SS_APP_VERSION);
+      if ('caches' in window) {
+        var keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log('[SafeSchool] All caches cleared');
+      }
+      localStorage.setItem('ss_app_version', SS_APP_VERSION);
+      // If this is an update (not first visit), tell the SW to skip waiting
+      if (storedVersion && navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+      }
+    }
+  } catch(e) { console.warn('Cache cleanup failed:', e); }
+})();
+
+// Global cache clearing function for manual use
+window.clearAppCache = async function() {
+  try {
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    localStorage.removeItem('ss_app_version');
+    if (navigator.serviceWorker) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    toast('Cache vidÃ© ! Rechargement...', 'ok');
+    setTimeout(() => location.reload(true), 500);
+  } catch(e) {
+    toast('Erreur lors du vidage du cache: ' + e.message, 'err');
+  }
+};
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then(reg => {
+      console.log('SW registered:', reg.scope);
+      // Listen for updates
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+      // V8 Pro: check for updates every 5 minutes (was hourly)
+      setInterval(() => reg.update(), 5 * 60 * 1000);
+    })
+    .catch(err => console.warn('SW registration failed:', err));
+
+  // Auto-reload when a new SW takes control (ensures latest version)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      location.reload();
+    }
+  });
+
+  // Listen for messages from SW
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'NAVIGATE') {
+      const page = new URLSearchParams(event.data.url.split('?')[1] || '').get('page');
+      if (page) go(page);
+    }
+  });
+}
+
+function showUpdateBanner() {
+  if (document.getElementById('update-banner')) return;
+  document.body.insertAdjacentHTML('beforeend', `
+  <div id="update-banner" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:9999;font-size:.88rem;font-weight:600;animation:fadeUp .3s ease">
+    <span>Nouvelle version disponible</span>
+    <button onclick="location.reload()" style="margin-left:auto;background:#fff;color:#059669;border:none;padding:6px 16px;border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer">Mettre Ã  jour</button>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;opacity:.7">Ã</button>
+  </div>`);
+}
+
+// Push LÃ©a stats on page unload (best effort)
+window.addEventListener('beforeunload', () => {
+  if (leaStats._session.messages > 0) {
+    leaStats.endSession();
+  }
+  if (currentEtab?.id) {
+    leaStats.pushSchoolStats(currentEtab.id);
+  }
+});
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â SMART INSTALL BANNER
+// âââââââââââââââââââââââââââââââââââââââââââ
+let deferredInstall = null;
+let isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  // Show smart install banner after 3s on first visit, 8s on return
+  const visits = parseInt(localStorage.getItem('ss_visits') || '0');
+  localStorage.setItem('ss_visits', visits + 1);
+  const delay = visits === 0 ? 3000 : 8000;
+
+  if (isStandalone) return; // Already installed
+
+  setTimeout(() => {
+    if (!deferredInstall || document.getElementById('install-banner')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+    <div id="install-banner" style="position:fixed;bottom:calc(var(--nav) + var(--safe) + 16px);left:12px;right:12px;max-width:560px;margin:0 auto;background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:20px;padding:18px 20px;box-shadow:0 10px 40px rgba(79,70,229,.35);display:flex;align-items:center;gap:14px;z-index:300;animation:fadeUp .4s cubic-bezier(.34,1.56,.64,1);border:1.5px solid rgba(99,102,241,.3)">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#4f46e5,#6366f1);border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;box-shadow:0 4px 12px rgba(79,70,229,.4)">ð²</div>
+      <div style="flex:1">
+        <p style="font-size:.92rem;font-weight:700;color:#fff;margin:0">Installe SafeSchool</p>
+        <p style="font-size:.76rem;color:#a5b4fc;margin:2px 0 0">AccÃ¨s instantanÃ© + notifications + hors ligne</p>
+      </div>
+      <button onclick="document.getElementById('install-banner').remove();localStorage.setItem('ss_install_dismissed','1')" style="background:none;border:none;color:#a5b4fc;font-size:1.3rem;cursor:pointer;padding:4px;opacity:.7">Ã</button>
+      <button onclick="installApp()" style="background:#fff;color:#4f46e5;border:none;padding:10px 20px;border-radius:12px;font-weight:800;font-size:.88rem;cursor:pointer;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,.15)">Installer</button>
+    </div>`);
+  }, delay);
+});
+
+async function installApp() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  deferredInstall = null;
+  document.getElementById('install-banner')?.remove();
+  if (outcome === 'accepted') {
+    toast('SafeSchool installÃ© avec succÃ¨s !', 'ok');
+    ssHaptic('success');
+  }
+}
+
+// iOS Safari install instructions
+if (/iPhone|iPad/.test(navigator.userAgent) && !window.navigator.standalone) {
+  setTimeout(() => {
+    if (localStorage.getItem('ss_ios_install_shown')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+    <div id="ios-install" style="position:fixed;bottom:calc(var(--nav) + var(--safe) + 16px);left:12px;right:12px;max-width:560px;margin:0 auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.15);z-index:300;animation:fadeUp .4s ease;text-align:center">
+      <p style="font-size:.95rem;font-weight:700;color:var(--t);margin:0 0 8px">Installer SafeSchool sur iPhone</p>
+      <p style="font-size:.82rem;color:var(--tm);margin:0 0 12px">Appuie sur <span style="background:var(--pbg);padding:2px 8px;border-radius:6px;font-weight:700;color:var(--p)">Partager</span> puis <span style="background:var(--pbg);padding:2px 8px;border-radius:6px;font-weight:700;color:var(--p)">Sur l'Ã©cran d'accueil</span></p>
+      <div style="display:flex;justify-content:center;gap:8px;font-size:2rem;margin-bottom:12px">
+        <span>1. Clique âï¸</span>
+      </div>
+      <button onclick="document.getElementById('ios-install').remove();localStorage.setItem('ss_ios_install_shown','1')" class="btn btn-p btn-sm">Compris !</button>
+    </div>`);
+  }, 6000);
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â PUSH NOTIFICATIONS
+// âââââââââââââââââââââââââââââââââââââââââââ
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    toast('Les notifications ne sont pas supportÃ©es sur ce navigateur', 'err');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    toast('Les notifications sont bloquÃ©es. Active-les dans les paramÃ¨tres.', 'err');
+    return false;
+  }
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+}
+
+async function subscribeToPush(role = 'student') {
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+
+    // Try to get VAPID key from server
+    let vapidKey = null;
+    try {
+      const res = await fetch('/api/push/vapid-key');
+      const data = await res.json();
+      vapidKey = data.vapidKey;
+    } catch (e) {
+      console.warn('Could not fetch VAPID key, using demo mode');
+    }
+
+    if (vapidKey) {
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+      });
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          schoolId: currentEtab?.id || 'global',
+          role: role
+        })
+      });
+
+      toast('Notifications activÃ©es !', 'ok');
+      ssHaptic('success');
+    } else {
+      // Demo mode â show local notification
+      toast('Notifications activÃ©es (mode dÃ©mo)', 'ok');
+      localStorage.setItem('ss_notif_enabled', '1');
+    }
+
+    localStorage.setItem('ss_push_subscribed', '1');
+  } catch (e) {
+    console.error('Push subscription failed:', e);
+    toast('Impossible d\'activer les notifications', 'err');
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+// Show notification opt-in after first report or 2nd visit
+function maybeShowNotifOptIn() {
+  if (localStorage.getItem('ss_push_subscribed') || localStorage.getItem('ss_notif_dismissed')) return;
+  if (Notification.permission === 'denied') return;
+  if (isStandalone || parseInt(localStorage.getItem('ss_visits') || '0') >= 2) {
+    setTimeout(() => {
+      if (document.getElementById('notif-optin')) return;
+      document.body.insertAdjacentHTML('beforeend', `
+      <div id="notif-optin" style="position:fixed;bottom:calc(var(--nav) + var(--safe) + 16px);left:12px;right:12px;max-width:560px;margin:0 auto;background:#fff;border-radius:20px;padding:18px 20px;box-shadow:0 10px 40px rgba(79,70,229,.2);z-index:250;animation:fadeUp .4s ease;display:flex;align-items:center;gap:14px;border:1.5px solid rgba(79,70,229,.1)">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#059669,#10b981);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">ð</div>
+        <div style="flex:1">
+          <p style="font-size:.88rem;font-weight:700;color:var(--t);margin:0">Activer les notifications ?</p>
+          <p style="font-size:.76rem;color:var(--tm);margin:2px 0 0">Sois informÃ©(e) quand ton dossier est traitÃ©</p>
+        </div>
+        <button onclick="document.getElementById('notif-optin').remove();localStorage.setItem('ss_notif_dismissed','1')" style="background:none;border:none;color:var(--ts);font-size:1.2rem;cursor:pointer;padding:4px">Ã</button>
+        <button onclick="document.getElementById('notif-optin').remove();subscribeToPush()" class="btn btn-g btn-sm">Activer</button>
+      </div>`);
+    }, 2000);
+  }
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â DARK MODE (superseded by V9 initTheme)
+// initDarkMode and toggleDarkMode now defined in V9 section above
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â HAPTIC FEEDBACK
+// âââââââââââââââââââââââââââââââââââââââââââ
+function ssHaptic(type = 'light') {
+  if (!navigator.vibrate) return;
+  const patterns = {
+    light: [10],
+    medium: [20],
+    heavy: [30],
+    success: [10, 50, 10],
+    error: [50, 30, 50, 30, 50],
+    warning: [30, 50, 30]
+  };
+  navigator.vibrate(patterns[type] || patterns.light);
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â OFFLINE INDICATOR
+// âââââââââââââââââââââââââââââââââââââââââââ
+function updateOnlineStatus() {
+  const el = document.getElementById('offline-indicator');
+  if (!navigator.onLine) {
+    if (!el) {
+      document.body.insertAdjacentHTML('afterbegin', `
+      <div id="offline-indicator" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:6px 16px;text-align:center;font-size:.8rem;font-weight:700;z-index:9999;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span>ð¡</span> Mode hors ligne â Les signalements seront envoyÃ©s Ã  la reconnexion
+      </div>`);
+    }
+  } else {
+    el?.remove();
+  }
+}
+window.addEventListener('online', () => { updateOnlineStatus(); toast('Connexion rÃ©tablie', 'ok'); });
+window.addEventListener('offline', () => { updateOnlineStatus(); toast('Tu es hors connexion', 'err'); });
+updateOnlineStatus();
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â GESTURE NAVIGATION & PULL TO REFRESH
+// âââââââââââââââââââââââââââââââââââââââââââ
+let touchStartY = 0;
+let pullRefreshActive = false;
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (touchStartY === 0) return;
+  const diff = e.touches[0].clientY - touchStartY;
+  if (diff > 80 && window.scrollY === 0 && !pullRefreshActive) {
+    pullRefreshActive = true;
+  }
+}, { passive: true });
+document.addEventListener('touchend', () => {
+  if (pullRefreshActive) {
+    pullRefreshActive = false;
+    touchStartY = 0;
+    if (adminIn && currentPage === 'dashboard') {
+      S.reloadReports().then(() => { renderDashboardV3(); toast('DonnÃ©es actualisÃ©es', 'ok'); ssHaptic('light'); });
+    } else if (currentPage === 'home') {
+      ssHaptic('light');
+    }
+  }
+  touchStartY = 0;
+});
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V9 â COMPLIANCE PAGES (Privacy, Legal, GDPR)
+// âââââââââââââââââââââââââââââââââââââââââââ
+function renderPrivacyPage() {
+  const el = document.getElementById('privacy-content');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="go('home')" style="margin-bottom:16px">${t('back')}</button>
+    <h1>${t('privacyTitle')}</h1>
+    <p><strong>SafeSchool</strong> â ${currentLang === 'fr' ? 'Plateforme anti-harcÃ¨lement scolaire' : 'Anti-bullying school platform'}</p>
+    <h2>${currentLang === 'fr' ? 'DonnÃ©es collectÃ©es' : 'Data collected'}</h2>
+    <ul>
+      <li>${currentLang === 'fr' ? 'Signalements (description, type, niveau d\'urgence) â anonymes par dÃ©faut' : 'Reports (description, type, urgency level) â anonymous by default'}</li>
+      <li>${currentLang === 'fr' ? 'Nom/email uniquement si choix d\'identification volontaire' : 'Name/email only if voluntary identification is chosen'}</li>
+      <li>${currentLang === 'fr' ? 'Langue prÃ©fÃ©rÃ©e et thÃ¨me (stockÃ©s localement sur l\'appareil)' : 'Preferred language and theme (stored locally on device)'}</li>
+      <li>${currentLang === 'fr' ? 'Aucun cookie tiers, aucun traceur publicitaire' : 'No third-party cookies, no advertising trackers'}</li>
+    </ul>
+    <h2>${currentLang === 'fr' ? 'FinalitÃ© du traitement' : 'Purpose of processing'}</h2>
+    <p>${currentLang === 'fr' ? 'Les donnÃ©es sont collectÃ©es dans le seul but de prÃ©venir et traiter les situations de harcÃ¨lement scolaire. Elles sont transmises exclusivement Ã  l\'Ã©quipe Ã©ducative de l\'Ã©tablissement sÃ©lectionnÃ©.' : 'Data is collected for the sole purpose of preventing and addressing school bullying situations. It is transmitted exclusively to the educational team of the selected school.'}</p>
+    <h2>${currentLang === 'fr' ? 'DurÃ©e de conservation' : 'Retention period'}</h2>
+    <p>${currentLang === 'fr' ? 'Les signalements sont conservÃ©s pendant la durÃ©e de traitement et 12 mois aprÃ¨s clÃ´ture, sauf demande de suppression anticipÃ©e (droit RGPD).' : 'Reports are kept for the duration of processing and 12 months after closure, unless early deletion is requested (GDPR right).'}</p>
+    <h2>${currentLang === 'fr' ? 'Assistant LÃ©a' : 'Lea Assistant'}</h2>
+    <p>${currentLang === 'fr' ? 'Les conversations avec l\'assistante LÃ©a ne sont PAS enregistrÃ©es. Aucune donnÃ©e n\'est conservÃ©e cÃ´tÃ© serveur. Les messages restent uniquement dans la mÃ©moire locale du navigateur et sont supprimÃ©s Ã  la fermeture.' : 'Conversations with Lea assistant are NOT recorded. No data is stored server-side. Messages remain only in browser local memory and are deleted on close.'}</p>
+    <h2>${currentLang === 'fr' ? 'Chiffrement' : 'Encryption'}</h2>
+    <p>${currentLang === 'fr' ? 'Les donnÃ©es sensibles (description, nom du dÃ©clarant) sont chiffrÃ©es cÃ´tÃ© serveur avec AES-256-GCM avant stockage en base de donnÃ©es.' : 'Sensitive data (description, reporter name) is encrypted server-side with AES-256-GCM before database storage.'}</p>
+    <h2>Contact DPO</h2>
+    <p>dpo@safeschool.fr</p>
+  `;
+}
+
+function renderLegalPage() {
+  const el = document.getElementById('legal-content');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="go('home')" style="margin-bottom:16px">${t('back')}</button>
+    <h1>${t('legalTitle')}</h1>
+    <h2>${currentLang === 'fr' ? 'Ãditeur' : 'Publisher'}</h2>
+    <p>SafeSchool SAS<br>${currentLang === 'fr' ? 'Plateforme anti-harcÃ¨lement scolaire' : 'Anti-bullying school platform'}</p>
+    <h2>${currentLang === 'fr' ? 'HÃ©bergement' : 'Hosting'}</h2>
+    <p>Netlify, Inc.<br>2325 3rd Street, Suite 296<br>San Francisco, CA 94107, USA</p>
+    <h2>${currentLang === 'fr' ? 'Base de donnÃ©es' : 'Database'}</h2>
+    <p>Supabase (PostgreSQL) â ${currentLang === 'fr' ? 'HÃ©bergÃ© dans l\'UE' : 'Hosted in the EU'}</p>
+    <h2>${currentLang === 'fr' ? 'Responsable de traitement' : 'Data controller'}</h2>
+    <p>${currentLang === 'fr' ? 'Le responsable de traitement est l\'Ã©tablissement scolaire abonnÃ© Ã  SafeSchool. SafeSchool agit en tant que sous-traitant au sens du RGPD (art. 28).' : 'The data controller is the school subscribed to SafeSchool. SafeSchool acts as a data processor under GDPR (art. 28).'}</p>
+    <h2>${currentLang === 'fr' ? 'ConformitÃ© RGPD' : 'GDPR compliance'}</h2>
+    <p>${currentLang === 'fr' ? 'SafeSchool est conforme au RÃ¨glement GÃ©nÃ©ral sur la Protection des DonnÃ©es (UE 2016/679). DonnÃ©es hÃ©bergÃ©es dans l\'Espace Ãconomique EuropÃ©en.' : 'SafeSchool complies with the General Data Protection Regulation (EU 2016/679). Data hosted within the European Economic Area.'}</p>
+  `;
+}
+
+function renderGdprPage() {
+  const el = document.getElementById('gdpr-content');
+  if (!el) return;
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="go('home')" style="margin-bottom:16px">${t('back')}</button>
+    <h1>${t('gdprTitle')}</h1>
+    <p>${currentLang === 'fr' ? 'En vertu du RGPD (UE 2016/679), tu disposes des droits suivants :' : 'Under GDPR (EU 2016/679), you have the following rights:'}</p>
+    <ul>
+      <li><strong>${currentLang === 'fr' ? 'Droit d\'accÃ¨s' : 'Right of access'}</strong> â ${currentLang === 'fr' ? 'Savoir quelles donnÃ©es sont conservÃ©es' : 'Know what data is stored'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit de rectification' : 'Right to rectification'}</strong> â ${currentLang === 'fr' ? 'Corriger des donnÃ©es inexactes' : 'Correct inaccurate data'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit Ã  l\'effacement' : 'Right to erasure'}</strong> â ${currentLang === 'fr' ? 'Demander la suppression de tes donnÃ©es' : 'Request deletion of your data'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit Ã  la portabilitÃ©' : 'Right to portability'}</strong> â ${currentLang === 'fr' ? 'Exporter tes donnÃ©es dans un format lisible' : 'Export your data in a readable format'}</li>
+      <li><strong>${currentLang === 'fr' ? 'Droit d\'opposition' : 'Right to object'}</strong> â ${currentLang === 'fr' ? 'T\'opposer au traitement de tes donnÃ©es' : 'Object to processing of your data'}</li>
+    </ul>
+    <h2>${currentLang === 'fr' ? 'Exercer tes droits' : 'Exercise your rights'}</h2>
+    <div class="gdpr-action" onclick="gdprExport()">
+      <div class="ga-icon">ð¤</div>
+      <div class="ga-info">
+        <h4>${t('gdprExport')}</h4>
+        <p>${t('gdprExportDesc')}</p>
+      </div>
+    </div>
+    <div class="gdpr-action" onclick="gdprDeleteRequest()">
+      <div class="ga-icon">ðï¸</div>
+      <div class="ga-info">
+        <h4>${t('gdprDelete')}</h4>
+        <p>${t('gdprDeleteDesc')}</p>
+      </div>
+    </div>
+    <p style="margin-top:20px;font-size:.82rem">${currentLang === 'fr' ? 'Tu peux aussi contacter notre DPO : ' : 'You can also contact our DPO: '}<strong>dpo@safeschool.fr</strong></p>
+  `;
+}
+
+function gdprExport() {
+  const code = prompt(currentLang === 'fr' ? 'Entre ton code de suivi (SS-XXXXXX) :' : 'Enter your tracking code (SS-XXXXXX):');
+  if (!code) return;
+  fetch('/api/gdpr/export?code=' + encodeURIComponent(code.trim().toUpperCase()))
+    .then(r => r.json())
+    .then(data => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'safeschool-export-' + code + '.json'; a.click();
+      URL.revokeObjectURL(url);
+      toast(currentLang === 'fr' ? 'Export tÃ©lÃ©chargÃ©' : 'Export downloaded', 'ok');
+    })
+    .catch(() => toast(currentLang === 'fr' ? 'Erreur lors de l\'export' : 'Export error', 'err'));
+}
+
+function gdprDeleteRequest() {
+  const code = prompt(currentLang === 'fr' ? 'Entre ton code de suivi (SS-XXXXXX) pour demander la suppression :' : 'Enter your tracking code (SS-XXXXXX) to request deletion:');
+  if (!code) return;
+  if (!confirm(currentLang === 'fr' ? 'Cette action est irrÃ©versible. Confirmer la demande de suppression ?' : 'This action is irreversible. Confirm deletion request?')) return;
+  fetch('/api/gdpr/delete-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code.trim().toUpperCase() })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) toast(currentLang === 'fr' ? 'Demande de suppression enregistrÃ©e' : 'Deletion request recorded', 'ok');
+      else toast(data.error || 'Error', 'err');
+    })
+    .catch(() => toast(currentLang === 'fr' ? 'Erreur lors de la demande' : 'Request error', 'err'));
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V9 â DARK MODE (improved with system detection)
+// âââââââââââââââââââââââââââââââââââââââââââ
+function initTheme() {
+  const stored = localStorage.getItem('ss_theme');
+  if (stored === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else if (stored === 'light') {
+    document.documentElement.classList.remove('dark');
+  } else {
+    // Follow system preference
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+  }
+}
+initTheme();
+
+// Listen for system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+  const stored = localStorage.getItem('ss_theme');
+  if (!stored || stored === 'system') {
+    document.documentElement.classList.toggle('dark', e.matches);
+  }
+});
+
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('ss_theme', isDark ? 'dark' : 'light');
+  // Update theme-color meta tag
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', isDark ? '#191919' : '#2563EB');
+}
+
+// âââââââââââââââââââââââââââââââââââââââââââ
+// V7 PRO â SHORTCUT LAUNCH HANDLER
+// âââââââââââââââââââââââââââââââââââââââââââ
+(function handleShortcuts() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  if (page && ['report', 'assistant', 'myreport', 'education', 'help', 'privacy', 'legal', 'gdpr'].includes(page)) {
+    // Wait for establishment to load, then navigate
+    const waitAndGo = setInterval(() => {
+      if (currentEtab || document.getElementById('pg-select-etab')?.style.display === 'flex') {
+        clearInterval(waitAndGo);
+        if (currentEtab) go(page);
+      }
+    }, 200);
+    setTimeout(() => clearInterval(waitAndGo), 5000);
+  }
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// âââââââââââââââââââââââââââââââââââââââââââ
+// SUPABASE CONFIG & AUTH
+// âââââââââââââââââââââââââââââââââââââââââââ
+const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
+const SS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
+
+window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
+window.ENV_SUPABASE_KEY = SS_SUPABASE_ANON_KEY;
+
+const ssSupabase = window.supabase.createClient(SS_SUPABASE_URL, SS_SUPABASE_ANON_KEY);
+
+// Current admin user data (from admin_users table)
+let currentAdminUser = null;
+
+// ââ Login via Supabase Auth ââ
+async function login(email, password) {
+  const { data, error } = await ssSupabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
+
+  // VÃ©rifier que l'utilisateur existe dans admin_users
+  const userId = data.user.id;
+  const { data: adminRow, error: adminErr } = await ssSupabase
+    .from('admin_users')
+    .select('*')
+    .eq('auth_user_id', userId)
+    .maybeSingle();
+
+  if (adminErr) throw new Error('Erreur de vÃ©rification des droits');
+  if (!adminRow) {
+    await ssSupabase.auth.signOut();
+    throw new Error('AccÃ¨s refusÃ© â compte non autorisÃ©');
+  }
+
+  currentAdminUser = adminRow;
+  return adminRow;
+}
+
+// ââ Logout ââ
+async function logout() {
+  await ssSupabase.auth.signOut();
+  currentAdminUser = null;
+  adminIn = false;
+  document.getElementById('ni-dashboard').style.display = 'none';
+  document.getElementById('pg-dashboard').style.display = 'none';
+  go('home');
+  toast('DÃ©connectÃ©', 'info');
+}
+
+// ââ Restauration de session au chargement ââ
+async function restoreSession() {
+  try {
+    const { data: { session } } = await ssSupabase.auth.getSession();
+    if (!session) return false;
+
+    const userId = session.user.id;
+    const { data: adminRow } = await ssSupabase
+      .from('admin_users')
+      .select('*')
+      .eq('auth_user_id', userId)
+      .maybeSingle();
+
+    if (!adminRow) return false;
+
+    currentAdminUser = adminRow;
+    adminIn = true;
+    document.getElementById('ni-dashboard').style.display = '';
+    document.getElementById('pg-dashboard').style.display = 'flex';
+    return true;
+  } catch (e) {
+    console.warn('Restauration session Ã©chouÃ©e:', e);
+    return false;
+  }
+}
+
+// ââ Ãcoute des changements d'auth ââ
+ssSupabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    currentAdminUser = null;
+    adminIn = false;
+    document.getElementById('ni-dashboard').style.display = 'none';
+    document.getElementById('pg-dashboard').style.display = 'none';
+  }
+});
+</script>
+
+<script src="./dashboard-v3.js"></script>
+
+<!-- COOKIE CONSENT (ePrivacy / RGPD) -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:calc(var(--nav) + var(--safe) + 8px);left:8px;right:8px;z-index:9999;background:rgba(15,23,42,.97);backdrop-filter:blur(16px);color:#fff;padding:14px 18px;border-radius:16px;box-shadow:0 -4px 24px rgba(0,0,0,.2);max-width:600px;margin:0 auto">
+  <p style="font-size:.82rem;color:#e2e8f0;line-height:1.5;margin:0 0 10px">ðª Ce site utilise uniquement des cookies strictement nÃ©cessaires (session, sÃ©curitÃ©). Aucun cookie publicitaire. <a href="/politique-confidentialite" style="color:#818cf8;text-decoration:underline">En savoir plus</a></p>
+  <button onclick="localStorage.setItem('ss_cookies_accepted','1');this.parentElement.style.display='none'" style="background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border:none;padding:9px 20px;border-radius:10px;font-size:.84rem;font-weight:700;cursor:pointer;width:100%">J'ai compris</button>
+</div>
+<script>if(!localStorage.getItem('ss_cookies_accepted'))document.getElementById('cookie-banner').style.display='block';</script>
+
+<!-- ERROR MONITORING â Lightweight client-side error capture -->
+<script>
+(function() {
+  const ERROR_LOG_KEY = 'ss_error_log';
+  const MAX_ERRORS = 50;
+  const REPORT_ENDPOINT = '/api/notify/new-report';
+
   function getErrorLog() {
     try { return JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]'); }
     catch { return []; }
