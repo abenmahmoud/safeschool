@@ -2,7 +2,7 @@ import { getStore } from '@netlify/blobs';
 import type { Context, Config } from '@netlify/functions';
 import crypto from 'node:crypto';
 
-// Ã¢ÂÂÃ¢ÂÂ V10 EU Ã¢ÂÂ Environment-driven auth Ã¢ÂÂ NO hardcoded fallbacks Ã¢ÂÂÃ¢ÂÂ
+// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ V10 EU ÃÂ¢ÃÂÃÂ Environment-driven auth ÃÂ¢ÃÂÃÂ NO hardcoded fallbacks ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
 const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
 const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
@@ -18,7 +18,7 @@ const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'safeschool.
 const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app';
 
 // ---------------------------------------------------------------------------
-// Rate limiting Ã¢ÂÂ 5 login attempts per IP per 15 minutes
+// Rate limiting ÃÂ¢ÃÂÃÂ 5 login attempts per IP per 15 minutes
 // ---------------------------------------------------------------------------
 const LOGIN_RATE_LIMIT = 5;
 const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -93,18 +93,18 @@ async function registerNetlifyDomain(slug: string): Promise<void> {
   if (!token || !dnsZoneId) { console.warn('[DNS] NETLIFY_API_TOKEN or NETLIFY_DNS_ZONE_ID missing'); return; }
   const hostname = buildSchoolDomain(slug);
   try {
-    // Vérifier si l'entrée existe déjà
+    // VÃ©rifier si l'entrÃ©e existe dÃ©jÃ 
     const existing = await fetch('https://api.netlify.com/api/v1/dns_zones/' + dnsZoneId + '/dns_records', {
       headers: { 'Authorization': 'Bearer ' + token }
     }).then(r => r.json());
     if (existing.find((rec: any) => rec.hostname === hostname)) {
       console.log('[DNS] Already exists: ' + hostname); return;
     }
-    // Ajouter l'entrée CNAME
+    // Ajouter l'entrÃ©e CNAME
     const res = await fetch('https://api.netlify.com/api/v1/dns_zones/' + dnsZoneId + '/dns_records', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'NETLIFY', hostname, value: Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app', ttl: 3600 })
+      body: JSON.stringify({ type: 'NETLIFY', hostname: hostname, value: Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app', ttl: 3600 })
     });
     if (res.ok) { console.log('[DNS] Registered: ' + hostname); }
     else { console.warn('[DNS] Failed:', await res.text()); }
@@ -221,9 +221,9 @@ export default async (req: Request, context: Context) => {
       const slug = path.replace('/by-slug/', '');
       const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
       const entry = index.find((e: any) => e.slug === slug && e.is_active);
-      if (!entry) return cors({ error: 'Etablissement non trouvÃÂ©' }, 404, req);
+      if (!entry) return cors({ error: 'Etablissement non trouvÃÂÃÂ©' }, 404, req);
       const data = await store.get(`school_${entry.id}`, { type: 'json' });
-      if (!data) return cors({ error: 'DonnÃÂ©es non trouvÃÂ©es' }, 404, req);
+      if (!data) return cors({ error: 'DonnÃÂÃÂ©es non trouvÃÂÃÂ©es' }, 404, req);
       const isAdmin = authCheck(req);
       const publicInfo: any = {
         id: (data as any).id,
@@ -345,7 +345,7 @@ export default async (req: Request, context: Context) => {
         const entry = index.find((e: any) => e.slug === slug);
         if (entry) schoolData = await store.get(`school_${entry.id}`, { type: 'json' });
       }
-      if (!schoolData) return cors({ error: 'ÃÂcole non trouvÃÂ©e' }, 404, req);
+      if (!schoolData) return cors({ error: 'ÃÂÃÂcole non trouvÃÂÃÂ©e' }, 404, req);
 
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -439,7 +439,7 @@ export default async (req: Request, context: Context) => {
     }
 
     if (!authCheck(req)) {
-      return cors({ error: 'Non autorisÃÂ©' }, 401, req);
+      return cors({ error: 'Non autorisÃÂÃÂ©' }, 401, req);
     }
 
     if (req.method === 'GET' && (path === '' || path === '/')) {
@@ -455,7 +455,7 @@ export default async (req: Request, context: Context) => {
     if (req.method === 'GET' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
       const id = path.slice(1);
       const data = await store.get(`school_${id}`, { type: 'json' });
-      if (!data) return cors({ error: 'Non trouvÃÂ©' }, 404, req);
+      if (!data) return cors({ error: 'Non trouvÃÂÃÂ©' }, 404, req);
       return cors(data, 200, req);
     }
 
@@ -464,11 +464,11 @@ export default async (req: Request, context: Context) => {
       try {
         body = await req.json();
       } catch {
-        return cors({ error: 'Corps de requÃÂªte invalide' }, 400, req);
+        return cors({ error: 'Corps de requÃÂÃÂªte invalide' }, 400, req);
       }
 
       if (!body.name || typeof body.name !== 'string' || body.name.trim().length < 2) {
-        return cors({ error: 'Nom requis (minimum 2 caractÃÂ¨res)' }, 400, req);
+        return cors({ error: 'Nom requis (minimum 2 caractÃÂÃÂ¨res)' }, 400, req);
       }
       if (body.email && !isValidEmail(body.email)) {
         return cors({ error: "Format d'email invalide" }, 400, req);
@@ -485,7 +485,7 @@ export default async (req: Request, context: Context) => {
 
       const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
       if (index.find((e: any) => e.slug === slug)) {
-        return cors({ error: 'Sous-domaine dÃÂ©jÃÂ  utilisÃÂ©' }, 409, req);
+        return cors({ error: 'Sous-domaine dÃÂÃÂ©jÃÂÃÂ  utilisÃÂÃÂ©' }, 409, req);
       }
 
       const id = crypto.randomUUID();
@@ -552,7 +552,7 @@ export default async (req: Request, context: Context) => {
     if (req.method === 'PUT' && path.match(/^\/[a-zA-Z0-9_-]+$/)) {
       const id = path.slice(1);
       const existing = (await store.get(`school_${id}`, { type: 'json' })) as any;
-      if (!existing) return cors({ error: 'Non trouvÃÂ©' }, 404, req);
+      if (!existing) return cors({ error: 'Non trouvÃÂÃÂ©' }, 404, req);
 
       const body = (await req.json()) as any;
       const updatedSlug = body.slug
@@ -604,7 +604,7 @@ export default async (req: Request, context: Context) => {
     if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/staff-codes$/)) {
       const id = path.split('/')[1];
       const existing = (await store.get(`school_${id}`, { type: 'json' })) as any;
-      if (!existing) return cors({ error: 'Non trouvÃÂ©' }, 404, req);
+      if (!existing) return cors({ error: 'Non trouvÃÂÃÂ©' }, 404, req);
 
       const body = (await req.json()) as any;
       const count = Math.min(body.count || 5, 50);
@@ -625,7 +625,7 @@ export default async (req: Request, context: Context) => {
     if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/regenerate-admin$/)) {
       const id = path.split('/')[1];
       const existing = (await store.get(`school_${id}`, { type: 'json' })) as any;
-      if (!existing) return cors({ error: 'Non trouvÃÂ©' }, 404, req);
+      if (!existing) return cors({ error: 'Non trouvÃÂÃÂ©' }, 404, req);
 
       existing.admin_code = genAdminCode();
       existing.admin_password = existing.admin_code;
@@ -633,7 +633,7 @@ export default async (req: Request, context: Context) => {
       return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password }, 200, req);
     }
 
-    return cors({ error: 'Route non trouvÃÂ©e' }, 404, req);
+    return cors({ error: 'Route non trouvÃÂÃÂ©e' }, 404, req);
   } catch (error: any) {
     console.error('api-establishments error:', error);
     return cors(
