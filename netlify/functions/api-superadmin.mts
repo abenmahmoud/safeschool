@@ -340,7 +340,7 @@ export default async (req: Request, context: Context) => {
                                                                                                 }
     }
   return cors({ error: 'Route non trouvée' }, 404);
-};
+
 
   
 export const config: Config = {
