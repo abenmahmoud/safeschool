@@ -665,6 +665,17 @@ body{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
   document.head.appendChild(s);
 })();
 </script>
+<script>window.SENTRY_DSN="https://1f741b2a53ba4a72e7354878668ece3f@o4511200271007744.ingest.de.sentry.io/4511200511852624";</script><script>
+// SafeSchool: support ?etab=slug pour accès direct sans sous-domaine
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var etabParam = params.get('etab');
+  if (etabParam && /^[a-z0-9-]+$/.test(etabParam)) {
+    localStorage.setItem('ss_current_etab_slug', etabParam);
+    console.log('[SafeSchool] etab from URL param:', etabParam);
+  }
+})();
+</script>
 </head>
 <body>
 <a href="#app" class="skip-link" tabindex="0">Aller au contenu principal</a>
