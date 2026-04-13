@@ -3199,32 +3199,33 @@ async function tryLogin() {
     const email = emailEl.value.trim();
     const pass = passEl.value.trim();
     if (!email || !pass) {
-      const errEl = document.getElementById('al-error');
-      if (errEl) { errEl.textContent = 'Email et mot de passe requis'; errEl.style.display = 'block'; }
+      const e = document.getElementById('al-error');
+      if (e) { e.textContent = 'Email et mot de passe requis'; e.style.display='block'; }
       return;
     }
     const slug = localStorage.getItem('ss_current_etab_slug') || location.hostname.split('.')[0];
     const btn = document.getElementById('al-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Connexion...'; }
     try {
-      const r = await fetch('/api/establishments/admin-login/' + slug, {
+      const res = await fetch('/api/establishments/admin-login/' + slug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: pass })
       });
-      const data = await r.json();
-      if (data.ok) {
-        localStorage.setItem('ss_admin_data', JSON.stringify({ school_id: data.school_id, name: data.name, plan: data.plan, admin_email: data.admin_email, slug: slug }));
+      const d = await res.json();
+      if (d.ok) {
+        localStorage.setItem('ss_admin_data', JSON.stringify({
+          school_id: d.school_id, name: d.name, plan: d.plan,
+          admin_email: d.admin_email, slug: slug
+        }));
         localStorage.setItem('ss_admin_mode', '1');
-        document.getElementById('admin-login-modal')?.remove();
-        if (typeof renderDashboardV3 === 'function') renderDashboardV3(data);
-        else location.reload();
+        location.reload();
       } else {
-        const errEl = document.getElementById('al-error');
-        if (errEl) { errEl.textContent = data.error || 'Identifiants incorrects'; errEl.style.display = 'block'; }
+        const e = document.getElementById('al-error');
+        if (e) { e.textContent = d.error || 'Identifiants incorrects'; e.style.display='block'; }
         if (btn) { btn.disabled = false; btn.textContent = 'Se connecter'; }
       }
-    } catch(e) {
+    } catch(err) {
       if (btn) { btn.disabled = false; btn.textContent = 'Se connecter'; }
     }
   }
