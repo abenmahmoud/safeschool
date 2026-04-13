@@ -3192,54 +3192,41 @@ function showAdminLogin(){
   document.getElementById('al-email').focus();
 }
 
-async function tryLogin(){
-  const email = document.getElementById('al-email')?.value?.trim()?.toLowerCase() || '';
-  const password = document.getElementById('al-pass')?.value || '';
-  const errorEl = document.getElementById('al-error');
-  const btn = document.getElementById('al-submit-btn');
-  const btnText = document.getElementById('al-btn-text');
-  const btnLoading = document.getElementById('al-btn-loading');
-
-  if (!email || !password) {
-    errorEl.textContent = 'Veuillez remplir tous les champs.';
-    errorEl.style.display = '';
+async function tryLogin() {
+  const overlay = document.getElementById('admin-overlay');
+  if (!overlay) return;
+  const emailEl = overlay.querySelector('#al-email, input[type="email"]');
+  const passEl = overlay.querySelector('#al-pass, input[type="password"]');
+  const errEl = overlay.querySelector('#al-error, .error-msg');
+  const btn = overlay.querySelector('#al-submit-btn, button[type="submit"], .btn-p');
+  if (!emailEl || !passEl) return;
+  const email = (emailEl.value || '').trim().toLowerCase();
+  const pass = (passEl.value || '').trim();
+  if (!email || !pass) {
+    if (errEl) { errEl.textContent = 'Email et mot de passe requis'; errEl.style.display = 'flex'; }
     return;
   }
-
-  // État de chargement
-  if(btn) btn.disabled = true;
-  if(btnText) btnText.style.display = 'none';
-  if(btnLoading) btnLoading.style.display = '';
-  if(errorEl) errorEl.style.display = 'none';
-
+  const slug = localStorage.getItem('ss_current_etab_slug') || location.hostname.split('.')[0];
+  if (btn) { btn.disabled = true; }
   try {
-    const adminRow = await login(email, password);
-    adminIn = true;
-    document.getElementById('admin-overlay')?.remove();
-    document.getElementById('ni-dashboard').style.display = '';
-    document.getElementById('pg-dashboard').style.display = 'flex';
-
-    // Charger les données du dashboard
-    try {
-      await Promise.all([S.reloadReports(), S.reloadStaff(), S.reloadLogs()]);
-    } catch(reloadErr) { console.warn('Chargement données (non-bloquant):', reloadErr); }
-
-    go('dashboard');
-    toast('Connecté · Admin' + (currentEtab ? ' ' + currentEtab.name : ''), 'ok');
-  } catch (err) {
-    // Réinitialiser le bouton
-    if(btn) btn.disabled = false;
-    if(btnText) btnText.style.display = '';
-    if(btnLoading) btnLoading.style.display = 'none';
-
-    // Afficher l'erreur
-    const msg = err.message || 'Échec de la connexion';
-    if(errorEl) {
-      errorEl.textContent = msg === 'Invalid login credentials'
-        ? 'Identifiants incorrects. Vérifiez votre email et mot de passe.'
-        : msg;
-      errorEl.style.display = '';
+    const res = await fetch('/api/establishments/admin-login/' + slug, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pass})
+    });
+    const d = await res.json();
+    if (d.ok) {
+      localStorage.setItem('ss_admin_data', JSON.stringify({school_id:d.school_id,name:d.name,plan:d.plan,admin_email:d.admin_email,slug}));
+      localStorage.setItem('ss_admin_mode','1');
+      if (window.__setAdminIn) window.__setAdminIn(true);
+      overlay.remove();
+      go('dashboard');
+    } else {
+      if (errEl) { errEl.textContent = d.error || 'Identifiants incorrects'; errEl.style.display = 'flex'; }
+      if (btn) btn.disabled = false;
     }
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Erreur réseau'; errEl.style.display = 'flex'; }
+    if (btn) btn.disabled = false;
   }
 }
 
