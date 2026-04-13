@@ -517,6 +517,41 @@ export default async (req: Request, context: Context) => {
     return cors({ ok: true, sub_admin_id: found.id, name: found.name, role: found.role, email: found.email, school_id: schoolData.id, school_name: schoolData.name, slug }, 200, req);
   }
 
+  if (req.method === 'POST' && path.startsWith('/add-subadmin/')) {
+    const slug = path.replace('/add-subadmin/', '').split('?')[0];
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!schoolData) return cors({ error: 'Non trouve' }, 404, req);
+    const adminCode = req.headers.get('x-admin-code') || '';
+    const isAdmin = adminCode === schoolData.admin_code || adminCode === schoolData.admin_password || authCheck(req);
+    if (!isAdmin) return cors({ error: 'Non autorise' }, 401, req);
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const subAdmin = { id: crypto.randomUUID(), name: sanitize(body.name || ''), role: sanitize(body.role || 'CPE'), email: sanitize(body.email || ''), code: (body.code || '').toUpperCase(), created_at: new Date().toISOString() };
+    if (!subAdmin.name || !subAdmin.code) return cors({ error: 'Nom et code requis' }, 400, req);
+    schoolData.sub_admins = [...(schoolData.sub_admins || []), subAdmin];
+    await store.setJSON('school_' + entry.id, schoolData);
+    return cors({ ok: true, sub_admin: subAdmin }, 201, req);
+  }
+
+  if (req.method === 'POST' && path.startsWith('/staff-login/')) {
+    const slug = path.replace('/staff-login/', '').split('?')[0];
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!schoolData) return cors({ error: 'Non trouve' }, 404, req);
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const code = (body.code || '').trim().toUpperCase();
+    if (!code) return cors({ error: 'Code requis' }, 400, req);
+    const sub = (schoolData.sub_admins || []).find((s: any) => s.code === code);
+    if (!sub) return cors({ error: 'Code incorrect' }, 401, req);
+    return cors({ ok: true, sub_admin_id: sub.id, name: sub.name, role: sub.role, email: sub.email, school_id: schoolData.id, school_name: schoolData.name, slug }, 200, req);
+  }
+
   if (!authCheck(req)) {
       return cors({ error: 'Non autorisÃÂÃÂ©' }, 401, req);
     }
