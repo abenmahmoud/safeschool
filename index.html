@@ -3865,7 +3865,19 @@ function printReport(){
   ${reps.slice(0,20).map(r=>`<tr><td>${fmtDate(r.createdAt,true)}</td><td>${tlabel(r.harassmentType||r.type)}</td><td>${{1:'Faible',2:'Moyen',3:'Urgent'}[r.urgency]||'â'}</td><td>${{new:'Nouveau',in_progress:'En cours',resolved:'RÃ©solu',archived:'ArchivÃ©'}[r.status]||'â'}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r.description||'').slice(0,80)}</td></tr>`).join('')}
   </tbody></table>
   <div class="footer">SafeSchool â Plateforme anti-harcÃ¨lement scolaire Â· Confidentiel Â· RGPD (UE 2016/679)<br>Ce rapport est rÃ©servÃ© Ã  l'usage interne de l'Ã©quipe Ã©ducative.</div>
-  </body></html>`);
+  
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.__autoAdminDash) {
+    setTimeout(function() {
+      if (typeof openAdminTestFlow === 'function') openAdminTestFlow();
+      else if (typeof renderDashboardV3 === 'function') renderDashboardV3(JSON.parse(localStorage.getItem('ss_admin_data') || '{}'));
+      else if (typeof switchDash === 'function') switchDash('admin');
+    }, 1200);
+  }
+});
+</script>
+</body></html>`);
   w.document.close();
   w.print();
   S.addLog('Rapport imprimÃ©');
