@@ -3165,32 +3165,57 @@ function renderProfile(){
 // ═══════════════════════════════════════════
 // ADMIN LOGIN (Supabase Auth)
 // ═══════════════════════════════════════════
-function showAdminLogin(){
-  if(document.getElementById('admin-overlay'))return;
-  document.body.insertAdjacentHTML('beforeend',`
-  <div id="admin-overlay" class="admin-wrap">
-    <div class="admin-card" style="animation:scaleIn .25s ease">
-      <div style="text-align:center;margin-bottom:12px">
-        <div style="width:56px;height:56px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 16px rgba(79,70,229,.25)">
-          <span style="font-size:1.5rem;filter:brightness(100)">🔐</span>
-        </div>
-        <h2 style="font-size:1.15rem;margin-bottom:4px;color:var(--t)">Espace Administration</h2>
-        <p style="font-size:.82rem;color:var(--tm)">Réservé au personnel éducatif</p>
-      </div>
-      ${currentEtab?`<div style="background:var(--pbg);border:1.5px solid rgba(79,70,229,.12);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:1.3rem">${etabTypeIcons[currentEtab.type]||'🏫'}</span><div><p style="font-size:.88rem;font-weight:700;color:var(--p)">${currentEtab.name}</p><p style="font-size:.75rem;color:var(--tm)">${etabTypeLabels[currentEtab.type]||'Établissement'}${currentEtab.city?' · '+currentEtab.city:''}</p></div></div>`:''}
-      <div id="al-error" style="display:none;background:var(--rbg);border:1.5px solid rgba(220,38,38,.15);border-radius:var(--r12);padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#991b1b;text-align:center"></div>
-      <div class="fg"><label class="fl">Email</label><input type="email" class="fi" id="al-email" value="" placeholder="votre.email@etablissement.fr"></div>
-      <div class="fg"><label class="fl">Mot de passe</label><input type="password" class="fi" id="al-pass" value="" placeholder="Votre mot de passe"></div>
-      <button class="btn btn-p btn-full btn-lg" id="al-submit-btn" onclick="tryLogin()" style="margin-bottom:10px">
-        <span id="al-btn-text">Se connecter</span>
-        <span id="al-btn-loading" style="display:none">Connexion en cours...</span>
-      </button>
-      <button class="btn btn-ghost btn-full" onclick="document.getElementById('admin-overlay').remove()">Annuler</button>
-    </div>
-  </div>`);
-  document.getElementById('al-pass').addEventListener('keydown',e=>e.key==='Enter'&&tryLogin());
-  document.getElementById('al-email').focus();
-}
+function showAdminLogin() {
+    document.getElementById('admin-login-modal')?.remove();
+    const slug = localStorage.getItem('ss_current_etab_slug') || location.hostname.split('.')[0];
+    const modal = document.createElement('div');
+    modal.id = 'admin-login-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,20,40,0.97);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+    modal.innerHTML = '<div style="background:#fff;border-radius:20px;padding:32px 28px;width:90%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">' +
+      '<div style="width:56px;height:56px;background:#4f46e5;border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;">&#128274;</div>' +
+      '<h2 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#0f1428;">Espace Administration</h2>' +
+      '<p style="margin:0 0 20px;color:#6b7280;font-size:13px;">R&eacute;serv&eacute; au personnel &eacute;ducatif</p>' +
+      '<div id="ss-adm-err" style="display:none;background:#fef2f2;color:#dc2626;border-radius:10px;padding:10px;margin-bottom:16px;font-size:13px;border:1px solid #fca5a5;"></div>' +
+      '<div style="text-align:left;margin-bottom:14px;"><label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Email</label>' +
+      '<input id="ss-adm-email" type="email" placeholder="votre.email@etablissement.fr" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;outline:none;transition:border 0.2s;" /></div>' +
+      '<div style="text-align:left;margin-bottom:20px;"><label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Mot de passe</label>' +
+      '<input id="ss-adm-pass" type="password" placeholder="Code ou mot de passe" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;outline:none;" /></div>' +
+      '<button id="ss-adm-btn" style="width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">Se connecter</button>' +
+      '<button onclick="document.getElementById('admin-login-modal').remove()" style="width:100%;padding:12px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;border-radius:12px;font-size:14px;cursor:pointer;">Annuler</button>' +
+      '</div>';
+    document.body.appendChild(modal);
+    setTimeout(function() { document.getElementById('ss-adm-email')?.focus(); }, 100);
+    var doLogin = async function() {
+      var emailEl = document.getElementById('ss-adm-email');
+      var passEl = document.getElementById('ss-adm-pass');
+      var errEl = document.getElementById('ss-adm-err');
+      var btn = document.getElementById('ss-adm-btn');
+      var email = emailEl ? emailEl.value.trim() : '';
+      var pass = passEl ? passEl.value.trim() : '';
+      if (!email || !pass) { if(errEl){errEl.textContent='Remplissez tous les champs';errEl.style.display='block';} return; }
+      if(btn){btn.disabled=true;btn.textContent='Connexion en cours...';}
+      if(errEl){errEl.style.display='none';}
+      try {
+        var res = await fetch('/api/establishments/admin-login/' + slug, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass})});
+        var d = await res.json();
+        if (d.ok) {
+          localStorage.setItem('ss_admin_data', JSON.stringify({school_id:d.school_id,name:d.name,plan:d.plan,admin_email:d.admin_email,slug:slug}));
+          localStorage.setItem('ss_admin_mode','1');
+          window.adminIn = true;
+          document.getElementById('admin-login-modal')?.remove();
+          go('dashboard');
+        } else {
+          if(errEl){errEl.textContent=d.error||'Identifiants incorrects';errEl.style.display='block';}
+          if(btn){btn.disabled=false;btn.textContent='Se connecter';}
+        }
+      } catch(err) {
+        if(errEl){errEl.textContent='Erreur de connexion';errEl.style.display='block';}
+        if(btn){btn.disabled=false;btn.textContent='Se connecter';}
+      }
+    };
+    document.getElementById('ss-adm-btn').onclick = doLogin;
+    modal.querySelectorAll('input').forEach(function(inp){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); }); });
+  }
 
 async function tryLogin() {
     const emailEl = document.getElementById('al-email');
