@@ -3193,8 +3193,8 @@ function showAdminLogin(){
 }
 
 async function tryLogin(){
-  const email = document.getElementById('al-email').value.trim().toLowerCase();
-  const password = document.getElementById('al-pass').value;
+  const email = document.getElementById('al-email')?.value?.trim()?.toLowerCase() || '';
+  const password = document.getElementById('al-pass')?.value || '';
   const errorEl = document.getElementById('al-error');
   const btn = document.getElementById('al-submit-btn');
   const btnText = document.getElementById('al-btn-text');
