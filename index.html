@@ -3541,6 +3541,10 @@ function renderStaffTab(){
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Ajouter un membre
     </button>
+    <button class="btn btn-s" style="background:#7c3aed;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:12px;" onclick="openSubAdminModal()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      + Ajouter un sous-admin
+    </button>
     ${emptyMsg}
     ${staff.map(s=>`
     <div class="staff-card">
@@ -3566,7 +3570,73 @@ function toggleStaffActive(id){
 }
 function refreshStaff(){document.getElementById('dt-staff').innerHTML=renderStaffTab()}
 
-function openStaffModal(id){
+function openSubAdminModal() {
+    document.getElementById('sub-admin-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'sub-admin-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,20,40,0.97);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:90%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4);">' +
+      '<h2 style="margin:0 0 4px;font-size:18px;font-weight:700;color:#0f1428;">Ajouter un sous-admin</h2>' +
+      '<p style="margin:0 0 20px;color:#6b7280;font-size:13px;">Acc\u00e8s restreint aux incidents assign\u00e9s</p>' +
+      '<div id="sa-err" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;"></div>' +
+      '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Pr\u00e9nom et Nom *</label>' +
+      '<input id="sa-name" type="text" placeholder="Mme Martin Sophie" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:14px;" />' +
+      '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">R\u00f4le *</label>' +
+      '<select id="sa-role" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:14px;background:#fff;">' +
+      '<option value="CPE">CPE \u2014 Conseiller Principal d\u2019\u00c9ducation</option>' +
+      '<option value="PSY">Psychologue scolaire</option>' +
+      '<option value="PROF">Professeur r\u00e9f\u00e9rent pHARe</option>' +
+      '<option value="INFIRMIER">Infirmier(e) scolaire</option>' +
+      '<option value="DIRECTION">Direction</option>' +
+      '</select>' +
+      '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">Email *</label>' +
+      '<input id="sa-email" type="email" placeholder="prenom.nom@lycee.fr" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:20px;" />' +
+      '<div style="display:flex;gap:10px;">' +
+      '<button onclick="document.getElementById('sub-admin-overlay').remove()" style="flex:1;padding:12px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;">Annuler</button>' +
+      '<button id="sa-btn" onclick="saveSubAdmin()" style="flex:2;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Cr\u00e9er le compte</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    setTimeout(() => document.getElementById('sa-name')?.focus(), 100);
+  }
+
+  async function saveSubAdmin() {
+    const name = document.getElementById('sa-name')?.value?.trim();
+    const role = document.getElementById('sa-role')?.value;
+    const email = document.getElementById('sa-email')?.value?.trim();
+    const errEl = document.getElementById('sa-err');
+    const btn = document.getElementById('sa-btn');
+    if (!name || !email) { if(errEl){errEl.textContent='Nom et email requis';errEl.style.display='block';} return; }
+    if(btn){btn.disabled=true;btn.textContent='Cr\u00e9ation...';}
+    // G\u00e9n\u00e9rer un code d\u2019acc\u00e8s unique
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = role.substring(0,2) + '-';
+    for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+    // Sauvegarder via API
+    const adminData = JSON.parse(localStorage.getItem('ss_admin_data')||'{}');
+    const slug = localStorage.getItem('ss_current_etab_slug');
+    try {
+      const r = await fetch('/api/establishments/add-subadmin/' + slug, {
+        method:'POST', headers:{'Content-Type':'application/json','x-admin-slug':slug,'x-admin-code':adminData.admin_code||''},
+        body: JSON.stringify({name, role, email, code})
+      });
+      const d = await r.json();
+      if (d.ok) {
+        document.getElementById('sub-admin-overlay')?.remove();
+        alert('Sous-admin cr\u00e9\u00e9\u00a0! Code d\u2019acc\u00e8s\u00a0: ' + code + '\n\nCommuniquez ce code \u00e0 ' + name);
+        if(typeof renderStaffTab==='function') renderStaffTab();
+        else location.reload();
+      } else {
+        if(errEl){errEl.textContent=d.error||'Erreur';errEl.style.display='block';}
+        if(btn){btn.disabled=false;btn.textContent='Cr\u00e9er le compte';}
+      }
+    } catch(e) {
+      if(errEl){errEl.textContent='Erreur r\u00e9seau';errEl.style.display='block';}
+      if(btn){btn.disabled=false;btn.textContent='Cr\u00e9er le compte';}
+    }
+  }
+  window.saveSubAdmin = saveSubAdmin;
+
+  function openStaffModal(id){
   const s=id?S.staff().find(x=>x.id===id):null;
   editStaffId=id;
   document.body.insertAdjacentHTML('beforeend',`
