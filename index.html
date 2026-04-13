@@ -1624,7 +1624,7 @@ let currentPage = 'home';
 let rStep = 1, rData = {urgency:1,isAnonymous:true};
 let qStep = 0, qScore = 0;
 let aiTyping = false;
-let adminIn = false;
+let adminIn = false; window.__setAdminIn = (v) => { adminIn = v; };
 let dashTab = 'reports';
 let editStaffId = null;
 let filterStatus = 'all', searchQ = '';
