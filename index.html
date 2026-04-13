@@ -3541,6 +3541,9 @@ function renderStaffTab(){
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Ajouter un membre
     </button>
+    <button class="btn btn-s" onclick="openSubAdminModal()" style="margin-bottom:4px;background:#7c3aed;color:#fff;border:none;border-radius:12px;padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;width:100%;display:flex;align-items:center;gap:8px;">
+      + Ajouter un sous-admin
+    </button>
     ${emptyMsg}
     ${staff.map(s=>`
     <div class="staff-card">
@@ -3746,7 +3749,66 @@ function saveToReportHistory(code, caseNumber) {
   localStorage.setItem('ss_my_reports', JSON.stringify(history.slice(0, 20)));
 }
 
-function adminLogout(){ logout(); }
+function openSubAdminModal() {
+    var old = document.getElementById('ss-sa-ov');
+    if (old) old.remove();
+    var slug = localStorage.getItem('ss_current_etab_slug') || '';
+    var ov = document.createElement('div');
+    ov.id = 'ss-sa-ov';
+    ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,20,40,.96);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    var h = '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:90%;max-width:380px;">';
+    h += '<h2 style="margin:0 0 4px;font-size:18px;font-weight:700;">Sous-admin</h2>';
+    h += '<p style="margin:0 0 16px;color:#6b7280;font-size:13px;">Accès restreint aux incidents assignés</p>';
+    h += '<div id="ssa-err" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px;"></div>';
+    h += '<label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Prénom et Nom *</label>';
+    h += '<input id="ssa-name" type="text" placeholder="Mme Martin Sophie" style="width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:12px;">';
+    h += '<label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Rôle *</label>';
+    h += '<select id="ssa-role" style="width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:12px;background:#fff;">';
+    h += '<option value="CPE">CPE</option><option value="PSY">Psychologue</option><option value="PROF">Prof référent</option><option value="INF">Infirmier(e)</option><option value="DIR">Direction</option>';
+    h += '</select>';
+    h += '<label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Email</label>';
+    h += '<input id="ssa-email" type="email" placeholder="prenom.nom@lycee.fr" style="width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:18px;">';
+    h += '<div style="display:flex;gap:10px;">';
+    h += '<button onclick="document.getElementById('ss-sa-ov').remove()" style="flex:1;padding:12px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;">Annuler</button>';
+    h += '<button id="ssa-btn" onclick="saveSubAdmin()" style="flex:2;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Créer</button>';
+    h += '</div></div>';
+    ov.innerHTML = h;
+    document.body.appendChild(ov);
+    setTimeout(function(){ var n=document.getElementById('ssa-name'); if(n) n.focus(); }, 100);
+  }
+
+  async function saveSubAdmin() {
+    var nameEl=document.getElementById('ssa-name'), roleEl=document.getElementById('ssa-role'), emailEl=document.getElementById('ssa-email');
+    var errEl=document.getElementById('ssa-err'), btn=document.getElementById('ssa-btn');
+    var name=(nameEl?nameEl.value:'').trim(), role=roleEl?roleEl.value:'CPE', email=(emailEl?emailEl.value:'').trim();
+    if (!name) { if(errEl){errEl.textContent='Nom requis';errEl.style.display='block';} return; }
+    if(btn){btn.disabled=true;btn.textContent='...';}
+    var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', code=role.substring(0,2)+'-';
+    for(var i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+    var adminData=JSON.parse(localStorage.getItem('ss_admin_data')||'{}');
+    var slug=localStorage.getItem('ss_current_etab_slug')||'';
+    try {
+      var res=await fetch('/api/establishments/add-subadmin/'+slug,{method:'POST',headers:{'Content-Type':'application/json','x-admin-code':adminData.admin_code||adminData.admin_password||''},body:JSON.stringify({name:name,role:role,email:email,code:code})});
+      var d=await res.json();
+      if(d.ok){
+        var ov=document.getElementById('ss-sa-ov'); if(ov) ov.remove();
+        alert('Créé !
+
+Nom : '+name+'
+Code : '+code+'
+
+Communiquez ce code à '+name);
+      } else {
+        if(errEl){errEl.textContent=d.error||'Erreur';errEl.style.display='block';}
+        if(btn){btn.disabled=false;btn.textContent='Créer';}
+      }
+    } catch(e){
+      if(errEl){errEl.textContent='Erreur réseau';errEl.style.display='block';}
+      if(btn){btn.disabled=false;btn.textContent='Créer';}
+    }
+  }
+
+  function adminLogout(){ logout(); }
 
 // ═══════════════════════════════════════════
 // DEMO DATA FOR PRESENTATION
