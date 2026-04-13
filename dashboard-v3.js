@@ -434,26 +434,75 @@ Communiquez ce code à ' + name + ' pour qu’il puisse se connecter.');
 };
 
 // Injecter le bouton sous-admin dans l'onglet Equipe apres rendu
-(function patchStaffTab() {
-  var _orig = window.renderStaffTab;
-  if (typeof _orig !== 'function') return;
-  window.renderStaffTab = function() {
-    var result = _orig.apply(this, arguments);
-    setTimeout(function() {
-      var existing = document.getElementById('ss-subadmin-btn');
-      if (existing) return;
-      var addBtn = Array.from(document.querySelectorAll('button')).find(function(b) {
-        return b.textContent && b.textContent.trim().indexOf('Ajouter un membre') !== -1;
-      });
-      if (addBtn && addBtn.parentNode) {
-        var newBtn = document.createElement('button');
-        newBtn.id = 'ss-subadmin-btn';
-        newBtn.onclick = window.openSubAdminModal;
-        newBtn.style.cssText = 'display:flex;align-items:center;gap:8px;background:#7c3aed;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;width:100%;';
-        newBtn.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> + Ajouter un sous-admin';
-        addBtn.parentNode.insertBefore(newBtn, addBtn.nextSibling);
-      }
-    }, 200);
-    return result;
-  };
-})();
+
+window.openSubAdminModal = function() {
+  var old = document.getElementById('ss-subadmin-overlay');
+  if (old) old.remove();
+  var slug = localStorage.getItem('ss_current_etab_slug') || '';
+  var ov = document.createElement('div');
+  ov.id = 'ss-subadmin-overlay';
+  ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,20,40,.96);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+  var h = '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:90%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.4);">';
+  h += '<h2 style="margin:0 0 4px;font-size:18px;font-weight:700;color:#0f1428;">Ajouter un sous-admin</h2>';
+  h += '<p style="margin:0 0 18px;color:#6b7280;font-size:13px;">Accès restreint — voit uniquement ses incidents</p>';
+  h += '<div id="ssa-err" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;"></div>';
+  h += '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;">Prénom et Nom *</label>';
+  h += '<input id="ssa-name" type="text" placeholder="Mme Martin Sophie" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:13px;outline:none;">';
+  h += '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;">Rôle *</label>';
+  h += '<select id="ssa-role" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:13px;background:#fff;outline:none;">';
+  h += '<option value="CPE">CPE — Conseiller Principal d’Éducation</option>';
+  h += '<option value="PSY">Psychologue scolaire</option>';
+  h += '<option value="PROF">Professeur référent pHARe</option>';
+  h += '<option value="INF">Infirmier(e) scolaire</option>';
+  h += '<option value="DIR">Direction</option>';
+  h += '</select>';
+  h += '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;">Email</label>';
+  h += '<input id="ssa-email" type="email" placeholder="prenom.nom@lycee.fr" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:20px;outline:none;">';
+  h += '<div style="display:flex;gap:10px;">';
+  h += '<button onclick="document.getElementById('ss-subadmin-overlay').remove()" style="flex:1;padding:12px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;">Annuler</button>';
+  h += '<button id="ssa-btn" onclick="window.saveSubAdmin()" style="flex:2;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Créer le compte</button>';
+  h += '</div></div>';
+  ov.innerHTML = h;
+  document.body.appendChild(ov);
+  setTimeout(function() { var n = document.getElementById('ssa-name'); if(n) n.focus(); }, 100);
+};
+
+window.saveSubAdmin = async function() {
+  var name = (document.getElementById('ssa-name') || {}).value || '';
+  var role = (document.getElementById('ssa-role') || {}).value || 'CPE';
+  var email = (document.getElementById('ssa-email') || {}).value || '';
+  var errEl = document.getElementById('ssa-err');
+  var btn = document.getElementById('ssa-btn');
+  name = name.trim(); email = email.trim();
+  if (!name) { if(errEl){errEl.textContent='Le nom est requis';errEl.style.display='block';} return; }
+  if(btn){btn.disabled=true;btn.textContent='Création...';}
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code = role.substring(0,2) + '-';
+  for(var i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  var adminData = JSON.parse(localStorage.getItem('ss_admin_data')||'{}');
+  var slug = localStorage.getItem('ss_current_etab_slug') || '';
+  try {
+    var res = await fetch('/api/establishments/add-subadmin/' + slug, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-code': adminData.admin_code || adminData.admin_password || '' },
+      body: JSON.stringify({ name: name, role: role, email: email, code: code })
+    });
+    var d = await res.json();
+    if (d.ok) {
+      var ov = document.getElementById('ss-subadmin-overlay');
+      if(ov) ov.remove();
+      alert('Sous-admin créé !
+
+Nom : ' + name + '
+Code d’accès : ' + code + '
+
+Communiquez ce code à ' + name);
+    } else {
+      if(errEl){errEl.textContent=d.error||'Erreur';errEl.style.display='block';}
+      if(btn){btn.disabled=false;btn.textContent='Créer le compte';}
+    }
+  } catch(e) {
+    if(errEl){errEl.textContent='Erreur réseau';errEl.style.display='block';}
+    if(btn){btn.disabled=false;btn.textContent='Créer le compte';}
+  }
+};
