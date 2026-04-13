@@ -264,7 +264,42 @@ export default async (req: Request, context: Context) => {
       return cors(results, 200, req);
     }
 
-    if (req.method === 'POST' && path.startsWith('/admin-login/')) {
+    // Staff login endpoint
+  if (req.method === 'POST' && path.startsWith('/staff-login/')) {
+    const slug = path.replace('/staff-login/', '');
+    if (!slug || !/^[a-z0-9-]+$/.test(slug)) return cors({ error: 'Slug invalide' }, 400, req);
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404, req);
+    const data = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!data) return cors({ error: 'Données non trouvées' }, 404, req);
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const code = (body.code || '').trim().toUpperCase();
+    if (!code) return cors({ error: 'Code requis' }, 400, req);
+    const members: any[] = data.staff_members || [];
+    const member = members.find((m: any) => m.code && m.code.toUpperCase() === code);
+    if (!member) return cors({ error: 'Code incorrect' }, 401, req);
+    return cors({ ok: true, member_id: member.id, name: member.name, role: member.role, school_id: data.id, school_name: data.name, slug: data.slug }, 200, req);
+  }
+
+  // Add staff member with code generation
+  if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/add-staff$/)) {
+    if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
+    const id = path.split('/')[1];
+    const existing = (await store.get('school_' + id, { type: 'json' })) as any;
+    if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
+    const body = (await req.json()) as any;
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const member = { id: crypto.randomUUID(), name: body.name || '', role: body.role || '', email: body.email || '', phone: body.phone || '', avatar: body.avatar || '👤', code: code, created_at: new Date().toISOString() };
+    existing.staff_members = [...(existing.staff_members || []), member];
+    await store.setJSON('school_' + id, existing);
+    return cors({ ok: true, member, code }, 201, req);
+  }
+
+  if (req.method === 'POST' && path.startsWith('/admin-login/')) {
       const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
       const rateCheck = await checkLoginRateLimit(clientIp);
       if (rateCheck.blocked) {
