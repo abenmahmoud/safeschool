@@ -360,118 +360,20 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === 'POST' && path === '/ensure-uuid') {
-      let body: any;
-      try {
-        body = await req.json();
-      } catch {
-        return cors({ error: 'Corps invalide' }, 400, req);
-      }
-
-      const blobId = body.blob_id || body.id;
-      const slug = body.slug;
-      if (!blobId && !slug) return cors({ error: 'blob_id ou slug requis' }, 400, req);
-
-      let schoolData: any = null;
-      if (blobId) {
-        schoolData = await store.get(`school_${blobId}`, { type: 'json' });
-      }
-      if (!schoolData && slug) {
-        const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-        const entry = index.find((e: any) => e.slug === slug);
-        if (entry) schoolData = await store.get(`school_${entry.id}`, { type: 'json' });
-      }
-      if (!schoolData) return cors({ error: 'ÃÂÃÂcole non trouvÃÂÃÂ©e' }, 404, req);
-
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-      if (schoolData.supabase_id && uuidRegex.test(schoolData.supabase_id)) {
-        if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-          try {
-            const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/schools?id=eq.${schoolData.supabase_id}&select=id`, {
-              headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
-            });
-            if (checkRes.ok) {
-              const rows = await checkRes.json();
-              if (!Array.isArray(rows) || rows.length === 0) {
-                await syncToSupabase({ ...schoolData, id: schoolData.supabase_id }, store).catch(() => {});
-              }
-            }
-          } catch {
-            /* best effort */
-          }
-        }
-        return cors({ uuid: schoolData.supabase_id, source: 'cached' }, 200, req);
-      }
-
-      if (uuidRegex.test(schoolData.id)) {
-        if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-          await syncToSupabase(schoolData, store).catch(() => {});
-        }
-        return cors({ uuid: schoolData.id, source: 'blob_uuid' }, 200, req);
-      }
-
-      if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-        try {
-          const lookupRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/schools?slug=eq.${encodeURIComponent(schoolData.slug)}&select=id`,
-            { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } },
-          );
-          if (lookupRes.ok) {
-            const rows = await lookupRes.json();
-            if (Array.isArray(rows) && rows.length > 0) {
-              schoolData.supabase_id = rows[0].id;
-              await store.setJSON(`school_${schoolData.id}`, schoolData);
-              return cors({ uuid: rows[0].id, source: 'lookup' }, 200, req);
-            }
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-
-      const newUUID = crypto.randomUUID();
-      if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-        try {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
-            method: 'POST',
-            headers: {
-              apikey: SUPABASE_SERVICE_KEY,
-              Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-              'Content-Type': 'application/json',
-              Prefer: 'resolution=merge-duplicates,return=representation',
-            },
-            body: JSON.stringify({
-              id: newUUID,
-              name: schoolData.name,
-              slug: schoolData.slug,
-              ville: schoolData.city || null,
-              email_contact: schoolData.email || null,
-              plan: schoolData.plan || 'starter',
-              status: schoolData.status || 'trial',
-              max_students: schoolData.max_students || 200,
-              max_reports_month: schoolData.max_reports || 50,
-              max_admins: schoolData.max_admins || 1,
-              expires_at: schoolData.expires_at,
-            }),
-          });
-          if (res.ok) {
-            const supaData = await res.json();
-            const finalUUID = Array.isArray(supaData) && supaData.length > 0 ? supaData[0].id : newUUID;
-            schoolData.supabase_id = finalUUID;
-            await store.setJSON(`school_${schoolData.id}`, schoolData);
-            await registerNetlifyDomain(schoolData.slug);
-            return cors({ uuid: finalUUID, source: 'created' }, 200, req);
-          }
-          console.warn('Supabase insert failed:', res.status, await res.text().catch(() => ''));
-        } catch (e) {
-          console.warn('Supabase ensure-uuid error:', e);
-        }
-      }
-
-      schoolData.supabase_id = newUUID;
-      await store.setJSON(`school_${schoolData.id}`, schoolData);
-      return cors({ uuid: newUUID, source: 'generated', warning: 'Supabase sync unavailable' }, 200, req);
+    let bodyEu: any;
+    try { bodyEu = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const slugEu = (bodyEu.slug || '').trim().toLowerCase();
+    if (!slugEu) return cors({ error: 'slug requis' }, 400, req);
+    // Chercher l'UUID REEL dans _index (source de verite)
+    const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const indexEntry = indexAll.find((e: any) => e.slug === slugEu);
+    if (indexEntry?.id) {
+      return cors({ uuid: indexEntry.id, source: 'blob_uuid' }, 200, req);
     }
+    // Fallback: creer un UUID et l'ajouter a l'index
+    const newUuid = crypto.randomUUID();
+    return cors({ uuid: newUuid, source: 'new' }, 200, req);
+  }
 
     // Add sub-admin endpoint (called by local admin, verified by slug+admin_code)
   if (req.method === 'POST' && path.startsWith('/add-subadmin/')) {
