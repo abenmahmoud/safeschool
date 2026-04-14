@@ -285,67 +285,174 @@ export default async (req: Request, context: Context) => {
 
   // Add staff member with code generation
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/add-staff$/)) {
-  
-  // ========== SIGNALEMENT PUBLIC (sans authentification) ==========
-  if (req.method === 'POST' && path.startsWith('/submit-report/')) {
-    const slug2 = path.replace('/submit-report/', '').split('?')[0].toLowerCase();
-    const idx2 = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const ent2 = idx2.find((e: any) => e.slug === slug2);
-    if (!ent2?.id) return cors({ error: 'Etablissement non trouve' }, 404, req);
-    let bod: any = {};
-    try { bod = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
-    const chs = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let tc2 = 'RPT-';
-    for (let i = 0; i < 8; i++) tc2 += chs[Math.floor(Math.random() * chs.length)];
-    const su2 = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const sk2 = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
-    const rpt2 = {
-      school_id: ent2.id,
-      tracking_code: tc2,
-      type: String(bod.type || 'autre').substring(0, 100),
-      description: String(bod.description || '').substring(0, 2000),
-      location: String(bod.location || '').substring(0, 500),
-      urgency: String(bod.urgency || 'moyen').substring(0, 50),
-      anonymous: bod.anonymous !== false,
-      reporter_role: String(bod.reporter_role || 'eleve').substring(0, 50),
-      reporter_email: String(bod.reporter_email || bod.contact || '').substring(0, 200),
-      classe: String(bod.classe || bod.class_name || bod.victim_class || '').substring(0, 100),
-      status: 'nouveau',
-      source_channel: 'web',
-      created_at: new Date().toISOString(),
-    };
-    const rs2 = await fetch(su2 + '/rest/v1/reports', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': sk2, 'Authorization': 'Bearer ' + sk2, 'Prefer': 'return=representation' },
-      body: JSON.stringify(rpt2),
-    });
-    if (!rs2.ok) { const e2 = await rs2.text(); return cors({ error: 'Erreur DB', d: e2.substring(0, 100) }, 500, req); }
-    const rd2 = await rs2.json();
-    return cors({ ok: true, tracking_code: tc2, report_id: rd2[0]?.id }, 201, req);
+    if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
+    const id = path.split('/')[1];
+    const existing = (await store.get('school_' + id, { type: 'json' })) as any;
+    if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
+    const body = (await req.json()) as any;
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const member = { id: crypto.randomUUID(), name: body.name || '', role: body.role || '', email: body.email || '', phone: body.phone || '', avatar: body.avatar || '👤', code: code, created_at: new Date().toISOString() };
+    existing.staff_members = [...(existing.staff_members || []), member];
+    await store.setJSON('school_' + id, existing);
+    return cors({ ok: true, member, code }, 201, req);
   }
 
-  // ========== LISTE SIGNALEMENTS POUR ADMIN ==========
-  if (req.method === 'GET' && path.startsWith('/reports/')) {
-    const slug3 = path.replace('/reports/', '').split('?')[0].toLowerCase();
-    const ac3 = req.headers.get('x-admin-code') || '';
-    const SA3 = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idx3 = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const ent3 = idx3.find((e: any) => e.slug === slug3);
-    if (!ent3?.id) return cors({ error: 'Etablissement non trouve' }, 404, req);
-    const sd3 = (await store.get('school_' + ent3.id, { type: 'json' })) as any;
-    const ok3 = (sd3 && (ac3 === sd3.admin_code || ac3 === sd3.admin_password)) || ac3 === SA3;
-    if (!ok3) return cors({ error: 'Non autorise' }, 401, req);
-    const su3 = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const sk3 = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
-    const rs3 = await fetch(su3 + '/rest/v1/reports?school_id=eq.' + ent3.id + '&order=created_at.desc&limit=200', {
-      headers: { 'apikey': sk3, 'Authorization': 'Bearer ' + sk3 },
-    });
-    if (!rs3.ok) return cors({ error: 'Erreur lecture' }, 500, req);
-    const data3 = await rs3.json();
-    return cors({ ok: true, reports: data3, total: data3.length }, 200, req);
+  if (req.method === 'POST' && path.startsWith('/admin-login/')) {
+      const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      const rateCheck = await checkLoginRateLimit(clientIp);
+      if (rateCheck.blocked) {
+        return cors(
+          { error: 'Trop de tentatives. Reessayez dans 15 minutes.', retry_after_seconds: LOGIN_RATE_WINDOW_MS / 1000 },
+          429,
+          req,
+        );
+      }
+
+      const slug = path.replace('/admin-login/', '');
+      if (!slug || slug.length > 100 || !/^[a-z0-9-]+$/.test(slug)) {
+        return cors({ error: 'Slug invalide' }, 400, req);
+      }
+
+      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+      const entry = index.find((e: any) => e.slug === slug && e.is_active);
+      if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
+      const data = (await store.get(`school_${entry.id}`, { type: 'json' })) as any;
+      if (!data) return cors({ error: 'Donnees non trouvees' }, 404, req);
+
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return cors({ error: 'Corps invalide' }, 400, req);
+      }
+
+      const email = (body.email || '').trim().toLowerCase();
+      const password = (body.password || '').trim();
+
+      if (!email || !isValidEmail(email)) return cors({ error: "Format d'email invalide" }, 400, req);
+      if (!password || password.length === 0) return cors({ error: 'Mot de passe requis' }, 400, req);
+      if (password.length > 200) return cors({ error: 'Mot de passe trop long' }, 400, req);
+
+      const storedEmail = (data.admin_email || '').toLowerCase();
+      const storedCode = data.admin_code || '';
+      const storedPassword = data.admin_password || '';
+
+      if (email === storedEmail && (password === storedCode || password === storedPassword)) {
+        return cors(
+          {
+            ok: true,
+            school_id: data.id,
+            name: data.name,
+            plan: data.plan,
+            admin_email: data.admin_email,
+            domain: data.domain || buildSchoolDomain(data.slug),
+            url: data.url || buildSchoolUrl(data.slug),
+          },
+          200,
+          req,
+        );
+      }
+
+      await recordLoginAttempt(clientIp);
+      return cors({ error: 'Identifiants incorrects', attempts_remaining: rateCheck.remaining - 1 }, 401, req);
+    }
+
+    if (req.method === 'POST' && path === '/ensure-uuid') {
+    let bodyEu: any;
+    try { bodyEu = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const slugEu = String(bodyEu.slug || bodyEu.blob_id || '').trim().toLowerCase();
+    if (!slugEu) return cors({ error: 'slug requis' }, 400, req);
+    const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = indexAll.find((e: any) => e.slug === slugEu || e.id === slugEu);
+    if (entry?.id) {
+      store.setJSON('uuid_' + entry.slug, { uuid: entry.id }).catch(() => {});
+      return cors({ uuid: entry.id, source: 'blob_uuid' }, 200, req);
+    }
+    return cors({ error: 'Etablissement non trouve' }, 404, req);
   }
 
-    if (!authCheck(req)) {
+    // Add sub-admin endpoint (called by local admin, verified by slug+admin_code)
+  if (req.method === 'POST' && path.startsWith('/add-subadmin/')) {
+    const slug = path.replace('/add-subadmin/', '');
+    if (!slug) return cors({ error: 'Slug invalide' }, 400, req);
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!schoolData) return cors({ error: 'Non trouvé' }, 404, req);
+    // Vérifier que c'est l'admin du lycée qui fait la demande
+    const adminCode = req.headers.get('x-admin-code') || '';
+    if (adminCode !== schoolData.admin_code && adminCode !== schoolData.admin_password) {
+      // Accepter aussi si superadmin
+      if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
+    }
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const { name, role, email, code } = body;
+    if (!name || !code) return cors({ error: 'Nom et code requis' }, 400, req);
+    const subAdmin = { id: crypto.randomUUID(), name: sanitize(name), role: sanitize(role || 'CPE'), email: sanitize(email || ''), code: code.toUpperCase(), created_at: new Date().toISOString() };
+    schoolData.sub_admins = [...(schoolData.sub_admins || []), subAdmin];
+    await store.setJSON('school_' + entry.id, schoolData);
+    return cors({ ok: true, sub_admin: subAdmin }, 201, req);
+  }
+
+  // Staff login (sub-admin login)
+  if (req.method === 'POST' && path.startsWith('/staff-login/')) {
+    const slug = path.replace('/staff-login/', '');
+    if (!slug) return cors({ error: 'Slug invalide' }, 400, req);
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouvé' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!schoolData) return cors({ error: 'Non trouvé' }, 404, req);
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const code = (body.code || '').trim().toUpperCase();
+    if (!code) return cors({ error: 'Code requis' }, 400, req);
+    const subAdmins: any[] = schoolData.sub_admins || [];
+    const found = subAdmins.find((sa: any) => sa.code === code);
+    if (!found) return cors({ error: 'Code incorrect' }, 401, req);
+    return cors({ ok: true, sub_admin_id: found.id, name: found.name, role: found.role, email: found.email, school_id: schoolData.id, school_name: schoolData.name, slug }, 200, req);
+  }
+
+  if (req.method === 'POST' && path.startsWith('/add-subadmin/')) {
+    const slug = path.replace('/add-subadmin/', '').split('?')[0];
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!schoolData) return cors({ error: 'Non trouve' }, 404, req);
+    const adminCode = req.headers.get('x-admin-code') || '';
+    const isAdmin = adminCode === schoolData.admin_code || adminCode === schoolData.admin_password || authCheck(req);
+    if (!isAdmin) return cors({ error: 'Non autorise' }, 401, req);
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const subAdmin = { id: crypto.randomUUID(), name: sanitize(body.name || ''), role: sanitize(body.role || 'CPE'), email: sanitize(body.email || ''), code: (body.code || '').toUpperCase(), created_at: new Date().toISOString() };
+    if (!subAdmin.name || !subAdmin.code) return cors({ error: 'Nom et code requis' }, 400, req);
+    schoolData.sub_admins = [...(schoolData.sub_admins || []), subAdmin];
+    await store.setJSON('school_' + entry.id, schoolData);
+    return cors({ ok: true, sub_admin: subAdmin }, 201, req);
+  }
+
+  if (req.method === 'POST' && path.startsWith('/staff-login/')) {
+    const slug = path.replace('/staff-login/', '').split('?')[0];
+    const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = index.find((e: any) => e.slug === slug && e.is_active);
+    if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    if (!schoolData) return cors({ error: 'Non trouve' }, 404, req);
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const code = (body.code || '').trim().toUpperCase();
+    if (!code) return cors({ error: 'Code requis' }, 400, req);
+    const sub = (schoolData.sub_admins || []).find((s: any) => s.code === code);
+    if (!sub) return cors({ error: 'Code incorrect' }, 401, req);
+    return cors({ ok: true, sub_admin_id: sub.id, name: sub.name, role: sub.role, email: sub.email, school_id: schoolData.id, school_name: schoolData.name, slug }, 200, req);
+  }
+
+  if (!authCheck(req)) {
       return cors({ error: 'Non autorisÃÂÃÂ©' }, 401, req);
     }
 
