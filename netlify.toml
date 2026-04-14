@@ -89,12 +89,12 @@ status = 200
 
 [[redirects]]
 from = "/api/reports"
-to = "/.netlify/functions/api-reports"
+to = "/.netlify/functions/api-report"
 status = 200
 
 [[redirects]]
 from = "/api/reports/*"
-to = "/.netlify/functions/api-reports"
+to = "/.netlify/functions/api-report"
 status = 200
 
 [[redirects]]
