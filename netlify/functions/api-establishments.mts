@@ -364,15 +364,10 @@ export default async (req: Request, context: Context) => {
     try { bodyEu = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
     const slugEu = (bodyEu.slug || '').trim().toLowerCase();
     if (!slugEu) return cors({ error: 'slug requis' }, 400, req);
-    // Chercher l'UUID REEL dans _index (source de verite)
     const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const indexEntry = indexAll.find((e: any) => e.slug === slugEu);
-    if (indexEntry?.id) {
-      return cors({ uuid: indexEntry.id, source: 'blob_uuid' }, 200, req);
-    }
-    // Fallback: creer un UUID et l'ajouter a l'index
-    const newUuid = crypto.randomUUID();
-    return cors({ uuid: newUuid, source: 'new' }, 200, req);
+    const entry = indexAll.find((e: any) => e.slug === slugEu);
+    if (entry?.id) return cors({ uuid: entry.id, source: 'blob_uuid' }, 200, req);
+    return cors({ error: 'Etablissement non trouve' }, 404, req);
   }
 
     // Add sub-admin endpoint (called by local admin, verified by slug+admin_code)
