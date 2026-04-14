@@ -320,6 +320,62 @@ export default async (req: Request, context: Context) => {
     return cors({ ok: true, tracking_code: sr_code, report_id: sr_data[0]?.id }, 201, req);
   }
 
+  // === ENDPOINT PUBLIC SIGNALEMENT (sans auth) ===
+  if (req.method === 'POST' && path.startsWith('/submit-report/')) {
+    const slug = path.split('/submit-report/')[1]?.split('?')[0]?.toLowerCase() || '';
+    if (!slug) return cors({ error: 'Slug manquant' }, 400, req);
+    const indexData = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const school = indexData.find((e: any) => e.slug === slug);
+    if (!school?.id) return cors({ error: 'Etablissement inconnu: ' + slug }, 404, req);
+    let body: any = {};
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'RPT-';
+    for (let i = 0; i < 8; i++) code += alpha[Math.floor(Math.random() * alpha.length)];
+    const sUrl = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const sKey = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const insertRes = await fetch(sUrl + '/rest/v1/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': sKey, 'Authorization': 'Bearer ' + sKey, 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        school_id: school.id, tracking_code: code,
+        type: String(body.type || 'autre').substring(0, 100),
+        description: String(body.description || '').substring(0, 2000),
+        location: String(body.location || '').substring(0, 500),
+        urgency: String(body.urgency || 'moyen').substring(0, 50),
+        anonymous: body.anonymous !== false,
+        reporter_role: String(body.reporter_role || 'eleve').substring(0, 50),
+        reporter_email: String(body.reporter_email || body.contact || '').substring(0, 200),
+        classe: String(body.classe || body.class_name || body.victim_class || '').substring(0, 100),
+        status: 'nouveau', source_channel: 'web', created_at: new Date().toISOString()
+      }),
+    });
+    if (!insertRes.ok) { const errTxt = await insertRes.text(); return cors({ error: 'Erreur DB', detail: errTxt.substring(0, 150) }, 500, req); }
+    const insertData = await insertRes.json();
+    return cors({ ok: true, tracking_code: code, report_id: insertData[0]?.id }, 201, req);
+  }
+
+  // === LISTE SIGNALEMENTS ADMIN ===
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const slug2 = path.split('/reports/')[1]?.split('?')[0]?.toLowerCase() || '';
+    const adminCode2 = req.headers.get('x-admin-code') || '';
+    const SA = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    const indexData2 = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const school2 = indexData2.find((e: any) => e.slug === slug2);
+    if (!school2?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
+    const schoolBlob = (await store.get('school_' + school2.id, { type: 'json' })) as any;
+    const isAdmin = schoolBlob && (adminCode2 === schoolBlob.admin_code || adminCode2 === schoolBlob.admin_password);
+    if (!isAdmin && adminCode2 !== SA) return cors({ error: 'Non autorise' }, 401, req);
+    const sUrl2 = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const sKey2 = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const listRes = await fetch(sUrl2 + '/rest/v1/reports?school_id=eq.' + school2.id + '&order=created_at.desc&limit=200', {
+      headers: { 'apikey': sKey2, 'Authorization': 'Bearer ' + sKey2 },
+    });
+    if (!listRes.ok) return cors({ error: 'Erreur lecture Supabase' }, 500, req);
+    const listData = await listRes.json();
+    return cors({ ok: true, reports: listData, total: listData.length }, 200, req);
+  }
+
   if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
     const id = path.split('/')[1];
     const existing = (await store.get('school_' + id, { type: 'json' })) as any;
