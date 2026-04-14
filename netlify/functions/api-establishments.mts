@@ -362,11 +362,14 @@ export default async (req: Request, context: Context) => {
     if (req.method === 'POST' && path === '/ensure-uuid') {
     let bodyEu: any;
     try { bodyEu = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
-    const slugEu = (bodyEu.slug || '').trim().toLowerCase();
+    const slugEu = String(bodyEu.slug || bodyEu.blob_id || '').trim().toLowerCase();
     if (!slugEu) return cors({ error: 'slug requis' }, 400, req);
     const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const entry = indexAll.find((e: any) => e.slug === slugEu);
-    if (entry?.id) return cors({ uuid: entry.id, source: 'blob_uuid' }, 200, req);
+    const entry = indexAll.find((e: any) => e.slug === slugEu || e.id === slugEu);
+    if (entry?.id) {
+      store.setJSON('uuid_' + entry.slug, { uuid: entry.id }).catch(() => {});
+      return cors({ uuid: entry.id, source: 'blob_uuid' }, 200, req);
+    }
     return cors({ error: 'Etablissement non trouve' }, 404, req);
   }
 
