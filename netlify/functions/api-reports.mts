@@ -1,183 +1,167 @@
-import { getStore } from '@netlify/blobs';
-import type { Context, Config } from '@netlify/functions';
-import crypto from 'node:crypto';
+import type { Context } from "@netlify/functions";
+import { getStore } from "@netlify/blobs";
+import { createClient } from "@supabase/supabase-js";
 
-// Diagnostic: lire toutes les vars disponibles
-const ALL_VARS = Object.keys(Netlify.env.toObject ? Netlify.env.toObject() : {});
+const SUPABASE_URL = Netlify.env.get("SUPABASE_URL") || "";
+const SUPABASE_KEY = Netlify.env.get("SUPABASE_KEY") || "";
+const SA_TOKEN = Netlify.env.get("SA_TOKEN") || "c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=";
 
-const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || Netlify.env.get('aSUPABASE_URL') || '';
-const SUPABASE_KEY = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('aSUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || '';
-const RESEND_API_KEY = Netlify.env.get('RESEND_API_KEY') || '';
-const FROM_EMAIL = Netlify.env.get('NOTIFY_FROM_EMAIL') || 'notifications@safeschool.fr';
-
-const _cache = new Map();
-const TTL = 60000;
-const fromCache = (k) => { const c = _cache.get(k); return c && Date.now() - c.ts < TTL ? c.data : null; };
-const toCache = (k, d) => _cache.set(k, { data: d, ts: Date.now() });
-
-
-function mapType(t) {
-  const m = {
-    'harcelement': 'autre', 'harcèlement': 'autre',
-    'harcelement_physique': 'physique', 'physique': 'physique',
-    'harcelement_verbal': 'verbal', 'verbal': 'verbal',
-    'cyber': 'cyber', 'cyberharcelement': 'cyber', 'cyberharcèlement': 'cyber',
-    'exclusion': 'exclusion', 'autre': 'autre'
-  };
-  return m[t] || 'autre';
-}
-
-function mapUrgence(u) {
-  const m = { 'faible': 'faible', 'moyen': 'moyenne', 'moyenne': 'moyenne', 'eleve': 'haute', 'haute': 'haute', 'high': 'haute', 'medium': 'moyenne', 'low': 'faible' };
-  return m[u] || 'moyenne';
-}
-
-function genCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let c = 'SS-';
-  for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
-  return c;
-}
-
-function cors(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status, headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token',
+function cors(data: any, status = 200, req?: Request) {
+  const origin = req?.headers.get("origin") || "*";
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, x-sa-token, x-admin-code, x-admin-slug",
     },
   });
 }
 
-async function sbFetch(path, opts = {}) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error('SB CONFIG MISSING - URL:', SUPABASE_URL ? 'ok' : 'EMPTY', '| KEY:', SUPABASE_KEY ? 'ok' : 'EMPTY', '| ALL_VARS:', ALL_VARS.join(','));
-    return null;
-  }
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      ...opts,
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(opts.headers || {}) },
-    });
-    if (!res.ok) { console.error('SB error:', res.status, await res.text().catch(() => '')); return null; }
-    return res.json().catch(() => null);
-  } catch(e) { console.error('SB fetch error:', e.message); return null; }
+async function getSchoolId(slug: string, store: any): Promise<string | null> {
+  const index = ((await store.get("_index", { type: "json" })) as any[]) || [];
+  const entry = index.find((e: any) => e.slug === slug);
+  return entry?.id || null;
 }
 
-async function resolveSchool(slug) {
-  const cacheKey = `school_slug:${slug}`;
-  const cached = fromCache(cacheKey);
-  if (cached) return cached;
-  // Chercher dans Supabase en priorité
-  const rows = await sbFetch(`schools?slug=eq.${encodeURIComponent(slug)}&select=id,name,slug&limit=1`);
-  if (rows && rows.length > 0) {
-    const school = { id: rows[0].id, name: rows[0].name, slug: rows[0].slug, admin_email: null, supabase_id: rows[0].id };
-    toCache(cacheKey, school);
-    return school;
-  }
-  // Fallback Blobs
-  try {
-    const store = getStore({ name: 'establishments', consistency: 'strong' });
-    const index = (await store.get('_index', { type: 'json' })) || [];
-    const entry = index.find((e) => e.slug === slug && e.is_active);
-    if (!entry) return null;
-    const bdata = await store.get(`school_${entry.id}`, { type: 'json' });
-    if (!bdata) return null;
-    const school = { id: bdata.id, name: bdata.name, slug: bdata.slug, admin_email: bdata.admin_email, supabase_id: bdata.supabase_id || bdata.id };
-    toCache(cacheKey, school);
-    return school;
-  } catch(e) { return null; }
+function generateCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "RPT-";
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
 }
 
-export default async function handler(req, context) {
-  if (req.method === 'OPTIONS') return cors({}, 200);
+function sanitize(s: string): string {
+  return String(s || "").replace(/<[^>]*>/g, "").substring(0, 2000);
+}
+
+export default async (req: Request, context: Context) => {
+  if (req.method === "OPTIONS") return cors({}, 200, req);
+
   const url = new URL(req.url);
+  const path = url.pathname.replace("/api/reports", "") || "/";
+  const store = getStore("safeschool-data");
 
-  if (req.method === 'GET') {
-    let code = url.searchParams.get('code');
-    if (!code) return cors({ error: 'Code requis' }, 400);
-    const codeClean = code.startsWith('SS-') ? code.substring(3) : code;
-    const codeWithPrefix = code.startsWith('SS-') ? code : `SS-${code}`;
-    const cached = fromCache(`report:${codeClean}`);
-    if (cached) return cors({ report: cached });
-    let rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(codeWithPrefix)}&select=id,tracking_code,status,type,urgency,created_at,updated_at,school_id`);
-    if (!rows || rows.length === 0) {
-      rows = await sbFetch(`reports?tracking_code=eq.${encodeURIComponent(codeClean)}&select=id,tracking_code,status,type,urgency,created_at,updated_at,school_id`);
-    }
-    if (!rows || rows.length === 0) return cors({ error: 'Signalement introuvable', debug: { url_ok: !!SUPABASE_URL, key_ok: !!SUPABASE_KEY } }, 404);
-    toCache(`report:${codeClean}`, rows[0]);
-    return cors({ report: rows[0] });
+  // POST /api/reports/submit/:slug - Soumettre un signalement
+  if (req.method === "POST" && path.startsWith("/submit/")) {
+    const slug = path.replace("/submit/", "").split("?")[0];
+    if (!slug) return cors({ error: "Slug requis" }, 400, req);
+
+    const schoolId = await getSchoolId(slug, store);
+    if (!schoolId) return cors({ error: "Etablissement non trouve" }, 404, req);
+
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: "Corps invalide" }, 400, req); }
+
+    const trackingCode = generateCode();
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const report = {
+      school_id: schoolId,
+      tracking_code: trackingCode,
+      type: sanitize(body.type || body.report_type || "autre"),
+      description: sanitize(body.description || ""),
+      location: sanitize(body.location || ""),
+      urgency: sanitize(body.urgency || "moyen"),
+      anonymous: body.anonymous !== false,
+      reporter_role: sanitize(body.reporter_role || "eleve"),
+      reporter_email: sanitize(body.reporter_email || body.contact || ""),
+      classe: sanitize(body.classe || body.class_name || body.victim_class || ""),
+      status: "nouveau",
+      source_channel: "web",
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase.from("reports").insert(report).select("id, tracking_code").single();
+    if (error) return cors({ error: error.message }, 500, req);
+
+    // Mettre a jour le compteur dans le Blob
+    try {
+      const schoolData = (await store.get("school_" + schoolId, { type: "json" })) as any;
+      if (schoolData) {
+        schoolData.report_count = (schoolData.report_count || 0) + 1;
+        schoolData.updated_at = new Date().toISOString();
+        await store.setJSON("school_" + schoolId, schoolData);
+      }
+    } catch (e) { /* non bloquant */ }
+
+    return cors({ ok: true, tracking_code: trackingCode, report_id: data.id }, 201, req);
   }
 
-  if (req.method === 'POST') {
-    let body;
-    try { body = await req.json(); } catch { return cors({ error: 'JSON invalide' }, 400); }
-    const { school_id, slug, type, urgence, description, anonymous, email, phone } = body;
-    if (!type || !description) return cors({ error: 'type et description requis' }, 400);
+  // GET /api/reports/list/:slug - Lister les signalements (admin)
+  if (req.method === "GET" && path.startsWith("/list/")) {
+    const slug = path.replace("/list/", "").split("?")[0];
+    const adminCode = req.headers.get("x-admin-code") || "";
+    if (!slug || !adminCode) return cors({ error: "Parametres requis" }, 400, req);
 
-    let school = null;
-    if (slug) {
-      school = await resolveSchool(slug);
-      if (!school) return cors({ error: `Etablissement introuvable` }, 404);
-    }
-    const sid = school?.supabase_id || school?.id || school_id;
-    if (!sid) return cors({ error: 'school_id requis' }, 400);
+    const schoolId = await getSchoolId(slug, store);
+    if (!schoolId) return cors({ error: "Etablissement non trouve" }, 404, req);
 
-    const tracking_code = genCode();
-    console.log('INSERT attempt - URL:', SUPABASE_URL ? SUPABASE_URL.substring(0,30) : 'EMPTY', '| KEY:', SUPABASE_KEY ? 'present' : 'EMPTY');
+    // Verifier le code admin
+    const schoolData = (await store.get("school_" + schoolId, { type: "json" })) as any;
+    const isAdmin = schoolData && (adminCode === schoolData.admin_code || adminCode === schoolData.admin_password);
+    const isSA = adminCode === SA_TOKEN;
+    if (!isAdmin && !isSA) return cors({ error: "Non autorise" }, 401, req);
 
-    const inserted = await sbFetch('reports', {
-      method: 'POST',
-      body: JSON.stringify({ tracking_code, type: mapType(type), urgency: mapUrgence(urgence || 'moyen'), description, anonymous: anonymous !== false, reporter_email: anonymous !== false ? null : (email || null), status: 'nouveau', school_id: sid }),
-    });
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data, error } = await supabase
+      .from("reports")
+      .select("id, tracking_code, type, description, location, urgency, anonymous, status, created_at, updated_at, admin_reply, assigned_staff_id, classe, reporter_role")
+      .eq("school_id", schoolId)
+      .order("created_at", { ascending: false })
+      .limit(200);
 
-    if (!inserted || !inserted[0]) {
-      console.warn('SB insert failed - using Blobs fallback');
-      const store = getStore({ name: 'reports', consistency: 'strong' });
-      await store.setJSON(`report_${tracking_code}`, { tracking_code, type, urgence, description, anonymous, school_id: sid, id: crypto.randomUUID(), created_at: new Date().toISOString() });
-    }
-
-    const report_id = inserted?.[0]?.id || tracking_code;
-
-    context.waitUntil((async () => {
-      try {
-        if (RESEND_API_KEY) {
-          // Notifier l'admin de l'école si email disponible
-          const toEmail = school?.admin_email || null;
-          if (toEmail) {
-            await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: toEmail,
-                subject: `🚨 Nouveau signalement [${(urgence||'moyen').toUpperCase()}] - ${school?.name||''}`,
-                html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#dc2626;color:white;padding:20px;border-radius:8px 8px 0 0"><h2 style="margin:0">Nouveau signalement SafeSchool</h2></div><div style="padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px"><p><b>Code de suivi :</b> <span style="font-size:1.2em;color:#dc2626;font-weight:bold">${tracking_code}</span></p><p><b>Type :</b> ${type}</p><p><b>Urgence :</b> ${urgence||'moyen'}</p><p><b>Description :</b> ${description.substring(0,400)}</p><p style="text-align:center;margin-top:20px"><a href="https://app.safeschool.fr/admin?code=${tracking_code}" style="background:#dc2626;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">Voir le signalement →</a></p></div></div>`
-              }),
-            });
-          }
-          // Confirmer au signalant non-anonyme
-          if (anonymous === false && email) {
-            await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: email,
-                subject: `Votre signalement a été reçu - Code ${tracking_code}`,
-                html: `<div style="font-family:sans-serif;max-width:600px"><div style="background:#2563eb;color:white;padding:20px;border-radius:8px 8px 0 0"><h2 style="margin:0">Signalement reçu</h2></div><div style="padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 8px 8px"><p>Votre signalement a bien été transmis à l'établissement.</p><p><b>Votre code de suivi :</b></p><p style="font-size:1.5em;color:#dc2626;font-weight:bold;letter-spacing:3px">${tracking_code}</p><p>Conservez ce code pour suivre l'avancement de votre dossier.</p><p style="text-align:center;margin-top:20px"><a href="https://app.safeschool.fr?code=${tracking_code}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:6px;text-decoration:none">Suivre mon dossier →</a></p></div></div>`
-              }),
-            });
-          }
-        }
-      } catch(e) { console.error('notify error', e.message); }
-    })());
-
-    return cors({ success: true, tracking_code, report_id, message: 'Signalement enregistre.' }, 201);
+    if (error) return cors({ error: error.message }, 500, req);
+    return cors({ ok: true, reports: data, total: data.length }, 200, req);
   }
 
-  return cors({ error: 'Methode non supportee' }, 405);
-}
+  // PATCH /api/reports/update/:id - Mettre a jour un signalement (admin)
+  if (req.method === "PATCH" && path.startsWith("/update/")) {
+    const reportId = path.replace("/update/", "").split("?")[0];
+    const adminCode = req.headers.get("x-admin-code") || "";
+    if (!reportId) return cors({ error: "ID requis" }, 400, req);
 
-export const config = { path: ['/api/reports', '/api/reports/*'] };
+    let body: any;
+    try { body = await req.json(); } catch { return cors({ error: "Corps invalide" }, 400, req); }
+
+    // Verifier que l'admin a acces a ce report
+    const schoolId = await getSchoolId(body.slug || "", store);
+    if (schoolId) {
+      const schoolData = (await store.get("school_" + schoolId, { type: "json" })) as any;
+      const isAdmin = schoolData && (adminCode === schoolData.admin_code || adminCode === schoolData.admin_password);
+      if (!isAdmin && adminCode !== SA_TOKEN) return cors({ error: "Non autorise" }, 401, req);
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const update: any = { updated_at: new Date().toISOString() };
+    if (body.status) update.status = sanitize(body.status);
+    if (body.admin_reply) update.admin_reply = sanitize(body.admin_reply);
+    if (body.assigned_staff_id) update.assigned_staff_id = sanitize(body.assigned_staff_id);
+    if (body.admin_note) update.admin_note = sanitize(body.admin_note);
+
+    const { data, error } = await supabase.from("reports").update(update).eq("id", reportId).select().single();
+    if (error) return cors({ error: error.message }, 500, req);
+    return cors({ ok: true, report: data }, 200, req);
+  }
+
+  // GET /api/reports/track/:code - Suivre un signalement (eleve)
+  if (req.method === "GET" && path.startsWith("/track/")) {
+    const code = path.replace("/track/", "").split("?")[0].toUpperCase();
+    if (!code) return cors({ error: "Code requis" }, 400, req);
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data, error } = await supabase
+      .from("reports")
+      .select("tracking_code, status, admin_reply, created_at, updated_at, type")
+      .eq("tracking_code", code)
+      .single();
+
+    if (error || !data) return cors({ error: "Signalement non trouve" }, 404, req);
+    return cors({ ok: true, report: data }, 200, req);
+  }
+
+  return cors({ error: "Route non trouvee" }, 404, req);
+};
+
+export const config = { path: "/api/reports/*" };
