@@ -354,3 +354,179 @@ window.renderDashboardV3External = async function(el) {
 };
 (function seedDemo(){var sid=localStorage.getItem("ss_current_etab")||"demo",key="ss_rpt_"+sid;if(localStorage.getItem(key))return;var types=["verbal","physique","cyber","exclusion","autre"],classes=["6e A","6e B","5e A","4e A","4e B","3e A","3e B"],descs=["Moqueries repetees en classe","Messages blessants sur les reseaux","Mise a l'ecart systematique","Bousculades dans les couloirs","Screenshots sans accord","Insultes en recreation","Commentaires degradants en ligne","Exclusion des conversations"],statuts=["nouveau","nouveau","en_cours","traite","traite","archive"],urgences=["haute","moyenne","faible","faible","moyenne"],now=new Date(),list=[];for(var i=0;i<16;i++){var d=new Date(now);d.setDate(d.getDate()-Math.floor(Math.random()*30));list.push({id:"demo_"+i,tracking_code:"SS-DM"+String(i).padStart(2,"0"),type:types[i%5],classe:classes[i%7],urgence:urgences[i%5],status:statuts[i%6],anonymous:true,description:descs[i%8],school_id:sid,created_at:d.toISOString()});}localStorage.setItem(key,JSON.stringify(list));})();
 console.log("[SafeSchool V4] dashboard-v3.js charge OK - Kanban CPE + pHARe + Messagerie + Journal");
+
+// =======================================================
+// SAFESCHOOL PRO - Extensions dashboard
+// Session persistante + Reports Supabase + Sous-admin
+// =======================================================
+
+// --- SESSION PERSISTANTE ---
+// Vérifier au chargement si une session admin existe
+(function checkPersistedSession() {
+  var adminToken = localStorage.getItem('ss_admin_token');
+  var adminData = localStorage.getItem('ss_admin_data');
+  if (!adminToken || !adminData) return;
+  try {
+    var data = JSON.parse(adminData);
+    var tokenData = JSON.parse(atob(adminToken.split('.')[1] || 'e30='));
+    var now = Date.now() / 1000;
+    if (tokenData.exp && tokenData.exp < now) {
+      localStorage.removeItem('ss_admin_token');
+      localStorage.removeItem('ss_admin_data');
+      return;
+    }
+    // Session valide - restaurer
+    window.__adminToken = adminToken;
+    window.__adminData = data;
+    window.__adminSlug = data.slug || localStorage.getItem('ss_current_etab_slug');
+  } catch(e) {
+    localStorage.removeItem('ss_admin_token');
+  }
+})();
+
+// --- LECTURE REPORTS DEPUIS SUPABASE ---
+window.loadReportsFromSupabase = async function(slug, adminCode) {
+  var code = adminCode || window.__adminToken || '';
+  var r = await fetch('/api/reports/list/' + slug, {
+    headers: { 'x-admin-code': code, 'Content-Type': 'application/json' }
+  });
+  if (!r.ok) {
+    if (r.status === 401) {
+      localStorage.removeItem('ss_admin_token');
+      localStorage.removeItem('ss_admin_data');
+      window.location.reload();
+      return [];
+    }
+    return [];
+  }
+  var d = await r.json();
+  return d.reports || [];
+};
+
+// Patch de refreshReports pour utiliser Supabase
+var _origRefreshReports = window.refreshReports;
+window.refreshReports = async function() {
+  var slug = window.__adminSlug || localStorage.getItem('ss_current_etab_slug');
+  var adminData = window.__adminData || JSON.parse(localStorage.getItem('ss_admin_data') || '{}');
+  var code = adminData.admin_code || adminData.admin_password || window.__adminToken || '';
+  
+  if (!slug || !code) {
+    if (_origRefreshReports) return _origRefreshReports.apply(this, arguments);
+    return;
+  }
+  
+  try {
+    var reports = await window.loadReportsFromSupabase(slug, code);
+    window.__cachedReports = reports;
+    // Déclencher le re-render si le dashboard est visible
+    if (typeof renderReportsList === 'function') renderReportsList(reports);
+    else if (typeof renderDashboardV3 === 'function') renderDashboardV3(adminData);
+    return reports;
+  } catch(e) {
+    if (_origRefreshReports) return _origRefreshReports.apply(this, arguments);
+  }
+};
+
+// --- SOUS-ADMIN MODAL ---
+window.openSubAdminModal = function() {
+  var old = document.getElementById('ss-sa-ov');
+  if (old) old.remove();
+  var slug = window.__adminSlug || localStorage.getItem('ss_current_etab_slug') || '';
+  var adminData = window.__adminData || JSON.parse(localStorage.getItem('ss_admin_data') || '{}');
+  var currentSubAdmins = parseInt(adminData.sub_admins_count || '0');
+  var maxSubAdmins = adminData.plan === 'enterprise' ? 5 : adminData.plan === 'pro' ? 3 : 0;
+  
+  if (maxSubAdmins === 0) {
+    alert('Votre contrat ne permet pas de créer des sous-admins. Contactez SafeSchool pour upgrader.');
+    return;
+  }
+  if (currentSubAdmins >= maxSubAdmins) {
+    alert('Limite atteinte : ' + maxSubAdmins + ' sous-admin(s) maximum pour votre contrat.');
+    return;
+  }
+  
+  var ov = document.createElement('div');
+  ov.id = 'ss-sa-ov';
+  ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,20,40,.96);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+  var h = '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.4);">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  h += '<h2 style="margin:0;font-size:18px;font-weight:700;color:#0f1428;">Ajouter un sous-admin</h2>';
+  h += '<span style="background:#7c3aed;color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;">' + currentSubAdmins + '/' + maxSubAdmins + '</span></div>';
+  h += '<p style="margin:0 0 18px;color:#6b7280;font-size:13px;">Accès restreint — voit uniquement les incidents assignés</p>';
+  h += '<div id="ssa-err" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px;"></div>';
+  h += '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;">Prénom et Nom *</label>';
+  h += '<input id="ssa-name" type="text" placeholder="Mme Martin Sophie" style="width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:13px;outline:none;">';
+  h += '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;">Rôle *</label>';
+  h += '<select id="ssa-role" style="width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:13px;background:#fff;outline:none;">';
+  h += '<option value="CPE">CPE - Conseiller Principal</option>';
+  h += '<option value="PSY">Psychologue scolaire</option>';
+  h += '<option value="PROF">Prof référent</option>';
+  h += '<option value="INF">Infirmier(e)</option>';
+  h += '<option value="DIR">Direction</option>';
+  h += '</select>';
+  h += '<label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;">Email</label>';
+  h += '<input id="ssa-email" type="email" placeholder="prenom.nom@lycee.fr" style="width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;margin-bottom:20px;outline:none;">';
+  h += '<div style="display:flex;gap:10px;">';
+  h += '<button onclick="document.getElementById('ss-sa-ov').remove()" style="flex:1;padding:12px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;">Annuler</button>';
+  h += '<button id="ssa-btn" onclick="window.saveSubAdmin()" style="flex:2;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Créer le compte</button>';
+  h += '</div></div>';
+  ov.innerHTML = h;
+  document.body.appendChild(ov);
+  setTimeout(function(){ var n=document.getElementById('ssa-name'); if(n) n.focus(); }, 100);
+};
+
+window.saveSubAdmin = async function() {
+  var nameEl=document.getElementById('ssa-name'), roleEl=document.getElementById('ssa-role'), emailEl=document.getElementById('ssa-email');
+  var errEl=document.getElementById('ssa-err'), btn=document.getElementById('ssa-btn');
+  var name=(nameEl?nameEl.value:'').trim(), role=roleEl?roleEl.value:'CPE', email=(emailEl?emailEl.value:'').trim();
+  if (!name) { if(errEl){errEl.textContent='Nom requis';errEl.style.display='block';} return; }
+  if(btn){btn.disabled=true;btn.textContent='Création...';}
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', code=role.substring(0,2)+'-';
+  for(var i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  var adminData=window.__adminData||JSON.parse(localStorage.getItem('ss_admin_data')||'{}');
+  var slug=window.__adminSlug||localStorage.getItem('ss_current_etab_slug')||'';
+  var adminCode=adminData.admin_code||adminData.admin_password||'';
+  try {
+    var res=await fetch('/api/establishments/add-subadmin/'+slug,{method:'POST',headers:{'Content-Type':'application/json','x-admin-code':adminCode},body:JSON.stringify({name:name,role:role,email:email,code:code})});
+    var d=await res.json();
+    if(d.ok){
+      var ov=document.getElementById('ss-sa-ov'); if(ov) ov.remove();
+      alert('Sous-admin créé !
+
+Nom : '+name+'
+Code d'accès : '+code+'
+
+Donnez ce code à '+name+' pour se connecter.');
+      if(typeof renderStaffTab==='function') renderStaffTab();
+    } else {
+      if(errEl){errEl.textContent=d.error||'Erreur';errEl.style.display='block';}
+      if(btn){btn.disabled=false;btn.textContent='Créer le compte';}
+    }
+  } catch(e){
+    if(errEl){errEl.textContent='Erreur réseau';errEl.style.display='block';}
+    if(btn){btn.disabled=false;btn.textContent='Créer le compte';}
+  }
+};
+
+// Injecter le bouton sous-admin dans l'onglet Equipe
+document.addEventListener('DOMContentLoaded', function() {
+  var _origRenderStaff = window.renderStaffTab;
+  if (typeof _origRenderStaff !== 'function') return;
+  window.renderStaffTab = function() {
+    _origRenderStaff.apply(this, arguments);
+    setTimeout(function() {
+      if (document.getElementById('ss-subadmin-btn')) return;
+      var addBtn = Array.from(document.querySelectorAll('button')).find(function(b) {
+        return b.textContent && b.textContent.trim().indexOf('Ajouter un membre') !== -1;
+      });
+      if (addBtn && addBtn.parentNode) {
+        var nb = document.createElement('button');
+        nb.id = 'ss-subadmin-btn';
+        nb.style.cssText = 'display:flex;align-items:center;gap:8px;background:#7c3aed;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;width:100%;';
+        nb.innerHTML = '<span style="font-size:16px;">+</span> Ajouter un sous-admin';
+        nb.onclick = window.openSubAdminModal;
+        addBtn.parentNode.insertBefore(nb, addBtn.nextSibling);
+      }
+    }, 300);
+  };
+});
