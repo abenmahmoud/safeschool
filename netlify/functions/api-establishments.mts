@@ -647,7 +647,68 @@ export default async (req: Request, context: Context) => {
       return cors({ admin_code: existing.admin_code, admin_password: existing.admin_password }, 200, req);
     }
 
-    return cors({ error: 'Route non trouvÃÂÃÂ©e' }, 404, req);
+    
+  // POST /api/establishments/submit-report/:slug
+  if (req.method === 'POST' && path.startsWith('/submit-report/')) {
+    const slug = path.replace('/submit-report/', '').split('?')[0];
+    if (!slug) return cors({ error: 'Slug requis' }, 400, req);
+    const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = indexAll.find((e: any) => e.slug === slug);
+    if (!entry?.id) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    let body: any = {};
+    try { body = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'RPT-';
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const supaUrl = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const supaKey = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const report = {
+      school_id: entry.id,
+      tracking_code: code,
+      type: String(body.type || 'autre').substring(0, 100),
+      description: String(body.description || '').substring(0, 2000),
+      location: String(body.location || '').substring(0, 500),
+      urgency: String(body.urgency || 'moyen').substring(0, 50),
+      anonymous: body.anonymous !== false,
+      reporter_role: String(body.reporter_role || 'eleve').substring(0, 50),
+      reporter_email: String(body.reporter_email || body.contact || '').substring(0, 200),
+      classe: String(body.classe || body.class_name || body.victim_class || '').substring(0, 100),
+      status: 'nouveau',
+      source_channel: 'web',
+      created_at: new Date().toISOString(),
+    };
+    const res = await fetch(supaUrl + '/rest/v1/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': supaKey, 'Authorization': 'Bearer ' + supaKey, 'Prefer': 'return=representation' },
+      body: JSON.stringify(report),
+    });
+    if (!res.ok) { const err = await res.text(); return cors({ error: 'Erreur DB', detail: err.substring(0, 100) }, 500, req); }
+    const data = await res.json();
+    return cors({ ok: true, tracking_code: code, report_id: data[0]?.id }, 201, req);
+  }
+
+  // GET /api/establishments/reports/:slug - Lister signalements pour admin
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const slug = path.replace('/reports/', '').split('?')[0];
+    const adminCode = req.headers.get('x-admin-code') || '';
+    const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const entry = indexAll.find((e: any) => e.slug === slug);
+    if (!entry?.id) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolData = (await store.get('school_' + entry.id, { type: 'json' })) as any;
+    const isAdmin = schoolData && (adminCode === schoolData.admin_code || adminCode === schoolData.admin_password);
+    const isSA = adminCode === 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    if (!isAdmin && !isSA) return cors({ error: 'Non autorise' }, 401, req);
+    const supaUrl = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const supaKey = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const res = await fetch(supaUrl + '/rest/v1/reports?school_id=eq.' + entry.id + '&order=created_at.desc&limit=200', {
+      headers: { 'apikey': supaKey, 'Authorization': 'Bearer ' + supaKey },
+    });
+    if (!res.ok) return cors({ error: 'Erreur lecture' }, 500, req);
+    const data = await res.json();
+    return cors({ ok: true, reports: data, total: data.length }, 200, req);
+  }
+
+return cors({ error: 'Route non trouvÃÂÃÂ©e' }, 404, req);
   } catch (error: any) {
     console.error('api-establishments error:', error);
     return cors(
