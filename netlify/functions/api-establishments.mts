@@ -247,11 +247,11 @@ export default async (req: Request, context: Context) => {
     const alphaSR = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let codeSR = 'RPT-'; for (let i = 0; i < 8; i++) codeSR += alphaSR[Math.floor(Math.random() * alphaSR.length)];
     const suSR = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const skSR = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const skSR = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
     const resSR = await fetch(suSR + '/rest/v1/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': skSR, 'Authorization': 'Bearer ' + skSR, 'Prefer': 'return=representation' },
-      body: JSON.stringify({ school_id: schoolSR.id, tracking_code: codeSR, type: String(bodySR.type || 'autre').substring(0, 100), description: String(bodySR.description || '').substring(0, 2000), location: String(bodySR.location || '').substring(0, 500), urgency: String(bodySR.urgency || 'moyen').substring(0, 50), anonymous: bodySR.anonymous !== false, reporter_role: String(bodySR.reporter_role || 'eleve').substring(0, 50), reporter_email: String(bodySR.reporter_email || bodySR.contact || '').substring(0, 200), classe: String(bodySR.classe || bodySR.class_name || bodySR.victim_class || '').substring(0, 100), status: 'nouveau', source_channel: 'web', created_at: new Date().toISOString() }),
+      body: JSON.stringify({ school_id: schoolSR.id, tracking_code: codeSR, type: String(bodySR.type || 'autre').substring(0, 100), description: String(bodySR.description || '').substring(0, 2000), location: String(bodySR.location || '').substring(0, 500), urgency: (['faible','moyen','eleve','critique'].includes(bodySR.urgency) ? bodySR.urgency : 'faible'), anonymous: bodySR.anonymous !== false, reporter_role: String(bodySR.reporter_role || 'eleve').substring(0, 50), reporter_email: String(bodySR.reporter_email || bodySR.contact || '').substring(0, 200), classe: String(bodySR.classe || bodySR.class_name || bodySR.victim_class || '').substring(0, 100), status: 'nouveau', source_channel: 'web', created_at: new Date().toISOString() }),
     });
     if (!resSR.ok) { const eSR = await resSR.text(); return cors({ error: 'Erreur DB', d: eSR.substring(0, 100) }, 500, req); }
     const dataSR = await resSR.json();
