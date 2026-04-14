@@ -15,7 +15,7 @@ function genCode(): string {
 
 export default async (req: Request, context: Context) => {
   if (req.method === "OPTIONS") return cors({}, 200, req);
-  const SUPABASE_URL = Netlify.env.get("SUPABASE_URL") || "";
+  const SUPABASE_URL = Netlify.env.get("aSUPABASE_URL") || Netlify.env.get("SUPABASE_URL") || "";
   const SUPABASE_KEY = Netlify.env.get("SUPABASE_ANON_KEY") || Netlify.env.get("SUPABASE_KEY") || "";
   const url = new URL(req.url);
   const path = url.pathname.replace("/api/reports", "");
