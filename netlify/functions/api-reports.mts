@@ -1,3 +1,4 @@
+// REBUILD-1776207336317
 import type { Context } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 function g(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let r="RPT-";for(let i=0;i<8;i++)r+=c[Math.floor(Math.random()*c.length)];return r;}
