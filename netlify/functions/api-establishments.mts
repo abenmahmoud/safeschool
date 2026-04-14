@@ -362,13 +362,23 @@ export default async (req: Request, context: Context) => {
     if (req.method === 'POST' && path === '/ensure-uuid') {
     let bodyEu: any;
     try { bodyEu = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
-    const slugEu = (bodyEu.slug || '').trim().toLowerCase();
+    const slugEu = (bodyEu.slug || bodyEu.blob_id || '').toString().trim().toLowerCase();
     if (!slugEu) return cors({ error: 'slug requis' }, 400, req);
+    // Source de verite : _index
     const indexAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const entry = indexAll.find((e: any) => e.slug === slugEu);
-    if (entry?.id) return cors({ uuid: entry.id, source: 'blob_uuid' }, 200, req);
-    return cors({ error: 'Etablissement non trouve' }, 404, req);
-  }
+    const indexEntry = indexAll.find((e: any) => e.slug === slugEu || e.id === slugEu);
+    if (indexEntry?.id) {
+      // Corriger le Blob uuid_ parasite si necessaire
+      try {
+        const existing = await store.get('uuid_' + slugEu, { type: 'json' }) as any;
+        if (!existing || existing.uuid !== indexEntry.id) {
+          await store.setJSON('uuid_' + slugEu, { uuid: indexEntry.id, slug: slugEu });
+        }
+      } catch(e) { /* non bloquant */ }
+      return cors({ uuid: indexEntry.id, source: 'blob_uuid' }, 200, req);
+    }
+    return cors({ error: 'Etablissement non trouve: ' + slugEu }, 404, req);
+  
 
     // Add sub-admin endpoint (called by local admin, verified by slug+admin_code)
   if (req.method === 'POST' && path.startsWith('/add-subadmin/')) {
