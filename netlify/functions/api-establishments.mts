@@ -359,7 +359,16 @@ export default async (req: Request, context: Context) => {
       return cors({ error: 'Identifiants incorrects', attempts_remaining: rateCheck.remaining - 1 }, 401, req);
     }
 
-    if (req.method === 'POST' && path === '/ensure-uuid') { const _b = await req.json().catch(()=>({})); const _s = ((_b).slug||(_b).blob_id||'').toString().trim().toLowerCase(); if(!_s) return cors({error:'slug requis'},400,req); const _i=((await store.get('_index',{type:'json'})))||[]; const _e=_i.find(e=>e.slug===_s); if(_e?.id){store.setJSON('uuid_'+_s,{uuid:_e.id}).catch(()=>{}); return cors({uuid:_e.id,source:'blob_uuid'},200,req);} return cors({error:'Non trouve'},404,req);} catch (error: any) {
+    if (req.method === 'POST' && path === '/ensure-uuid') {
+    let bEu: any;
+    try { bEu = await req.json(); } catch { return cors({ error: 'invalide' }, 400, req); }
+    const sEu = ((bEu.slug || bEu.blob_id || '') as string).trim().toLowerCase();
+    if (!sEu) return cors({ error: 'slug requis' }, 400, req);
+    const iAll = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const iEntry = iAll.find((e: any) => e.slug === sEu);
+    if (iEntry?.id) { store.setJSON('uuid_' + sEu, { uuid: iEntry.id }).catch(() => {}); return cors({ uuid: iEntry.id, source: 'blob_uuid' }, 200, req); }
+    return cors({ error: 'Non trouve' }, 404, req);
+  } catch (error: any) {
     console.error('api-establishments error:', error);
     return cors(
       {
