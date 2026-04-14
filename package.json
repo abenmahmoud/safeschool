@@ -5,8 +5,7 @@
   "description": "SafeSchool - Plateforme SaaS anti-harcèlement scolaire",
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
-    "@netlify/functions": "^3.0.0",
-    "@supabase/supabase-js": "^2.39.0"
+    "@netlify/functions": "^3.0.0"
   },
   "devDependencies": {
     "@netlify/edge-functions": "^1.0.0"
