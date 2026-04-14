@@ -132,6 +132,17 @@ from = "/api/superadmin/*"
 to = "/.netlify/functions/api-superadmin"
 status = 200
 
+
+[[redirects]]
+from = "/api/report"
+to = "/.netlify/functions/api-report"
+status = 200
+
+[[redirects]]
+from = "/api/report/*"
+to = "/.netlify/functions/api-report"
+status = 200
+
 [[redirects]]
 from = "/*"
 to = "/index.html"
