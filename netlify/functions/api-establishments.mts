@@ -223,6 +223,46 @@ export default async (req: Request, context: Context) => {
       const entry = index.find((e: any) => e.slug === slug && e.is_active);
       if (!entry) return cors({ error: 'Etablissement non trouvÃÂÃÂ©' }, 404, req);
       const data = await store.get(`school_${entry.id}`, { type: 'json' });
+  // === SIGNALEMENT PUBLIC (avant authCheck) ===
+  if (req.method === 'POST' && path.startsWith('/submit-report/')) {
+    const slugSR = (path.split('/submit-report/')[1] || '').split('?')[0].toLowerCase();
+    if (!slugSR) return cors({ error: 'Slug manquant' }, 400, req);
+    const idxSR = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const schoolSR = idxSR.find((e: any) => e.slug === slugSR);
+    if (!schoolSR?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
+    let bodySR: any = {};
+    try { bodySR = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const alphaSR = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let codeSR = 'RPT-'; for (let i = 0; i < 8; i++) codeSR += alphaSR[Math.floor(Math.random() * alphaSR.length)];
+    const suSR = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skSR = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const resSR = await fetch(suSR + '/rest/v1/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': skSR, 'Authorization': 'Bearer ' + skSR, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ school_id: schoolSR.id, tracking_code: codeSR, type: String(bodySR.type || 'autre').substring(0, 100), description: String(bodySR.description || '').substring(0, 2000), location: String(bodySR.location || '').substring(0, 500), urgency: String(bodySR.urgency || 'moyen').substring(0, 50), anonymous: bodySR.anonymous !== false, reporter_role: String(bodySR.reporter_role || 'eleve').substring(0, 50), reporter_email: String(bodySR.reporter_email || bodySR.contact || '').substring(0, 200), classe: String(bodySR.classe || bodySR.class_name || bodySR.victim_class || '').substring(0, 100), status: 'nouveau', source_channel: 'web', created_at: new Date().toISOString() }),
+    });
+    if (!resSR.ok) { const eSR = await resSR.text(); return cors({ error: 'Erreur DB', d: eSR.substring(0, 100) }, 500, req); }
+    const dataSR = await resSR.json();
+    return cors({ ok: true, tracking_code: codeSR, report_id: dataSR[0]?.id }, 201, req);
+  }
+  // === LISTE SIGNALEMENTS ADMIN ===
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
+    const acRL = req.headers.get('x-admin-code') || '';
+    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
+    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
+    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
+    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
+    const dataRL = await resRL.json();
+    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
+  }
       if (!data) return cors({ error: 'DonnÃÂÃÂ©es non trouvÃÂÃÂ©es' }, 404, req);
       const isAdmin = authCheck(req);
       const publicInfo: any = {
