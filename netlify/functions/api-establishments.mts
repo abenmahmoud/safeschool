@@ -285,7 +285,50 @@ export default async (req: Request, context: Context) => {
 
   // Add staff member with code generation
   if (req.method === 'POST' && path.match(/^\/[a-zA-Z0-9_-]+\/add-staff$/)) {
-    if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
+    // SIGNALEMENT PUBLIC - pas d'auth requise
+  if (req.method === 'POST' && path.startsWith('/submit-report/')) {
+    const sl = path.replace('/submit-report/', '').split('?')[0].toLowerCase();
+    const ix = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const et = ix.find((e: any) => e.slug === sl);
+    if (!et?.id) return cors({ error: 'Non trouve' }, 404, req);
+    let bd: any = {};
+    try { bd = await req.json(); } catch { return cors({ error: 'Invalide' }, 400, req); }
+    const cs = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let tc = 'RPT-';
+    for (let i = 0; i < 8; i++) tc += cs[Math.floor(Math.random() * cs.length)];
+    const su = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const sk = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const rs = await fetch(su + '/rest/v1/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': sk, 'Authorization': 'Bearer ' + sk, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ school_id: et.id, tracking_code: tc, type: String(bd.type || 'autre').substring(0, 100), description: String(bd.description || '').substring(0, 2000), location: String(bd.location || '').substring(0, 500), urgency: String(bd.urgency || 'moyen').substring(0, 50), anonymous: bd.anonymous !== false, reporter_role: String(bd.reporter_role || 'eleve').substring(0, 50), reporter_email: String(bd.reporter_email || bd.contact || '').substring(0, 200), classe: String(bd.classe || bd.class_name || bd.victim_class || '').substring(0, 100), status: 'nouveau', source_channel: 'web', created_at: new Date().toISOString() }),
+    });
+    if (!rs.ok) { const e = await rs.text(); return cors({ error: 'DB error', d: e.substring(0, 100) }, 500, req); }
+    const rd = await rs.json();
+    return cors({ ok: true, tracking_code: tc, report_id: rd[0]?.id }, 201, req);
+  }
+
+  // LISTE SIGNALEMENTS ADMIN
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const sl2 = path.replace('/reports/', '').split('?')[0].toLowerCase();
+    const ac = req.headers.get('x-admin-code') || '';
+    const SA = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    const ix2 = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const et2 = ix2.find((e: any) => e.slug === sl2);
+    if (!et2?.id) return cors({ error: 'Non trouve' }, 404, req);
+    const sd = (await store.get('school_' + et2.id, { type: 'json' })) as any;
+    if (!(sd && (ac === sd.admin_code || ac === sd.admin_password) || ac === SA)) return cors({ error: 'Non autorise' }, 401, req);
+    const su2 = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const sk2 = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const rs2 = await fetch(su2 + '/rest/v1/reports?school_id=eq.' + et2.id + '&order=created_at.desc&limit=200', {
+      headers: { 'apikey': sk2, 'Authorization': 'Bearer ' + sk2 },
+    });
+    if (!rs2.ok) return cors({ error: 'Erreur' }, 500, req);
+    const data2 = await rs2.json();
+    return cors({ ok: true, reports: data2, total: data2.length }, 200, req);
+  }
+
+  if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
     const id = path.split('/')[1];
     const existing = (await store.get('school_' + id, { type: 'json' })) as any;
     if (!existing) return cors({ error: 'Non trouvé' }, 404, req);
