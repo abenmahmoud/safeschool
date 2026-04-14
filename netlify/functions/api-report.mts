@@ -29,7 +29,7 @@ export default async (req: Request, context: Context) => {
   const SA_TOKEN = "c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=";
 
   const url = new URL(req.url);
-  const path = url.pathname.replace("/api/report", "");
+  const path = url.pathname.replace("/api/reports", "");
   const store = getStore("safeschool-data");
 
   if (req.method === "POST" && path.startsWith("/submit/")) {
@@ -96,4 +96,4 @@ export default async (req: Request, context: Context) => {
   return cors({ error: "Route non trouvee" }, 404, req);
 };
 
-export const config = { path: "/api/report/*" };
+export const config = { path: "/api/reports/*" };
