@@ -2224,6 +2224,30 @@ function rNext(){
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
 async function submitReport(){
+  // INJECTION: utiliser le nouvel endpoint si slug disponible
+  var _slug = localStorage.getItem('ss_current_etab_slug') || (currentEtab ? currentEtab.slug : '');
+  if(_slug) {
+    try {
+      var _type = uiState && uiState.reportType ? uiState.reportType : 'autre';
+      var _desc = uiState && uiState.reportDesc ? uiState.reportDesc : '';
+      var _loc = uiState && uiState.reportLocation ? uiState.reportLocation : '';
+      var _email = uiState && uiState.reportEmail ? uiState.reportEmail : '';
+      var _classe = uiState && uiState.reportClass ? uiState.reportClass : '';
+      var _role = uiState && uiState.reportRole ? uiState.reportRole : 'eleve';
+      var _anon = !uiState || uiState.reportAnon !== false;
+      var _res = await fetch('/api/establishments/submit-report/' + _slug, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type:_type, description:_desc, location:_loc, urgency:'faible', anonymous:_anon, reporter_email:_email, classe:_classe, reporter_role:_role})
+      });
+      var _data = await _res.json();
+      if(_res.ok && _data.ok) {
+        showConfirmation(_data.tracking_code, {});
+        return;
+      }
+    } catch(_e) { console.warn('New endpoint failed, falling back:', _e); }
+  }
+
   try {
     var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
     if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
