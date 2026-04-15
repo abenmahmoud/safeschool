@@ -25,7 +25,7 @@ export default async(req:Request,context:Context)=>{
   const school=schools[0];
   const store=getStore('safeschool-data');
   const sd=await store.get('school_'+school.id,{type:'json'}) as any;
-  const ok=sd&&(admin_code===sd.admin_code||admin_code===sd.admin_password||(sd.sous_admins||[]).some((sa:any)=>sa.code===admin_code));
+  const ok=sd&&(admin_code===sd.admin_code||admin_code===sd.admin_password||admin_code===sd.password||admin_code===sd.code||admin_code===sd.adminCode||(sd.sous_admins||[]).some((sa:any)=>sa.code===admin_code));
   if(!ok)return cors({error:'Code incorrect'},401);
   const role=(sd?.sous_admins||[]).find((sa:any)=>sa.code===admin_code)?'sous-admin':'admin';
   const token=await signJWT({slug,school_id:school.id,school_name:school.name,role,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+86400},SECRET);
