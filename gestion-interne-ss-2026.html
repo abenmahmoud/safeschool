@@ -1478,5 +1478,50 @@ function svcCard(name, ok, msg) {
 
 rdQu();
 </script>
+
+<script>
+// SafeSchool - Override slug generation: nom + ville + cp
+(function() {
+  function toSlugFull(name, city, cp) {
+    return [name, city, cp].filter(Boolean).join(' ')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, '').trim()
+      .replace(/\s+/g, '-').replace(/-+/g, '-')
+      .substring(0, 80);
+  }
+  function updateSlug() {
+    var name = (document.getElementById('cn') || {}).value || '';
+    var city = (document.getElementById('cv') || {}).value || '';
+    var cp = (document.getElementById('cp') || {}).value || '';
+    var slugField = document.getElementById('csl');
+    if(slugField) slugField.value = toSlugFull(name, city, cp);
+  }
+  // Ajouter champ CP après le champ ville si absent
+  function addCpField() {
+    if(document.getElementById('cp')) return;
+    var cvField = document.getElementById('cv');
+    if(!cvField) return;
+    var cpDiv = document.createElement('div');
+    cpDiv.style.cssText = 'margin-top:12px';
+    cpDiv.innerHTML = '<label style="display:block;font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:4px">CODE POSTAL *</label>' +
+      '<input id="cp" type="text" maxlength="5" placeholder="ex: 93700" style="width:100%;padding:.65rem .875rem;background:#374151;border:1px solid #4b5563;border-radius:8px;color:#fff;font-size:.9rem">';
+    cvField.closest('div') ? cvField.closest('div').insertAdjacentElement('afterend', cpDiv) : cvField.insertAdjacentElement('afterend', cpDiv);
+    document.getElementById('cp').addEventListener('input', updateSlug);
+  }
+  // Attendre que le DOM soit prêt
+  function init() {
+    addCpField();
+    var cn = document.getElementById('cn');
+    var cv = document.getElementById('cv');
+    if(cn) cn.addEventListener('input', updateSlug);
+    if(cv) cv.addEventListener('input', updateSlug);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  // Retry si les champs pas encore dans le DOM (chargement dynamique)
+  setTimeout(init, 1000);
+  setTimeout(init, 3000);
+})();
+</script>
 </body>
-</html>
