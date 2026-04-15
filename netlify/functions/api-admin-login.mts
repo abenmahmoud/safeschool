@@ -20,18 +20,23 @@ export default async (req) => {
   const school = schools[0];
   if (!school.admin_code || admin_code !== school.admin_code) return new Response(JSON.stringify({ error: 'Code incorrect' }), { status: 401, headers: hdrs });
 
-  // Générer JWT HS256
-  const enc = (s) => btoa(s).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const jh = enc(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const jp = enc(JSON.stringify({ slug, school_id: school.id, school_name: school.name, plan: school.plan_code || 'standard', role: 'admin', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400 }));
+  // JWT HS256 avec base64url via Uint8Array (safe pour tous les bytes)
+  const b64u = (buf) => {
+    const bytes = buf instanceof Uint8Array ? buf : new TextEncoder().encode(buf);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  };
+  const jh = b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const jp = b64u(JSON.stringify({ slug, school_id: school.id, school_name: school.name, plan: school.plan_code || 'standard', role: 'admin', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400 }));
   const jm = jh + '.' + jp;
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(jm));
-  const sigArr = Array.from(new Uint8Array(sig));
-  const sigStr = sigArr.reduce((a, b) => a + String.fromCharCode(b), '');
-  const token = jm + '.' + enc(sigStr);
+  const sigBuf = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(jm)));
+  const token = jm + '.' + b64u(sigBuf);
 
-  const cookieHdr = { ...hdrs, 'Set-Cookie': 'ss_admin_token=' + token + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400' };
-  return new Response(JSON.stringify({ ok: true, token, school_name: school.name, role: 'admin' }), { status: 200, headers: cookieHdr });
+  return new Response(JSON.stringify({ ok: true, token, school_name: school.name, role: 'admin' }), {
+    status: 200,
+    headers: { ...hdrs, 'Set-Cookie': 'ss_admin_token=' + token + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400' }
+  });
 };
 export const config = { path: '/api/admin/login' };
