@@ -287,6 +287,14 @@ export default async (req: Request, context: Context) => {
         fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: schoolSR.id, reportId: dataSR[0]?.id, trackingCode: codeSR, urgency: bodySR.urgency || "moyen", type: bodySR.type, adminEmail: _adminEmail }) }).catch(() => {});
       }
     } catch (_ne) {}
+    // Sprint1: emails automatiques
+    try {
+      const _rEmail = String(bodySR.reporter_email || bodySR.contact || '');
+      const _aEmail = String(schoolSR.admin_email || '');
+      const _notifyBase = { schoolId: schoolSR.id, trackingCode: codeSR, reportId: dataSR[0]?.id, urgency: String(bodySR.urgency || 'moyen'), type: String(bodySR.type || 'autre'), adminEmail: _aEmail };
+      fetch(new URL(req.url).origin + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(_notifyBase) }).catch(() => {});
+      if (_rEmail) fetch(new URL(req.url).origin + '/api/notify/status-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trackingCode: codeSR, newStatus: 'nouveau', email: _rEmail, schoolId: schoolSR.id }) }).catch(() => {});
+    } catch (_) {}
     return cors({ ok: true, tracking_code: codeSR, report_id: dataSR[0]?.id }, 201, req);
   }
   // LISTE SIGNALEMENTS ADMIN
@@ -439,6 +447,13 @@ export default async (req: Request, context: Context) => {
         fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: sr_entry.id, reportId: sr_data[0]?.id, trackingCode: sr_code, urgency: sr_body.urgency || "moyen", type: sr_body.type, adminEmail: _adminEmail }) }).catch(() => {});
       }
     } catch (_ne) {}
+    // Sprint1: emails automatiques
+    try {
+      const _rEmail2 = String(sr_body?.reporter_email || sr_body?.contact || '');
+      const _aEmail2 = String(sr_school?.admin_email || '');
+      fetch(new URL(req.url).origin + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: sr_school?.id, trackingCode: sr_code, reportId: sr_data[0]?.id, urgency: String(sr_body?.urgency || 'moyen'), type: String(sr_body?.type || 'autre'), adminEmail: _aEmail2 }) }).catch(() => {});
+      if (_rEmail2) fetch(new URL(req.url).origin + '/api/notify/status-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trackingCode: sr_code, newStatus: 'nouveau', email: _rEmail2, schoolId: sr_school?.id }) }).catch(() => {});
+    } catch (_) {}
     return cors({ ok: true, tracking_code: sr_code, report_id: sr_data[0]?.id }, 201, req);
   }
 
@@ -483,6 +498,13 @@ export default async (req: Request, context: Context) => {
         fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: school.id, reportId: insertData[0]?.id, trackingCode: code, urgency: body.urgency || "moyen", type: body.type, adminEmail: _adminEmail }) }).catch(() => {});
       }
     } catch (_ne) {}
+    // Sprint1: emails automatiques
+    try {
+      const _rEmail3 = String(body?.reporter_email || body?.contact || '');
+      const _aEmail3 = String(school?.admin_email || '');
+      fetch(new URL(req.url).origin + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: school?.id, trackingCode: code, reportId: insertData[0]?.id, urgency: String(body?.urgency || 'moyen'), type: String(body?.type || 'autre'), adminEmail: _aEmail3 }) }).catch(() => {});
+      if (_rEmail3) fetch(new URL(req.url).origin + '/api/notify/status-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trackingCode: code, newStatus: 'nouveau', email: _rEmail3, schoolId: school?.id }) }).catch(() => {});
+    } catch (_) {}
     return cors({ ok: true, tracking_code: code, report_id: insertData[0]?.id }, 201, req);
   }
 
