@@ -94,39 +94,24 @@ async function clearRateLimit(ip: string): Promise<void> {
 
 export default async (req: Request, context: Context) => {
   if (req.method === 'OPTIONS') 
-  // === SYNC SUPABASE + NETLIFY ===
-  const supaUrl = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-  const supaKey = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const netlifyToken = Netlify.env.get('NETLIFY_API_TOKEN') || '';
-  const netlifySiteId = Netlify.env.get('NETLIFY_SITE_ID') || '';
-
-  if (supaUrl && supaKey) {
-    await fetch(supaUrl + '/rest/v1/schools', {
+  // SYNC SUPABASE + NETLIFY
+  const _supaUrl = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+  const _supaKey = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const _netlifyToken = Netlify.env.get('NETLIFY_API_TOKEN') || '';
+  const _netlifySiteId = Netlify.env.get('NETLIFY_SITE_ID') || '';
+  if (_supaUrl && _supaKey) {
+    await fetch(_supaUrl + '/rest/v1/schools', {
       method: 'POST',
-      headers: { apikey: supaKey, Authorization: 'Bearer ' + supaKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        name: body.name, slug: slug, city: body.city || '', postal_code: body.postal_code || body.cp || '',
-        admin_code: password, admin_email: body.admin_email || body.email || '',
-        admin_name: body.admin_name || '', is_active: true,
-        type: body.type || 'lycee', plan_code: body.plan || 'standard', sector: body.sector || 'public',
-        country_code: 'FR'
-      })
+      headers: { apikey: _supaKey, Authorization: 'Bearer ' + _supaKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ name: body.name, slug: slug, city: body.city || '', postal_code: body.postal_code || body.cp || '', admin_code: password, admin_email: body.admin_email || body.email || '', admin_name: body.admin_name || '', is_active: true, type: body.type || 'lycee', plan_code: body.plan || 'standard', sector: body.sector || 'public', country_code: 'FR' })
     }).catch(() => {});
   }
-
-  if (netlifyToken && netlifySiteId) {
-    const subdomain = slug + '.safeschool.fr';
-    const siteInfo = await fetch('https://api.netlify.com/api/v1/sites/' + netlifySiteId, {
-      headers: { Authorization: 'Bearer ' + netlifyToken }
-    }).then(r => r.json()).catch(() => ({ domain_aliases: [] }));
-    const newAliases = [...(siteInfo.domain_aliases || []).filter((d:string) => d !== subdomain), subdomain];
-    await fetch('https://api.netlify.com/api/v1/sites/' + netlifySiteId, {
-      method: 'PATCH',
-      headers: { Authorization: 'Bearer ' + netlifyToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain_aliases: newAliases })
-    }).catch(() => {});
+  if (_netlifyToken && _netlifySiteId) {
+    const _subdomain = slug + '.safeschool.fr';
+    const _siteInfo = await fetch('https://api.netlify.com/api/v1/sites/' + _netlifySiteId, { headers: { Authorization: 'Bearer ' + _netlifyToken } }).then(r => r.json()).catch(() => ({ domain_aliases: [] }));
+    const _aliases = (_siteInfo.domain_aliases || []).filter((d: any) => d !== _subdomain).concat([_subdomain]);
+    await fetch('https://api.netlify.com/api/v1/sites/' + _netlifySiteId, { method: 'PATCH', headers: { Authorization: 'Bearer ' + _netlifyToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ domain_aliases: _aliases }) }).catch(() => {});
   }
-
 return cors({ ok: true });
 
   const url = new URL(req.url);
@@ -374,7 +359,7 @@ if (path === '/dns-catchup' && req.method === 'POST') {
     const slugs: string[] = bd.slugs || [];
     const results: any[] = [];
     for (const slug of slugs) {
-      const domain = 'https://app.safeschool.fr/?etab=' + slug;
+      const domain = slug + '.safeschool.fr';
       const r = await fetch('https://api.netlify.com/api/v1/sites/' + siteId + '/domain_aliases', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
