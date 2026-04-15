@@ -11,12 +11,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:linear-g
 .logo{text-align:center;margin-bottom:1.5rem}
 .logo h1{font-size:1.4rem;font-weight:700;color:#111;margin-top:.5rem}
 .logo p{color:#888;font-size:.85rem}
-label{display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:.4rem}
-input{width:100%;padding:.75rem;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;outline:none;margin-bottom:1rem}
-input:focus{border-color:#4f46e5}
-.btn{width:100%;padding:.8rem;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer}
-.btn:disabled{opacity:.5}
-.err{color:#dc2626;font-size:.85rem;text-align:center;margin-top:.75rem;display:none}
+.lbl{display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:.4rem;margin-top:.9rem}
+.inp{width:100%;padding:.75rem;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;outline:none}
+.inp:focus{border-color:#4f46e5}
+.btn{width:100%;padding:.85rem;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1.25rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.err{color:#dc2626;font-size:.85rem;text-align:center;margin-top:.75rem;padding:.5rem;border-radius:6px;background:#fef2f2;display:none}
 </style>
 </head>
 <body>
@@ -26,58 +26,69 @@ input:focus{border-color:#4f46e5}
     <h1>SafeSchool</h1>
     <p>Espace administrateur</p>
   </div>
-  <label for="inp-email">Email administrateur</label>
-  <input type="email" id="inp-email" placeholder="proviseur@lycee.fr" autocomplete="email">
-  <label for="inp-code">Code d'accès</label>
-  <input type="password" id="inp-code" placeholder="Code reçu (ex: SSABCD12)" autocomplete="current-password">
-  <button class="btn" id="inp-btn" onclick="tryLogin()">Se connecter</button>
-  <div class="err" id="inp-err"></div>
+  <span class="lbl">Email administrateur</span>
+  <input class="inp" type="email" id="f-email" placeholder="proviseur@lycee.fr" autocomplete="email">
+  <span class="lbl">Code d'accès</span>
+  <input class="inp" type="password" id="f-code" placeholder="Code reçu (ex: SSABCD12)" autocomplete="current-password">
+  <button class="btn" id="f-btn" onclick="doLogin()">Se connecter</button>
+  <div class="err" id="f-err"></div>
 </div>
 <script>
-var _slug = new URLSearchParams(location.search).get('etab') || '';
+document.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
 
-async function tryLogin() {
-  var email = document.getElementById('inp-email').value.trim().toLowerCase();
-  var code = document.getElementById('inp-code').value.trim().toUpperCase();
-  var btn = document.getElementById('inp-btn');
-  var err = document.getElementById('inp-err');
-  err.style.display = 'none';
-  if (!email || !code) { err.textContent = 'Remplissez les deux champs'; err.style.display = 'block'; return; }
+async function doLogin() {
+  var slug = new URLSearchParams(location.search).get('etab') || '';
+  var email = (document.getElementById('f-email').value || '').trim().toLowerCase();
+  var code = (document.getElementById('f-code').value || '').trim().toUpperCase();
+  var btn = document.getElementById('f-btn');
+  var errEl = document.getElementById('f-err');
+  errEl.style.display = 'none';
+  if (!email || !code) { showErr('Remplissez les deux champs'); return; }
   btn.disabled = true;
   btn.textContent = 'Connexion...';
   try {
-    var token = null, slug = null, name = null;
-    if (_slug) {
-      var r1 = await fetch('/api/establishments/admin-jwt/' + _slug, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
+    var token = null, finalSlug = null, name = null;
+    // Essai 1: par slug si disponible dans URL
+    if (slug) {
+      var r1 = await fetch('/api/establishments/admin-jwt/' + slug, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({admin_code: code})
       });
       var d1 = await r1.json();
-      if (r1.ok && d1.ok) { token = d1.token; slug = _slug; name = d1.school_name; }
+      if (d1.ok && d1.token) { token = d1.token; finalSlug = slug; name = d1.school_name; }
     }
+    // Essai 2: par email+code
     if (!token) {
       var r2 = await fetch('/api/establishments/admin-jwt-by-email', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({email: email, admin_code: code})
       });
       var d2 = await r2.json();
-      if (r2.ok && d2.ok) { token = d2.token; slug = d2.slug; name = d2.school_name; }
-      else { err.textContent = d2.error || 'Email ou code incorrect'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Se connecter'; return; }
+      if (d2.ok && d2.token) { token = d2.token; finalSlug = d2.slug; name = d2.school_name; }
+      else { showErr(d2.error || 'Email ou code incorrect'); btn.disabled=false; btn.textContent='Se connecter'; return; }
     }
+    // Stocker dans localStorage ET cookie
     localStorage.setItem('ss_admin_token', token);
-    localStorage.setItem('ss_admin_slug', slug);
+    localStorage.setItem('ss_admin_slug', finalSlug);
     localStorage.setItem('ss_admin_code', code);
-    localStorage.setItem('ss_admin_school', name || slug);
-    document.cookie = 'ss_admin_token=' + token + '; path=/; max-age=86400; SameSite=Strict';
-    location.href = '/admin/dashboard.html?etab=' + slug;
+    localStorage.setItem('ss_admin_school', name || finalSlug);
+    document.cookie = 'ss_admin_token=' + token + '; path=/; max-age=86400; SameSite=Lax';
+    // Rediriger vers dashboard
+    window.location.replace('/admin/dashboard.html?etab=' + finalSlug);
   } catch(e) {
-    err.textContent = 'Erreur reseau. Reessayez.';
-    err.style.display = 'block';
+    showErr('Erreur réseau. Réessayez.');
     btn.disabled = false;
     btn.textContent = 'Se connecter';
   }
 }
-document.addEventListener('keydown', function(e){ if(e.key==='Enter') tryLogin(); });
+
+function showErr(msg) {
+  var e = document.getElementById('f-err');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
 </script>
 </body>
 </html>
