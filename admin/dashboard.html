@@ -101,6 +101,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f2f5;
 .ub{display:inline-block;padding:.2rem .6rem;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase}
 .ub.critique{background:#fee2e2;color:#991b1b}.ub.eleve{background:#ffedd5;color:#9a3412}.ub.moyen{background:#fef3c7;color:#92400e}.ub.faible{background:#f0fdf4;color:#166534}
 @media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}}
+.baro-ring{width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;position:relative;background:conic-gradient(var(--bc,#10b981) 0% var(--bp,20%),#e5e7eb var(--bp,20%) 100%)}
+.baro-inner{width:120px;height:120px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.baro-score{font-size:2.5rem;font-weight:800;color:var(--bc,#10b981)}
+.baro-label{font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
+.lea-card{background:#fff;border-radius:12px;padding:1.5rem;border:1px solid #e5e7eb;margin-bottom:1rem}
+.lea-card h3{font-size:.95rem;font-weight:600;color:#374151;margin-bottom:.875rem;display:flex;align-items:center;gap:.5rem}
+.conseil-item{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem;border-radius:8px;background:#f8fafc;margin-bottom:.5rem}
+.conseil-num{width:24px;height:24px;border-radius:50%;background:#6366f1;color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.point-item{display:flex;align-items:flex-start;gap:.5rem;padding:.5rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+.point-item:last-child{border:none}
+.tendance-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .875rem;border-radius:20px;font-size:.85rem;font-weight:600}
+.tendance-hausse{background:#fee2e2;color:#991b1b}
+.tendance-stable{background:#fef3c7;color:#92400e}
+.tendance-baisse{background:#d1fae5;color:#065f46}
+.lea-loading{text-align:center;padding:3rem;color:#6b7280}
+.lea-loading .spin-icon{font-size:2rem;animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.report-frame{width:100%;min-height:400px;border:1px solid #e5e7eb;border-radius:8px;padding:1.25rem;background:#fff;font-family:Arial,sans-serif;font-size:.9rem;line-height:1.6}
 </style></head><body>
 <!-- Sidebar -->
 <div class="sb">
@@ -110,6 +128,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f2f5;
     <a onclick="nav('dash')" id="nav-dash" class="on"><span class="ico">&#128196;</span>Tableau de bord</a>
     <a onclick="nav('reports')" id="nav-reports"><span class="ico">&#128204;</span>Signalements</a>
     <a onclick="nav('team')" id="nav-team"><span class="ico">&#128101;</span>&#201;quipe</a>
+    <a onclick="nav('lea')" id="nav-lea"><span class="ico">&#129302;</span>L&#233;a IA</a>
     <div class="sep">Outils</div>
     <a onclick="nav('settings')" id="nav-settings"><span class="ico">&#9881;&#65039;</span>Param&#232;tres</a>
   </nav>
@@ -166,6 +185,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f2f5;
     </div>
   </div>
 </div>
+  <!-- Page: Léa IA -->
+  <div class="page" id="pg-lea">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <div>
+        <div style="font-size:.875rem;color:#6b7280">Analyse IA de votre &#233;tablissement par L&#233;a</div>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-outline btn-sm" onclick="loadLea()">&#8635; Actualiser</button>
+        <button class="btn btn-primary btn-sm" onclick="generateReport()">&#128196; G&#233;n&#233;rer rapport PDF</button>
+      </div>
+    </div>
+    <!-- Baromètre + Synthèse -->
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:1rem;margin-bottom:1rem">
+      <div class="lea-card" style="text-align:center">
+        <h3 style="justify-content:center">&#127777;&#65039; Barom&#232;tre risque</h3>
+        <div class="baro-ring" id="baro-ring" style="--bc:#10b981;--bp:20%">
+          <div class="baro-inner">
+            <div class="baro-score" id="baro-score" style="color:#10b981">-</div>
+            <div class="baro-label">/ 100</div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;font-size:.875rem;font-weight:600;color:#374151" id="baro-niveau">Chargement...</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem;font-size:.8rem">
+          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem" id="bl-total">-</div><div style="color:#6b7280">Total</div></div>
+          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem;color:#f59e0b" id="bl-new">-</div><div style="color:#6b7280">Nouveaux</div></div>
+          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem;color:#ef4444" id="bl-urg">-</div><div style="color:#6b7280">Urgents</div></div>
+          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem;color:#10b981" id="bl-30">-</div><div style="color:#6b7280">30 jours</div></div>
+        </div>
+      </div>
+      <div class="lea-card">
+        <h3>&#129302; Analyse de L&#233;a</h3>
+        <div id="lea-synthese"><div class="lea-loading"><span class="spin-icon">&#129302;</span><br>L&#233;a analyse vos donn&#233;es...</div></div>
+      </div>
+    </div>
+    <!-- Points d'attention + Conseils -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+      <div class="lea-card">
+        <h3>&#9888;&#65039; Points d'attention</h3>
+        <div id="lea-points"><div class="lea-loading">En attente...</div></div>
+      </div>
+      <div class="lea-card">
+        <h3>&#128161; Conseils prioritaires</h3>
+        <div id="lea-conseils"><div class="lea-loading">En attente...</div></div>
+      </div>
+    </div>
+    <!-- Rapport -->
+    <div class="lea-card" id="lea-report-section" style="display:none">
+      <h3>&#128196; Rapport mensuel g&#233;n&#233;r&#233; par L&#233;a</h3>
+      <div id="lea-report-content" class="report-frame"></div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button class="btn btn-outline" onclick="printLeaReport()">&#128424; Imprimer</button>
+      </div>
+    </div>
+  </div>
+
 <!-- Modal signalement -->
 <div class="ov" id="ov" onclick="if(event.target===this)doCl()">
   <div class="mbox">
@@ -310,6 +384,7 @@ function nav(p) {
   document.getElementById("page-title").innerHTML = titles[p] || p;
   if (p === "team") loadTeam();
   if (p === "settings") loadSettings();
+  if (p === "lea") loadLea();
 }
 function mtab(i) {
   document.querySelectorAll(".mtab").forEach(function(el, idx){ el.classList.toggle("on", idx === i); });
@@ -610,6 +685,101 @@ function printReport() {
 }
 function doCl() { document.getElementById("ov").classList.remove("on"); }
 function doOut() { localStorage.clear(); document.cookie = "ss_admin_token=; path=/; max-age=0"; location.href = "/admin/login"; }
+
+// === LEA IA ===
+var _leaData = null;
+var _leaReport = "";
+
+function loadLea() {
+  if (!_tok) return;
+  // Baromètre immédiat (pas besoin de clé Anthropic)
+  fetch("/api/lea/barometer", { method: "POST", headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" } })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var score = d.score || 0;
+      var pct = score + "%";
+      var el = document.getElementById("baro-ring");
+      if (el) { el.style.setProperty("--bc", d.couleur || "#10b981"); el.style.setProperty("--bp", pct); }
+      var es = document.getElementById("baro-score");
+      if (es) { es.textContent = score; es.style.color = d.couleur || "#10b981"; }
+      var niveauTxt = { faible: "&#127881; Niveau FAIBLE", modere: "&#9888;&#65039; Niveau MOD&#201;R&#201;", eleve: "&#128308; Niveau &#201;LEV&#201;", critique: "&#128680; Niveau CRITIQUE" };
+      var en = document.getElementById("baro-niveau");
+      if (en) en.innerHTML = niveauTxt[d.niveau] || d.niveau || "-";
+      if (document.getElementById("bl-total")) document.getElementById("bl-total").textContent = d.total || 0;
+      if (document.getElementById("bl-new")) document.getElementById("bl-new").textContent = d.nouveau || 0;
+      if (document.getElementById("bl-urg")) document.getElementById("bl-urg").textContent = d.critique_urgent || 0;
+      if (document.getElementById("bl-30")) document.getElementById("bl-30").textContent = d.last30 || 0;
+    })
+    .catch(function(e){ console.error("Baromètre error:", e); });
+  // Analyse IA (nécessite ANTHROPIC_API_KEY)
+  var syEl = document.getElementById("lea-synthese");
+  if (syEl) syEl.innerHTML = '<div class="lea-loading"><span class="spin-icon">&#129302;</span><br>L&#233;a analyse vos donn&#233;es...</div>';
+  fetch("/api/lea/analyze", { method: "POST", headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" } })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _leaData = d;
+      if (d.error || !d.analysis) {
+        var msg = d.analysis ? "" : "L'analyse IA n'est pas encore activ&#233;e. Configurez ANTHROPIC_API_KEY dans Netlify.";
+        if (syEl) syEl.innerHTML = '<div style="color:#92400e;background:#fef3c7;padding:1rem;border-radius:8px;font-size:.875rem">&#9888;&#65039; ' + msg + '</div>';
+        return;
+      }
+      var a = d.analysis;
+      // Synthèse
+      var tendCls = { hausse: "tendance-hausse", stable: "tendance-stable", baisse: "tendance-baisse" };
+      var tendIco = { hausse: "&#8679;", stable: "&#8596;", baisse: "&#8681;" };
+      var synHtml = '<p style="font-size:.9rem;color:#374151;line-height:1.6;margin-bottom:1rem">' + (a.synthese || "") + '</p>';
+      synHtml += '<div style="display:flex;align-items:center;gap:.75rem"><span class="tendance-badge ' + (tendCls[a.tendance] || "tendance-stable") + '">' + (tendIco[a.tendance] || "") + " Tendance " + (a.tendance || "stable") + '</span></div>';
+      if (a.message_equipe) synHtml += '<div style="margin-top:1rem;padding:.875rem;background:#eff6ff;border-radius:8px;border-left:4px solid #6366f1;font-size:.875rem;color:#1e40af;font-style:italic">&#128140; ' + a.message_equipe + '</div>';
+      if (syEl) syEl.innerHTML = synHtml;
+      // Points d'attention
+      var ptEl = document.getElementById("lea-points");
+      if (ptEl && a.points_attention) {
+        ptEl.innerHTML = (a.points_attention || []).map(function(pt){
+          return '<div class="point-item"><span style="color:#ef4444;flex-shrink:0">&#9679;</span><span>' + pt + '</span></div>';
+        }).join("");
+        if (!a.points_attention.length) ptEl.innerHTML = '<div style="color:#9ca3af;font-size:.875rem">Aucun point critique identifi&#233;</div>';
+      }
+      // Conseils
+      var coEl = document.getElementById("lea-conseils");
+      if (coEl && a.conseils) {
+        coEl.innerHTML = (a.conseils || []).map(function(c, i){
+          return '<div class="conseil-item"><div class="conseil-num">' + (i+1) + '</div><div style="font-size:.875rem;color:#374151">' + c + '</div></div>';
+        }).join("");
+        if (!a.conseils.length) coEl.innerHTML = '<div style="color:#9ca3af;font-size:.875rem">Aucun conseil sp&#233;cifique</div>';
+      }
+    })
+    .catch(function(e){
+      if (syEl) syEl.innerHTML = '<div style="color:#6b7280;font-size:.875rem">Erreur connexion IA: ' + e.message + '</div>';
+    });
+}
+
+function generateReport() {
+  var secEl = document.getElementById("lea-report-section");
+  var conEl = document.getElementById("lea-report-content");
+  if (secEl) secEl.style.display = "block";
+  if (conEl) conEl.innerHTML = '<div class="lea-loading"><span class="spin-icon">&#129302;</span><br>L&#233;a r&#233;dige votre rapport...</div>';
+  fetch("/api/lea/report", { method: "POST", headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" } })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _leaReport = d.html || "";
+      if (d.error || !d.html) {
+        if (conEl) conEl.innerHTML = '<div style="color:#92400e">Erreur: ' + (d.error || "L'IA n'est pas configur&#233;e") + '</div>';
+        return;
+      }
+      if (conEl) conEl.innerHTML = d.html;
+      if (secEl) secEl.scrollIntoView({ behavior: "smooth" });
+    })
+    .catch(function(e){ if (conEl) conEl.innerHTML = '<div style="color:#6b7280">Erreur: ' + e.message + '</div>'; });
+}
+
+function printLeaReport() {
+  if (!_leaReport) return;
+  var w = window.open("", "_blank");
+  w.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>Rapport Léa SafeSchool</title><style>body{font-family:Arial,sans-serif;padding:2rem;max-width:800px;margin:0 auto}h1,h2,h3{color:#1a1a2e}table{width:100%;border-collapse:collapse}td,th{padding:.5rem;border:1px solid #e5e7eb}@media print{button{display:none}}</style></head><body>");
+  w.document.write(_leaReport);
+  w.document.write("<br><button onclick=window.print()>Imprimer</button></body></html>");
+  w.document.close();
+}
 // Init
 doLoad();
 loadTeam();
