@@ -108,6 +108,7 @@ textarea:focus{outline:none;border-color:#4f46e5}
 
 <script>
 const tok = localStorage.getItem('ss_admin_token');
+const adminCode = localStorage.getItem('ss_admin_code') || '';
 const slug = localStorage.getItem('ss_admin_slug') || new URLSearchParams(location.search).get('etab');
 const sname = localStorage.getItem('ss_admin_school') || '';
 if(!tok || !slug){ location.href='/admin/login'; }
@@ -115,7 +116,7 @@ document.getElementById('sname').textContent = sname;
 let all = [];
 
 async function api(url, opts={}) {
-  const r = await fetch(url, { ...opts, headers: { 'Authorization': 'Bearer '+tok, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
+  const r = await fetch(url, { ...opts, headers: { 'Authorization': 'Bearer '+tok, 'x-admin-code': adminCode, 'Content-Type': 'application/json', ...(opts.headers||{}) } });
   if(r.status===401){ logout(); return null; }
   return r.json();
 }
