@@ -242,14 +242,14 @@ export default async (req: Request, context: Context) => {
     if (!sJ || !cJ) return cors({error:'Params requis'},400,req);
     const suJ = Netlify.env.get('aSUPABASE_URL')||Netlify.env.get('SUPABASE_URL')||'';
     const skJ = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
-    const rJ = await fetch(suJ+'/rest/v1/schools?slug=eq.'+sJ+'&select=id,name,slug,is_active,admin_code,plan_code',{headers:{apikey:skJ,Authorization:'Bearer '+skJ}});
+    const rJ = await fetch(suJ+'/rest/v1/schools?slug=eq.'+sJ+'&select=id,name,slug,city,postal_code,is_active,admin_code,plan_code',{headers:{apikey:skJ,Authorization:'Bearer '+skJ}});
     const schs: any[] = await rJ.json();
     if (!schs?.length||!schs[0].is_active) return cors({error:'Etablissement non trouve'},404,req);
     const sc=schs[0];
     if (!sc.admin_code||cJ!==sc.admin_code) return cors({error:'Code incorrect'},401,req);
     const sec=Netlify.env.get('ADMIN_JWT_SECRET')||'safeschool_change_me';
     const h64=btoa(JSON.stringify({alg:'HS256',typ:'JWT'})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-    const p64=btoa(JSON.stringify({slug:sJ,school_id:sc.id,school_name:sc.name,role:'admin',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+86400})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    const p64=btoa(JSON.stringify({slug:sJ,school_id:sc.id,school_name:sc.name,city:sc.city||'',postal_code:sc.postal_code||'',role:'admin',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+86400})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
     const msg=h64+'.'+p64;
     const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(sec),{name:'HMAC',hash:'SHA-256'},false,['sign']);
     const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(msg));
