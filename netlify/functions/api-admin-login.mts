@@ -1,42 +1,29 @@
-export default async (req) => {
-  const hdrs = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
-  if (req.method === 'OPTIONS') return new Response('{}', { status: 200, headers: hdrs });
-  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: hdrs });
-  
+import type { Context, Config } from '@netlify/functions';
+export default async (req: Request, _ctx: Context) => {
+  const ok = (d: object, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+  if (req.method === 'OPTIONS') return ok({});
+  if (req.method !== 'POST') return ok({ error: 'Method not allowed' }, 405);
+  let body: any = {};
+  try { body = await req.json(); } catch { return ok({ error: 'Corps invalide' }, 400); }
+  const email = (body.email || '').trim().toLowerCase();
+  const code = (body.admin_code || body.code || '').trim().toUpperCase();
+  if (!email || !code) return ok({ error: 'Email et code requis' }, 400);
   const SU = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
   const SK = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const SECRET = Netlify.env.get('ADMIN_JWT_SECRET') || 'safeschool_jwt_secret_change_me';
-
-  let body = {}; try { body = await req.json(); } catch { return new Response(JSON.stringify({ error: 'Corps invalide' }), { status: 400, headers: hdrs }); }
-  const slug = String(body.slug || '').toLowerCase().trim();
-  const admin_code = String(body.admin_code || '').trim();
-  if (!slug || !admin_code) return new Response(JSON.stringify({ error: 'Slug et code requis' }), { status: 400, headers: hdrs });
-
-  const resp = await fetch(SU + '/rest/v1/schools?slug=eq.' + encodeURIComponent(slug) + '&select=id,name,slug,is_active,admin_code,plan_code', {
-    headers: { 'apikey': SK, 'Authorization': 'Bearer ' + SK }
+  if (!SU || !SK) return ok({ error: 'Config manquante' }, 500);
+  const r = await fetch(SU + '/rest/v1/schools?admin_email=eq.' + encodeURIComponent(email) + '&admin_code=eq.' + encodeURIComponent(code) + '&is_active=eq.true&select=id,name,slug,admin_code,plan_code', {
+    headers: { apikey: SK, Authorization: 'Bearer ' + SK }
   });
-  const schools = await resp.json();
-  if (!schools || !schools.length || !schools[0].is_active) return new Response(JSON.stringify({ error: 'Etablissement non trouve' }), { status: 404, headers: hdrs });
-  const school = schools[0];
-  if (!school.admin_code || admin_code !== school.admin_code) return new Response(JSON.stringify({ error: 'Code incorrect' }), { status: 401, headers: hdrs });
-
-  // JWT HS256 avec base64url via Uint8Array (safe pour tous les bytes)
-  const b64u = (buf) => {
-    const bytes = buf instanceof Uint8Array ? buf : new TextEncoder().encode(buf);
-    let bin = '';
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  };
-  const jh = b64u(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const jp = b64u(JSON.stringify({ slug, school_id: school.id, school_name: school.name, plan: school.plan_code || 'standard', role: 'admin', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400 }));
-  const jm = jh + '.' + jp;
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sigBuf = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(jm)));
-  const token = jm + '.' + b64u(sigBuf);
-
-  return new Response(JSON.stringify({ ok: true, token, school_name: school.name, role: 'admin' }), {
-    status: 200,
-    headers: { ...hdrs, 'Set-Cookie': 'ss_admin_token=' + token + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400' }
-  });
+  const schools = await r.json();
+  if (!Array.isArray(schools) || schools.length === 0) return ok({ error: 'Email ou code incorrect' }, 401);
+  const sc = schools[0];
+  const sec = Netlify.env.get('ADMIN_JWT_SECRET') || 'safeschool_change_me';
+  const h = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const p = btoa(JSON.stringify({ slug: sc.slug, school_id: sc.id, school_name: sc.name, role: 'admin', iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000) + 86400 })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const msg = h + '.' + p;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(sec), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+  const tok = msg + '.' + btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return ok({ ok: true, token: tok, school_name: sc.name, slug: sc.slug, role: 'admin' });
 };
-export const config = { path: '/api/admin/login' };
+export const config: Config = { path: ['/api/establishments/admin-jwt-by-email'] };
