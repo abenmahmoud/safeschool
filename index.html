@@ -1945,6 +1945,7 @@ function renderHomePage() {
   </div>
   <div style="height:16px"></div>
   <div style="padding:0 20px 8px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button class="btn btn-soft btn-full" onclick="openAdminTestFlow()">🛠️ ${t('adminDash')}</button>
     <button class="btn btn-ghost btn-full btn-sm" onclick="go('myreport')">🔎 ${t('trackCase')}</button>
   </div>
   <div style="height:20px"></div>
@@ -1974,6 +1975,7 @@ function renderHomePage() {
 // ═══════════════════════════════════════════
 // TEST / DEMO SHORTCUTS
 // ═══════════════════════════════════════════
+function openAdminTestFlow(){
   if (!currentEtab) { showEtabSelector(); return; }
   if (adminIn) { go('dashboard'); return; }
   showAdminLogin();
@@ -3194,6 +3196,7 @@ function renderProfile(){
   <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);margin-top:14px">
     <div style="height:14px"></div>
     <button class="btn btn-ghost btn-full btn-sm" onclick="showEtabSelector()">🏫 Changer d'établissement</button>
+    <button class="btn btn-soft btn-full btn-sm" onclick="openAdminTestFlow()">⚙️ Dashboard admin</button>
     <button class="btn btn-ghost btn-full btn-sm" onclick="clearAppCache()" style="color:#dc2626;border-color:rgba(220,38,38,.2)">🗑️ Vider le cache (corriger les bugs)</button>
     <p style="font-size:.68rem;color:var(--ts);text-align:center;margin-top:4px">Version ${SS_APP_VERSION}</p>
   </div>
