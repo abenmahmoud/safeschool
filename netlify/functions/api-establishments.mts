@@ -233,7 +233,6 @@ export default async (req: Request, context: Context) => {
 
     const url = new URL(req.url);
     const path = url.pathname.replace('/api/establishments', '');
-
   // ADMIN JWT LOGIN
   if (req.method === 'POST' && path.startsWith('/admin-jwt/')) {
     const sJ = (path.split('/admin-jwt/')[1]||'').split('?')[0].toLowerCase();
@@ -254,7 +253,7 @@ export default async (req: Request, context: Context) => {
     const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(sec),{name:'HMAC',hash:'SHA-256'},false,['sign']);
     const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(msg));
     const tok=msg+'.'+btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-    return new Response(JSON.stringify({ok:true,token:tok,school_name:sc.name,role:'admin'}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Set-Cookie':'ss_admin_token='+tok+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400'}});
+    return new Response(JSON.stringify({ok:true,token:tok,school_name:sc.name,city:sc.city||'',postal_code:sc.postal_code||'',role:'admin'}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Set-Cookie':'ss_admin_token='+tok+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400'}});
   }
     const store = getStore({ name: 'establishments', consistency: 'strong' });
 
