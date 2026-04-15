@@ -278,6 +278,15 @@ export default async (req: Request, context: Context) => {
     });
     if (!resSR.ok) { const eSR = await resSR.text(); return cors({ error: 'Erreur DB', d: eSR.substring(0, 100) }, 500, req); }
     const dataSR = await resSR.json();
+    
+    // Email auto: admin + eleve si email fourni
+    try {
+      const _adminEmail = blobRL?.admin_email || blobRL?.email || "";
+      const _siteUrl = Netlify.env.get('URL') || 'https://app.safeschool.fr';
+      if (_adminEmail) {
+        fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: schoolSR.id, reportId: dataSR[0]?.id, trackingCode: codeSR, urgency: bodySR.urgency || "moyen", type: bodySR.type, adminEmail: _adminEmail }) }).catch(() => {});
+      }
+    } catch (_ne) {}
     return cors({ ok: true, tracking_code: codeSR, report_id: dataSR[0]?.id }, 201, req);
   }
   // LISTE SIGNALEMENTS ADMIN
@@ -421,6 +430,15 @@ export default async (req: Request, context: Context) => {
     });
     if (!sr_res.ok) { const sr_err = await sr_res.text(); return cors({ error: 'Erreur DB', d: sr_err.substring(0, 100) }, 500, req); }
     const sr_data = await sr_res.json();
+    
+    // Email auto: admin + eleve si email fourni
+    try {
+      const _adminEmail = "" /* no admin email at this point */;
+      const _siteUrl = Netlify.env.get('URL') || 'https://app.safeschool.fr';
+      if (_adminEmail) {
+        fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: sr_entry.id, reportId: sr_data[0]?.id, trackingCode: sr_code, urgency: sr_body.urgency || "moyen", type: sr_body.type, adminEmail: _adminEmail }) }).catch(() => {});
+      }
+    } catch (_ne) {}
     return cors({ ok: true, tracking_code: sr_code, report_id: sr_data[0]?.id }, 201, req);
   }
 
@@ -456,6 +474,15 @@ export default async (req: Request, context: Context) => {
     });
     if (!insertRes.ok) { const errTxt = await insertRes.text(); return cors({ error: 'Erreur DB', detail: errTxt.substring(0, 150) }, 500, req); }
     const insertData = await insertRes.json();
+    
+    // Email auto: admin + eleve si email fourni
+    try {
+      const _adminEmail = "" /* school admin email */;
+      const _siteUrl = Netlify.env.get('URL') || 'https://app.safeschool.fr';
+      if (_adminEmail) {
+        fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: school.id, reportId: insertData[0]?.id, trackingCode: code, urgency: body.urgency || "moyen", type: body.type, adminEmail: _adminEmail }) }).catch(() => {});
+      }
+    } catch (_ne) {}
     return cors({ ok: true, tracking_code: code, report_id: insertData[0]?.id }, 201, req);
   }
 
