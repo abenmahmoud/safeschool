@@ -1,788 +1,463 @@
 <!DOCTYPE html>
 <html lang="fr"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SafeSchool Admin</title>
+<title>SafeSchool Admin</title><meta name="robots" content="noindex,nofollow">
 <style>
+:root{--primary:#4f46e5;--primary-dark:#4338ca;--bg:#f0f2f5;--white:#fff;--border:#e5e7eb;--text:#111;--muted:#6b7280;--danger:#dc2626;--success:#059669;--warn:#d97706}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f2f5;color:#111;display:flex;min-height:100vh}
-/* Sidebar */
-.sb{width:220px;background:#1a1a2e;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;overflow-y:auto}
-.sb-logo{padding:1.25rem 1.5rem;border-bottom:1px solid rgba(255,255,255,.1);font-size:1rem;font-weight:700}
-.sb-school{padding:.5rem 1.5rem .75rem;font-size:.75rem;color:#a5b4fc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sb-nav{flex:1;padding:.75rem 0}
-.sb-nav a{display:flex;align-items:center;gap:.625rem;padding:.65rem 1.5rem;color:#cbd5e1;font-size:.875rem;text-decoration:none;cursor:pointer;transition:background .15s}
-.sb-nav a:hover,.sb-nav a.on{background:rgba(255,255,255,.08);color:#fff}
-.sb-nav a.on{border-left:3px solid #6366f1}
-.sb-nav .ico{font-size:1rem;width:1.25rem;text-align:center}
-.sb-nav .sep{padding:.4rem 1.5rem;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-top:.5rem}
-.sb-foot{padding:1rem 1.5rem;border-top:1px solid rgba(255,255,255,.1)}
-.sb-foot button{width:100%;padding:.55rem;background:transparent;border:1px solid rgba(255,255,255,.2);color:#cbd5e1;border-radius:6px;cursor:pointer;font-size:.8rem}
-.sb-foot button:hover{background:rgba(255,255,255,.08);color:#fff}
-/* Main */
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:var(--primary);text-decoration:none}
+.layout{display:flex;min-height:100vh}
+.sb{width:220px;background:#1a1a2e;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50}
+.sb-logo{padding:1.25rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.5rem}
+.sb-logo h1{font-size:.95rem;font-weight:700}
+.sb-logo p{font-size:.7rem;color:#a5b4fc;margin-top:.1rem}
+.sb-nav{flex:1;padding:.5rem 0}
+.sb-item{display:flex;align-items:center;gap:.625rem;padding:.65rem 1rem;color:rgba(255,255,255,.7);cursor:pointer;transition:all .15s;font-size:.875rem;border:none;background:none;width:100%;text-align:left}
+.sb-item:hover,.sb-item.active{background:rgba(255,255,255,.08);color:#fff}
+.sb-item.active{border-left:3px solid var(--primary);padding-left:calc(1rem - 3px)}
+.sb-item .ico{font-size:1rem;width:20px;text-align:center}
+.sb-foot{padding:1rem;border-top:1px solid rgba(255,255,255,.1)}
+.sb-school{font-size:.75rem;color:#a5b4fc;padding:.5rem 1rem;font-weight:500}
 .main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
-.topbar h2{font-size:1.1rem;font-weight:700;color:#111}
-.topbar .actions{display:flex;align-items:center;gap:.75rem}
-.page{padding:1.5rem;display:none}
-.page.on{display:block}
-/* Stats */
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar h2{font-size:1rem;font-weight:600}
+.topbar .actions{display:flex;gap:.5rem;align-items:center}
+.content{padding:1.5rem;flex:1}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem}
-.stat{background:#fff;border-radius:12px;padding:1.25rem;border:1px solid #e5e7eb;position:relative;overflow:hidden}
-.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,#6366f1)}
-.stat .n{font-size:2rem;font-weight:700;color:var(--c,#111)}
-.stat .l{font-size:.75rem;color:#6b7280;margin-top:.2rem}
-.stat.s1{--c:#6366f1}.stat.s2{--c:#f59e0b}.stat.s3{--c:#10b981}.stat.s4{--c:#ef4444}
-/* Filters */
+.stat-card{background:var(--white);border-radius:12px;padding:1.125rem 1.25rem;border:1px solid var(--border)}
+.stat-card .val{font-size:2rem;font-weight:700;line-height:1}
+.stat-card .lbl{font-size:.75rem;color:var(--muted);margin-top:.35rem}
+.stat-card.c-blue .val{color:#2563eb}.stat-card.c-red .val{color:var(--danger)}.stat-card.c-green .val{color:var(--success)}.stat-card.c-warn .val{color:var(--warn)}
 .filters{display:flex;gap:.625rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
-.filters select,.filters input{padding:.5rem .875rem;border:1px solid #d1d5db;border-radius:8px;font-size:.875rem;background:#fff;outline:none}
+.filters select,.filters input{padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem;background:var(--white);outline:none;height:36px}
+.filters select:focus,.filters input:focus{border-color:var(--primary)}
 .filters input{flex:1;min-width:200px}
-.btn{display:inline-flex;align-items:center;gap:.375rem;padding:.5rem 1rem;border-radius:8px;font-size:.875rem;font-weight:500;cursor:pointer;border:none;transition:all .15s}
-.btn-primary{background:#6366f1;color:#fff}.btn-primary:hover{background:#4f46e5}
-.btn-outline{background:#fff;color:#374151;border:1px solid #d1d5db}.btn-outline:hover{border-color:#6366f1;color:#6366f1}
-.btn-sm{padding:.35rem .75rem;font-size:.8rem}
-.btn-danger{background:#fff;color:#dc2626;border:1px solid #fecaca}.btn-danger:hover{background:#fef2f2}
-/* List */
-.lst{display:flex;flex-direction:column;gap:.625rem}
-.card{background:#fff;border-radius:10px;padding:1.125rem;border:1px solid #e5e7eb;cursor:pointer;transition:box-shadow .15s;position:relative}
-.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:#c7d2fe}
-.card .r1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem}
-.card .cc{font-size:.7rem;font-family:monospace;color:#9ca3af;font-weight:600}
-.card .ct{font-size:.95rem;font-weight:600}
-.card .cx{font-size:.875rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px}
-.card .tgs{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center}
-.card .cdt{font-size:.75rem;color:#9ca3af;white-space:nowrap}
-.tag{display:inline-flex;align-items:center;padding:.175rem .55rem;border-radius:20px;font-size:.7rem;font-weight:500}
-.tnew{background:#dbeafe;color:#1d4ed8}.tpg{background:#fef3c7;color:#92400e}.tdn{background:#d1fae5;color:#065f46}.tan{background:#f3f4f6;color:#4b5563}
-.tug-c{background:#fee2e2;color:#991b1b}.tug-e{background:#ffedd5;color:#9a3412}.tug-m{background:#fef3c7;color:#92400e}.tug-f{background:#f0fdf4;color:#166534}
-.card .assigned-badge{position:absolute;top:.75rem;right:.75rem;font-size:.7rem;background:#e0e7ff;color:#4338ca;padding:.15rem .5rem;border-radius:20px}
-/* Modal */
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;overflow-y:auto;padding:1.5rem}
+.btn{display:inline-flex;align-items:center;gap:.375rem;padding:.5rem 1rem;border-radius:8px;font-size:.85rem;font-weight:500;cursor:pointer;border:none;transition:all .15s;height:36px}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark)}
+.btn-outline{background:var(--white);border:1.5px solid var(--border);color:var(--text)}.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-danger{background:var(--white);border:1.5px solid #fecaca;color:var(--danger)}.btn-danger:hover{background:#fef2f2}
+.btn-sm{padding:.3rem .7rem;font-size:.8rem;height:28px}
+.cards{display:flex;flex-direction:column;gap:.625rem}
+.rep-card{background:var(--white);border-radius:10px;padding:1rem 1.25rem;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s}
+.rep-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:#d1d5db}
+.rep-card.unread{border-left:4px solid var(--primary)}
+.rep-row1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.35rem}
+.rep-code{font-size:.7rem;font-family:monospace;color:var(--muted);font-weight:600;letter-spacing:.05em}
+.rep-type{font-size:.925rem;font-weight:600;color:var(--text)}
+.rep-desc{font-size:.85rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px;margin:.25rem 0}
+.rep-tags{display:flex;gap:.375rem;flex-wrap:wrap;margin-top:.375rem}
+.tag{display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:20px;font-size:.7rem;font-weight:500;white-space:nowrap}
+.tnew{background:#dbeafe;color:#1d4ed8}.tprog{background:#fef3c7;color:#92400e}.tdone{background:#d1fae5;color:#065f46}
+.tanon{background:#f3f4f6;color:#4b5563}.turg{background:#fee2e2;color:#991b1b}.tassign{background:#ede9fe;color:#5b21b6}
+.rep-date{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.empty{text-align:center;padding:3rem;color:var(--muted)}.spin{text-align:center;padding:2.5rem;color:var(--muted)}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;overflow-y:auto;padding:1.5rem 1rem}
 .ov.on{display:flex;align-items:flex-start;justify-content:center}
-.mbox{background:#fff;border-radius:16px;width:100%;max-width:720px;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,.15)}
-.mhead{background:#1a1a2e;color:#fff;padding:1.125rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
-.mhead h2{font-size:1rem;font-weight:600}
-.mhead .mactions{display:flex;align-items:center;gap:.5rem}
-.mhead button{background:transparent;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;padding:.25rem}
-.mhead button:hover{color:#fff}
-.mtabs{display:flex;border-bottom:1px solid #e5e7eb;background:#f8fafc}
-.mtab{padding:.75rem 1.25rem;font-size:.875rem;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent;transition:all .15s}
-.mtab.on{color:#6366f1;border-bottom-color:#6366f1;background:#fff}
-.mpanel{padding:1.25rem;display:none}.mpanel.on{display:block}
-.fl{margin-bottom:1rem}.fl label{display:block;font-size:.7rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}.fl p{font-size:.9rem;color:#111}
-.fl2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
-.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.625rem;margin-top:.5rem}
-.media-item{border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:center;border:1px solid #e2e8f0}
-.media-item img,.media-item video{width:100%;height:100%;object-fit:cover}
-.media-item:hover{border-color:#6366f1}
-.status-btns{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
-.status-btns button{padding:.4rem .875rem;border-radius:7px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;font-size:.82rem;font-weight:500}
-.status-btns button.on{border-color:#6366f1;background:#e0e7ff;color:#4338ca}
-.reply-box{width:100%;padding:.75rem;border:1.5px solid #d1d5db;border-radius:8px;font-size:.875rem;resize:vertical;min-height:100px;font-family:inherit}
-.reply-box:focus{outline:none;border-color:#6366f1}
-.note-box{width:100%;padding:.75rem;border:1.5px solid #fbbf24;border-radius:8px;font-size:.875rem;resize:vertical;min-height:80px;background:#fffbeb;font-family:inherit}
-.note-box:focus{outline:none;border-color:#f59e0b}
-.timeline{display:flex;flex-direction:column;gap:.75rem}
-.tl-item{display:flex;gap:.75rem;align-items:flex-start}
-.tl-dot{width:8px;height:8px;border-radius:50%;background:#6366f1;margin-top:.35rem;flex-shrink:0}
-.tl-line{display:flex;flex-direction:column;gap:.1rem}
-.tl-line .tl-act{font-size:.875rem;color:#111}
-.tl-line .tl-dt{font-size:.75rem;color:#9ca3af}
-.assign-sel{width:100%;padding:.65rem;border:1.5px solid #d1d5db;border-radius:8px;font-size:.875rem;background:#fff;outline:none}
-.assign-sel:focus{border-color:#6366f1}
-/* Empty / spin */
-.empty{text-align:center;padding:3rem;color:#9ca3af}.spin{text-align:center;padding:2.5rem;color:#6b7280}
-/* Team page */
-.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
-.team-card{background:#fff;border-radius:12px;padding:1.25rem;border:1px solid #e5e7eb}
-.team-card .tc-name{font-size:1rem;font-weight:600;margin-bottom:.25rem}
-.team-card .tc-role{font-size:.8rem;color:#6b7280;margin-bottom:.5rem}
-.team-card .tc-code{font-family:monospace;font-size:.85rem;background:#f1f5f9;padding:.25rem .6rem;border-radius:6px;display:inline-block}
-.team-card .tc-actions{display:flex;gap:.5rem;margin-top:.75rem}
+.modal{background:var(--white);border-radius:14px;width:100%;max-width:720px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.2)}
+.modal-head{background:#1a1a2e;color:#fff;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.modal-head h2{font-size:1rem;font-weight:600}
+.modal-head button{background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;line-height:1;padding:.25rem}
+.modal-body{padding:1.25rem}
+.mtabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:1rem;gap:0}
+.mtab{padding:.625rem 1rem;font-size:.85rem;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none}
+.mtab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.mtab-pane{display:none}.mtab-pane.active{display:block}
+.fl{margin-bottom:1rem}
+.fl label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.375rem}
+.fl p{font-size:.9rem;line-height:1.5}
+.fl input,.fl textarea,.fl select{width:100%;padding:.6rem .875rem;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;font-family:inherit}
+.fl input:focus,.fl textarea:focus,.fl select:focus{border-color:var(--primary)}
+.fl textarea{resize:vertical;min-height:80px}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.75rem;margin-top:.5rem}
+.media-thumb{border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f3f4f6;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:2rem;position:relative;border:1px solid var(--border)}
+.media-thumb img{width:100%;height:100%;object-fit:cover}
+.media-thumb .play-icon{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border-radius:4px;padding:2px 4px;font-size:.7rem}
+.sa-card{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:.875rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.625rem}
+.sa-info .name{font-weight:600;font-size:.9rem}.sa-info .meta{font-size:.75rem;color:var(--muted);margin-top:.2rem}
+.sa-code{font-family:monospace;font-size:.8rem;background:#e0e7ff;color:#3730a3;padding:.2rem .5rem;border-radius:4px;font-weight:700}
+.staff-table{width:100%;border-collapse:collapse}
+.staff-table th{text-align:left;font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:.5rem .75rem;border-bottom:2px solid var(--border)}
+.staff-table td{padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:.875rem}
+.staff-table tr:last-child td{border-bottom:none}
+.status-btns{display:flex;gap:.375rem;flex-wrap:wrap;margin-top:.375rem}
+.status-btns button{padding:.35rem .75rem;border-radius:6px;border:1.5px solid var(--border);background:var(--white);cursor:pointer;font-size:.8rem;font-weight:500;transition:all .15s}
+.status-btns button.on{border-color:var(--primary);background:#ede9fe;color:var(--primary)}
+.timeline{list-style:none;padding-left:0}
+.tl-item{display:flex;gap:.75rem;padding:.625rem 0;border-bottom:1px solid #f3f4f6;font-size:.85rem}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:var(--primary);margin-top:.35rem;flex-shrink:0}
+.tl-time{font-size:.75rem;color:var(--muted);white-space:nowrap}
 .ub{display:inline-block;padding:.2rem .6rem;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase}
 .ub.critique{background:#fee2e2;color:#991b1b}.ub.eleve{background:#ffedd5;color:#9a3412}.ub.moyen{background:#fef3c7;color:#92400e}.ub.faible{background:#f0fdf4;color:#166534}
-@media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}}
-.baro-ring{width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;position:relative;background:conic-gradient(var(--bc,#10b981) 0% var(--bp,20%),#e5e7eb var(--bp,20%) 100%)}
-.baro-inner{width:120px;height:120px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.baro-score{font-size:2.5rem;font-weight:800;color:var(--bc,#10b981)}
-.baro-label{font-size:.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
-.lea-card{background:#fff;border-radius:12px;padding:1.5rem;border:1px solid #e5e7eb;margin-bottom:1rem}
-.lea-card h3{font-size:.95rem;font-weight:600;color:#374151;margin-bottom:.875rem;display:flex;align-items:center;gap:.5rem}
-.conseil-item{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem;border-radius:8px;background:#f8fafc;margin-bottom:.5rem}
-.conseil-num{width:24px;height:24px;border-radius:50%;background:#6366f1;color:#fff;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.point-item{display:flex;align-items:flex-start;gap:.5rem;padding:.5rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
-.point-item:last-child{border:none}
-.tendance-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .875rem;border-radius:20px;font-size:.85rem;font-weight:600}
-.tendance-hausse{background:#fee2e2;color:#991b1b}
-.tendance-stable{background:#fef3c7;color:#92400e}
-.tendance-baisse{background:#d1fae5;color:#065f46}
-.lea-loading{text-align:center;padding:3rem;color:#6b7280}
-.lea-loading .spin-icon{font-size:2rem;animation:spin 1s linear infinite;display:inline-block}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.report-frame{width:100%;min-height:400px;border:1px solid #e5e7eb;border-radius:8px;padding:1.25rem;background:#fff;font-family:Arial,sans-serif;font-size:.9rem;line-height:1.6}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:640px){.form-row{grid-template-columns:1fr}.main{margin-left:0}.sb{display:none}}
 </style></head><body>
-<!-- Sidebar -->
-<div class="sb">
-  <div class="sb-logo">&#128737;&#65039; SafeSchool</div>
-  <div class="sb-school" id="sb-school">Chargement...</div>
-  <nav class="sb-nav">
-    <a onclick="nav('dash')" id="nav-dash" class="on"><span class="ico">&#128196;</span>Tableau de bord</a>
-    <a onclick="nav('reports')" id="nav-reports"><span class="ico">&#128204;</span>Signalements</a>
-    <a onclick="nav('team')" id="nav-team"><span class="ico">&#128101;</span>&#201;quipe</a>
-    <a onclick="nav('lea')" id="nav-lea"><span class="ico">&#129302;</span>L&#233;a IA</a>
-    <div class="sep">Outils</div>
-    <a onclick="nav('settings')" id="nav-settings"><span class="ico">&#9881;&#65039;</span>Param&#232;tres</a>
-  </nav>
-  <div class="sb-foot"><button onclick="doOut()">D&#233;connexion</button></div>
+<div class="layout">
+<nav class="sb">
+<div class="sb-logo"><span>&#128737;&#65039;</span><div><h1>SafeSchool</h1></div></div>
+<div class="sb-school" id="sb-school-name">Chargement...</div>
+<div class="sb-nav">
+<button class="sb-item active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="ico">&#127968;</span>Tableau de bord</button>
+<button class="sb-item" onclick="showPage('reports')" id="nav-reports"><span class="ico">&#128203;</span>Signalements</button>
+<button class="sb-item" onclick="showPage('team')" id="nav-team"><span class="ico">&#128101;</span>Equipe</button>
+<button class="sb-item" onclick="showPage('settings')" id="nav-settings"><span class="ico">&#9881;&#65039;</span>Parametres</button>
 </div>
-<!-- Main -->
+<div class="sb-foot"><button class="btn btn-outline btn-sm" style="width:100%" onclick="doOut()">Deconnexion</button></div>
+</nav>
 <div class="main">
-  <div class="topbar">
-    <h2 id="page-title">Tableau de bord</h2>
-    <div class="actions">
-      <span style="font-size:.8rem;color:#6b7280" id="last-update"></span>
-      <button class="btn btn-outline btn-sm" onclick="doLoad()">&#8635; Actualiser</button>
-    </div>
-  </div>
-  <!-- Page: Tableau de bord -->
-  <div class="page on" id="pg-dash">
-    <div class="stats">
-      <div class="stat s1"><div class="n" id="c0">-</div><div class="l">Total signalements</div></div>
-      <div class="stat s2"><div class="n" id="c1">-</div><div class="l">Nouveaux</div></div>
-      <div class="stat s3"><div class="n" id="c2">-</div><div class="l">En cours</div></div>
-      <div class="stat s4"><div class="n" id="c3">-</div><div class="l">Urgents non trait&#233;s</div></div>
-    </div>
-    <div style="background:#fff;border-radius:12px;padding:1.25rem;border:1px solid #e5e7eb;margin-bottom:1rem">
-      <div style="font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.75rem">&#127381; Derniers signalements</div>
-      <div id="recent-list"><div class="spin">Chargement...</div></div>
-    </div>
-  </div>
-  <!-- Page: Signalements -->
-  <div class="page" id="pg-reports">
-    <div class="filters">
-      <select id="fst" onchange="doLoad()"><option value="">Tous statuts</option><option value="nouveau">Nouveau</option><option value="en_cours">En cours</option><option value="resolu">R&#233;solu</option></select>
-      <select id="ftp" onchange="doLoad()"><option value="">Tous types</option><option value="physique">Physique</option><option value="verbal">Verbal</option><option value="exclusion">Exclusion</option><option value="cyberharcèlement">Cyber</option><option value="autre">Autre</option></select>
-      <select id="fug" onchange="doLoad()"><option value="">Toutes urgences</option><option value="critique">Critique</option><option value="eleve">&#201;lev&#233;e</option><option value="moyen">Moyenne</option><option value="faible">Faible</option></select>
-      <input type="text" id="fq" placeholder="&#128269; Rechercher code, description..." oninput="doFil()">
-      <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8595; CSV</button>
-    </div>
-    <div class="lst" id="lst"><div class="spin">Chargement...</div></div>
-  </div>
-  <!-- Page: Equipe -->
-  <div class="page" id="pg-team">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <div>
-        <div style="font-size:.875rem;color:#6b7280">Maximum 4 sous-administrateurs</div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="showAddSub()">+ Ajouter sous-admin</button>
-    </div>
-    <div class="team-grid" id="team-grid"><div class="spin">Chargement...</div></div>
-  </div>
-  <!-- Page: Parametres -->
-  <div class="page" id="pg-settings">
-    <div style="background:#fff;border-radius:12px;padding:1.5rem;border:1px solid #e5e7eb;max-width:600px">
-      <div style="font-size:1rem;font-weight:600;margin-bottom:1rem">Informations &#233;tablissement</div>
-      <div id="settings-info"><div class="spin">Chargement...</div></div>
-    </div>
-  </div>
+<div class="topbar"><h2 id="page-title">Tableau de bord</h2><div class="actions"><span id="topbar-school" style="font-size:.8rem;color:var(--muted)"></span><button class="btn btn-primary btn-sm" onclick="doLoad()">&#8635; Actualiser</button></div></div>
+<div class="content">
+<div id="page-dashboard">
+<div class="stats">
+<div class="stat-card"><div class="val" id="c0">-</div><div class="lbl">Total</div></div>
+<div class="stat-card c-blue"><div class="val" id="c1">-</div><div class="lbl">Nouveaux</div></div>
+<div class="stat-card c-warn"><div class="val" id="c2">-</div><div class="lbl">En cours</div></div>
+<div class="stat-card c-green"><div class="val" id="c3">-</div><div class="lbl">Resolus</div></div>
+<div class="stat-card c-red"><div class="val" id="c4">-</div><div class="lbl">Urgents</div></div>
 </div>
-  <!-- Page: Léa IA -->
-  <div class="page" id="pg-lea">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <div>
-        <div style="font-size:.875rem;color:#6b7280">Analyse IA de votre &#233;tablissement par L&#233;a</div>
-      </div>
-      <div style="display:flex;gap:.5rem">
-        <button class="btn btn-outline btn-sm" onclick="loadLea()">&#8635; Actualiser</button>
-        <button class="btn btn-primary btn-sm" onclick="generateReport()">&#128196; G&#233;n&#233;rer rapport PDF</button>
-      </div>
-    </div>
-    <!-- Baromètre + Synthèse -->
-    <div style="display:grid;grid-template-columns:280px 1fr;gap:1rem;margin-bottom:1rem">
-      <div class="lea-card" style="text-align:center">
-        <h3 style="justify-content:center">&#127777;&#65039; Barom&#232;tre risque</h3>
-        <div class="baro-ring" id="baro-ring" style="--bc:#10b981;--bp:20%">
-          <div class="baro-inner">
-            <div class="baro-score" id="baro-score" style="color:#10b981">-</div>
-            <div class="baro-label">/ 100</div>
-          </div>
-        </div>
-        <div style="margin-top:1rem;font-size:.875rem;font-weight:600;color:#374151" id="baro-niveau">Chargement...</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem;font-size:.8rem">
-          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem" id="bl-total">-</div><div style="color:#6b7280">Total</div></div>
-          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem;color:#f59e0b" id="bl-new">-</div><div style="color:#6b7280">Nouveaux</div></div>
-          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem;color:#ef4444" id="bl-urg">-</div><div style="color:#6b7280">Urgents</div></div>
-          <div style="background:#f8fafc;border-radius:8px;padding:.5rem"><div style="font-weight:700;font-size:1.1rem;color:#10b981" id="bl-30">-</div><div style="color:#6b7280">30 jours</div></div>
-        </div>
-      </div>
-      <div class="lea-card">
-        <h3>&#129302; Analyse de L&#233;a</h3>
-        <div id="lea-synthese"><div class="lea-loading"><span class="spin-icon">&#129302;</span><br>L&#233;a analyse vos donn&#233;es...</div></div>
-      </div>
-    </div>
-    <!-- Points d'attention + Conseils -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-      <div class="lea-card">
-        <h3>&#9888;&#65039; Points d'attention</h3>
-        <div id="lea-points"><div class="lea-loading">En attente...</div></div>
-      </div>
-      <div class="lea-card">
-        <h3>&#128161; Conseils prioritaires</h3>
-        <div id="lea-conseils"><div class="lea-loading">En attente...</div></div>
-      </div>
-    </div>
-    <!-- Rapport -->
-    <div class="lea-card" id="lea-report-section" style="display:none">
-      <h3>&#128196; Rapport mensuel g&#233;n&#233;r&#233; par L&#233;a</h3>
-      <div id="lea-report-content" class="report-frame"></div>
-      <div style="display:flex;gap:.5rem;margin-top:1rem">
-        <button class="btn btn-outline" onclick="printLeaReport()">&#128424; Imprimer</button>
-      </div>
-    </div>
-  </div>
-
-<!-- Modal signalement -->
-<div class="ov" id="ov" onclick="if(event.target===this)doCl()">
-  <div class="mbox">
-    <div class="mhead">
-      <h2 id="m-code">Signalement</h2>
-      <div class="mactions">
-        <span id="m-status-badge" style="font-size:.75rem;padding:.2rem .6rem;border-radius:20px;background:#e0e7ff;color:#4338ca"></span>
-        <button onclick="printReport()" title="Imprimer">&#128424;</button>
-        <button onclick="doCl()">&#x2715;</button>
-      </div>
-    </div>
-    <div class="mtabs">
-      <div class="mtab on" onclick="mtab(0)">D&#233;tail</div>
-      <div class="mtab" onclick="mtab(1)">M&#233;dias</div>
-      <div class="mtab" onclick="mtab(2)">R&#233;ponse</div>
-      <div class="mtab" onclick="mtab(3)">Note interne</div>
-      <div class="mtab" onclick="mtab(4)">Historique</div>
-    </div>
-    <!-- Tab 0: Detail -->
-    <div class="mpanel on" id="mp0">
-      <div class="fl2">
-        <div class="fl"><label>Code</label><p id="d-code" style="font-family:monospace"></p></div>
-        <div class="fl"><label>Urgence</label><p id="d-urg"></p></div>
-      </div>
-      <div class="fl2">
-        <div class="fl"><label>Type</label><p id="d-type"></p></div>
-        <div class="fl"><label>R&#244;le d&#233;clarant</label><p id="d-role"></p></div>
-      </div>
-      <div class="fl"><label>Description</label><p id="d-desc" style="white-space:pre-wrap;line-height:1.5"></p></div>
-      <div class="fl2">
-        <div class="fl"><label>Lieu</label><p id="d-loc"></p></div>
-        <div class="fl"><label>Classe</label><p id="d-cls"></p></div>
-      </div>
-      <div class="fl2">
-        <div class="fl"><label>Anonyme</label><p id="d-anon"></p></div>
-        <div class="fl"><label>Email contact</label><p id="d-email"></p></div>
-      </div>
-      <div class="fl"><label>Re&#231;u le</label><p id="d-date"></p></div>
-      <div class="fl">
-        <label>Statut</label>
-        <div class="status-btns">
-          <button id="sb-n" onclick="doSt('nouveau')">Nouveau</button>
-          <button id="sb-p" onclick="doSt('en_cours')">En cours</button>
-          <button id="sb-r" onclick="doSt('resolu')">R&#233;solu</button>
-        </div>
-      </div>
-      <div class="fl">
-        <label>Assigner &#224;</label>
-        <select class="assign-sel" id="assign-sel" onchange="doAssign()">
-          <option value="">Non assign&#233;</option>
-        </select>
-      </div>
-    </div>
-    <!-- Tab 1: Medias -->
-    <div class="mpanel" id="mp1">
-      <div id="media-content"><div class="spin">Chargement m&#233;dias...</div></div>
-    </div>
-    <!-- Tab 2: Reponse -->
-    <div class="mpanel" id="mp2">
-      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:.85rem;color:#1e40af">
-        &#9993;&#65039; Si l'&#233;l&#232;ve a fourni son email, il recevra cette r&#233;ponse automatiquement.
-      </div>
-      <div class="fl">
-        <label>R&#233;ponse &#224; l'&#233;l&#232;ve</label>
-        <textarea class="reply-box" id="reply-txt" placeholder="Votre r&#233;ponse visible par l'&#233;l&#232;ve..."></textarea>
-      </div>
-      <button class="btn btn-primary" onclick="doSaveReply()" style="margin-top:.5rem">
-        &#128233; Envoyer la r&#233;ponse
-      </button>
-      <div id="reply-confirm" style="display:none;margin-top:.75rem;padding:.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.85rem;color:#166534">
-        &#10003; R&#233;ponse enregistr&#233;e. Email envoy&#233; si l'&#233;l&#232;ve a fourni son adresse.
-      </div>
-    </div>
-    <!-- Tab 3: Note interne -->
-    <div class="mpanel" id="mp3">
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:.85rem;color:#92400e">
-        &#128274; Cette note est visible uniquement par l'&#233;quipe d'administration.
-      </div>
-      <div class="fl">
-        <label>Note interne</label>
-        <textarea class="note-box" id="note-txt" placeholder="Note pour l'&#233;quipe (invisible par l'&#233;l&#232;ve)..."></textarea>
-      </div>
-      <button class="btn btn-outline" onclick="doSaveNote()" style="margin-top:.5rem">
-        &#128190; Enregistrer la note
-      </button>
-    </div>
-    <!-- Tab 4: Historique -->
-    <div class="mpanel" id="mp4">
-      <div class="timeline" id="timeline-content">
-        <div class="spin">Chargement...</div>
-      </div>
-    </div>
-  </div>
+<h3 style="font-size:.9rem;font-weight:600;margin-bottom:.75rem;color:var(--muted)">Derniers signalements</h3>
+<div class="cards" id="dash-recent"><div class="spin">Chargement...</div></div>
 </div>
-<!-- Modal ajouter sous-admin -->
-<div class="ov" id="ov-sub" onclick="if(event.target===this)closeSubModal()">
-  <div class="mbox" style="max-width:480px">
-    <div class="mhead"><h2>Ajouter un sous-administrateur</h2><button onclick="closeSubModal()">&#x2715;</button></div>
-    <div style="padding:1.25rem">
-      <div class="fl"><label>Nom complet</label><input type="text" id="sub-name" class="assign-sel" placeholder="Jean Dupont"></div>
-      <div class="fl"><label>R&#244;le</label><select id="sub-role" class="assign-sel"><option value="CPE">CPE</option><option value="Proviseur adjoint">Proviseur adjoint</option><option value="Infirmier">Infirmier(e)</option><option value="Assistante sociale">Assistante sociale</option><option value="Conseiller">Conseiller</option></select></div>
-      <div class="fl"><label>Email</label><input type="email" id="sub-email" class="assign-sel" placeholder="cpe@lycee.fr"></div>
-      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem">
-        <button class="btn btn-outline" onclick="closeSubModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="doAddSub()">Cr&#233;er le sous-admin</button>
-      </div>
-      <div id="sub-result" style="display:none;margin-top:.75rem;padding:.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.85rem;color:#166534"></div>
-    </div>
-  </div>
+<div id="page-reports" style="display:none">
+<div class="filters">
+<select id="fst" onchange="doLoad()"><option value="">Tous statuts</option><option value="nouveau">Nouveaux</option><option value="en_cours">En cours</option><option value="resolu">Resolus</option></select>
+<select id="ftp" onchange="doLoad()"><option value="">Tous types</option><option value="physique">Physique</option><option value="verbal">Verbal</option><option value="exclusion">Exclusion</option><option value="autre">Autre</option></select>
+<select id="fug" onchange="doLoad()"><option value="">Toutes urgences</option><option value="critique">Critique</option><option value="eleve">Elevee</option><option value="moyen">Moyenne</option><option value="faible">Faible</option></select>
+<input type="text" id="fq" placeholder="Rechercher code, description..." oninput="doFil()">
 </div>
+<div class="cards" id="lst"><div class="spin">Chargement...</div></div>
+</div>
+<div id="page-team" style="display:none">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+<div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h3 style="font-weight:600">Sous-admins (max 4)</h3><button class="btn btn-primary btn-sm" onclick="showAddSubAdmin()">+ Ajouter</button></div>
+<div id="sa-list"><div class="spin">Chargement...</div></div>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h3 style="font-weight:600">Annuaire personnel</h3><button class="btn btn-primary btn-sm" onclick="showAddStaff()">+ Ajouter</button></div>
+<div id="staff-list"><div class="spin">Chargement...</div></div>
+</div>
+</div></div>
+<div id="page-settings" style="display:none">
+<div style="max-width:480px">
+<h3 style="font-weight:600;margin-bottom:1rem">Informations etablissement</h3>
+<div class="fl"><label>Nom etablissement</label><p id="set-name">-</p></div>
+<div class="fl"><label>Ville</label><p id="set-city">-</p></div>
+<div class="fl"><label>Code postal</label><p id="set-cp">-</p></div>
+<div class="fl"><label>Email administrateur</label><p id="set-email">-</p></div>
+<div class="fl"><label>Code acces</label><p id="set-code" style="font-family:monospace;font-size:1rem;font-weight:700;color:var(--primary)">-</p></div>
+<div class="fl"><label>URL app eleves</label><p id="set-url">-</p></div>
+</div></div>
+</div></div></div>
+<div class="ov" id="ov-rep" onclick="if(event.target===this)closeRep()">
+<div class="modal">
+<div class="modal-head"><h2 id="rep-title">Signalement</h2><button onclick="closeRep()">&#x2715;</button></div>
+<div class="modal-body">
+<div class="mtabs">
+<button class="mtab active" onclick="showTab('detail')">Detail</button>
+<button class="mtab" onclick="showTab('media')">Medias</button>
+<button class="mtab" onclick="showTab('reply')">Reponse</button>
+<button class="mtab" onclick="showTab('note')">Note interne</button>
+<button class="mtab" onclick="showTab('history')">Historique</button>
+</div>
+<div class="mtab-pane active" id="tab-detail"></div>
+<div class="mtab-pane" id="tab-media"></div>
+<div class="mtab-pane" id="tab-reply"></div>
+<div class="mtab-pane" id="tab-note"></div>
+<div class="mtab-pane" id="tab-history"></div>
+</div></div></div>
+<div class="ov" id="ov-sa" onclick="if(event.target===this)closeSA()">
+<div class="modal" style="max-width:440px">
+<div class="modal-head"><h2>Ajouter sous-admin</h2><button onclick="closeSA()">&#x2715;</button></div>
+<div class="modal-body">
+<div class="fl"><label>Nom complet</label><input type="text" id="sa-name" placeholder="Marie Dupont"></div>
+<div class="fl"><label>Role</label><select id="sa-role"><option value="CPE">CPE</option><option value="Proviseur adjoint">Proviseur adjoint</option><option value="Infirmier">Infirmier(e)</option><option value="Assistante sociale">Assistante sociale</option></select></div>
+<div class="fl"><label>Email</label><input type="email" id="sa-email" placeholder="marie@etablissement.fr"></div>
+<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:flex-end"><button class="btn btn-outline" onclick="closeSA()">Annuler</button><button class="btn btn-primary" onclick="doAddSA()">Ajouter</button></div>
+</div></div></div>
+<div class="ov" id="ov-staff" onclick="if(event.target===this)closeStaff()">
+<div class="modal" style="max-width:440px">
+<div class="modal-head"><h2>Ajouter personnel</h2><button onclick="closeStaff()">&#x2715;</button></div>
+<div class="modal-body">
+<div class="fl"><label>Nom complet</label><input type="text" id="st-name" placeholder="Jean Martin"></div>
+<div class="form-row"><div class="fl"><label>Role / Poste</label><input type="text" id="st-role" placeholder="Enseignant"></div>
+<div class="fl"><label>Email</label><input type="email" id="st-email" placeholder="jean@etablissement.fr"></div></div>
+<div class="fl"><label>Telephone</label><input type="tel" id="st-phone" placeholder="0612345678"></div>
+<div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:flex-end"><button class="btn btn-outline" onclick="closeStaff()">Annuler</button><button class="btn btn-primary" onclick="doAddStaff()">Ajouter</button></div>
+</div></div></div>
 <script>
-var _tok = localStorage.getItem("ss_admin_token") || "";
-var _slug = localStorage.getItem("ss_admin_slug") || new URLSearchParams(location.search).get("etab") || "";
-var _nm = localStorage.getItem("ss_admin_school") || _slug;
-var _sid = "";
-var _all = [];
-var _subAdmins = [];
-var _currentId = "";
-var SUPA = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-var SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A";
-if (!_tok || !_slug) { location.href = "/admin/login"; }
-try {
-  var _pl = JSON.parse(atob(_tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
-  _sid = _pl.school_id || "";
-  document.getElementById("sb-school").textContent = _nm;
-} catch(e) {}
-var TL = { physique: "&#129340; Physique", verbal: "&#128172; Verbal", exclusion: "&#128683; Exclusion", autre: "&#10067; Autre" };
-var TL2 = { physique: "Physique", verbal: "Verbal", exclusion: "Exclusion", autre: "Autre" };
-var SN = { nouveau: "Nouveau", en_cours: "En cours", resolu: "Résolu" };
-var SC = { nouveau: "tnew", en_cours: "tpg", resolu: "tdn" };
-var UGC = { critique: "tug-c", eleve: "tug-e", moyen: "tug-m", faible: "tug-f" };
-function ago(dt) {
-  var m = Math.floor((Date.now() - new Date(dt)) / 60000);
-  if (m < 1) return "instant"; if (m < 60) return m + "min"; if (m < 1440) return Math.floor(m/60) + "h"; return Math.floor(m/1440) + "j";
+var _t=localStorage.getItem("ss_admin_token")||"";
+var _s=localStorage.getItem("ss_admin_slug")||new URLSearchParams(location.search).get("etab")||"";
+var _nm=localStorage.getItem("ss_admin_school")||_s;
+var _code=localStorage.getItem("ss_admin_code")||"";
+var _sid="";var _all=[];var _curRep=null;var _subs=[];var _stfs=[];
+var SU="https://bsytkpgdxvlddzuwaabp.supabase.co";var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A";
+if(!_t||!_s){location.href="/admin/login";}
+try{var _p=JSON.parse(atob(_t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));_sid=_p.school_id||"";}catch(e){}
+document.getElementById("sb-school-name").textContent=_nm;
+document.getElementById("topbar-school").textContent=_nm;
+var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcèlement:"Cyber"};
+var SN={nouveau:"Nouveau",en_cours:"En cours",resolu:"Resolu"};
+var SC={nouveau:"tnew",en_cours:"tprog",resolu:"tdone"};
+function ago(d){var m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return"instant";if(m<60)return m+"min";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"j";}
+function showPage(p){
+  var pages=["dashboard","reports","team","settings"];
+  pages.forEach(function(x){document.getElementById("page-"+x).style.display=(x===p?"block":"none");document.getElementById("nav-"+x).classList.toggle("active",x===p);});
+  var titles={dashboard:"Tableau de bord",reports:"Signalements",team:"Equipe",settings:"Parametres"};
+  document.getElementById("page-title").textContent=titles[p]||p;
+  if(p==="team"){loadTeam();}
+  if(p==="settings"){loadSettings();}
 }
-function nav(p) {
-  document.querySelectorAll(".page").forEach(function(el){ el.classList.remove("on"); });
-  document.querySelectorAll(".sb-nav a").forEach(function(el){ el.classList.remove("on"); });
-  document.getElementById("pg-" + p).classList.add("on");
-  document.getElementById("nav-" + p).classList.add("on");
-  var titles = { dash: "Tableau de bord", reports: "Signalements", team: "&#201;quipe", settings: "Param&#232;tres" };
-  document.getElementById("page-title").innerHTML = titles[p] || p;
-  if (p === "team") loadTeam();
-  if (p === "settings") loadSettings();
-  if (p === "lea") loadLea();
+function doLoad(){
+  if(!_sid){document.getElementById("lst").innerHTML="<div class='empty'>Erreur: reconnectez-vous</div>";return;}
+  var st=document.getElementById("fst")?document.getElementById("fst").value:"";
+  var tp=document.getElementById("ftp")?document.getElementById("ftp").value:"";
+  var ug=document.getElementById("fug")?document.getElementById("fug").value:"";
+  var url=SU+"/rest/v1/reports?school_id=eq."+_sid+"&order=created_at.desc&limit=500";
+  if(st)url+="&status=eq."+st;if(tp)url+="&type=eq."+tp;if(ug)url+="&urgency=eq."+ug;
+  fetch(url,{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(data){
+    if(!Array.isArray(data)){console.error(data);document.getElementById("lst").innerHTML="<div class='empty'>Erreur chargement</div>";return;}
+    _all=data;
+    document.getElementById("c0").textContent=_all.length;
+    document.getElementById("c1").textContent=_all.filter(function(x){return x.status==="nouveau";}).length;
+    document.getElementById("c2").textContent=_all.filter(function(x){return x.status==="en_cours";}).length;
+    document.getElementById("c3").textContent=_all.filter(function(x){return x.status==="resolu";}).length;
+    document.getElementById("c4").textContent=_all.filter(function(x){return x.urgency==="critique"||x.urgency==="eleve";}).length;
+    var recent=_all.slice(0,5);
+    var dashEl=document.getElementById("dash-recent");if(dashEl)dashEl.innerHTML=renderCards(recent);
+    var lstEl=document.getElementById("lst");if(lstEl)lstEl.innerHTML=renderCards(_all);
+  }).catch(function(e){console.error(e);});
 }
-function mtab(i) {
-  document.querySelectorAll(".mtab").forEach(function(el, idx){ el.classList.toggle("on", idx === i); });
-  document.querySelectorAll(".mpanel").forEach(function(el, idx){ el.classList.toggle("on", idx === i); });
-  if (i === 1) loadMedias(_currentId);
-  if (i === 4) loadTimeline(_currentId);
-}
-function doLoad() {
-  if (!_sid) { document.getElementById("lst").innerHTML = '<div class="empty">Reconnectez-vous</div>'; return; }
-  var st = (document.getElementById("fst") || {}).value || "";
-  var tp = (document.getElementById("ftp") || {}).value || "";
-  var ug = (document.getElementById("fug") || {}).value || "";
-  var url = SUPA + "/rest/v1/reports?school_id=eq." + _sid + "&order=created_at.desc&limit=500";
-  if (st) url += "&status=eq." + st;
-  if (tp) url += "&type=eq." + tp;
-  if (ug) url += "&urgency=eq." + ug;
-  fetch(url, { headers: { apikey: SK, Authorization: "Bearer " + SK } })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (!Array.isArray(data)) { document.getElementById("lst").innerHTML = '<div class="empty">Erreur: ' + JSON.stringify(data).substring(0,80) + '</div>'; return; }
-      _all = data;
-      doRen(_all);
-      document.getElementById("c0").textContent = _all.length;
-      document.getElementById("c1").textContent = _all.filter(function(x){ return x.status === "nouveau"; }).length;
-      document.getElementById("c2").textContent = _all.filter(function(x){ return x.status === "en_cours"; }).length;
-      document.getElementById("c3").textContent = _all.filter(function(x){ return (x.urgency === "critique" || x.urgency === "eleve") && x.status !== "resolu"; }).length;
-      loadRecent();
-      document.getElementById("last-update").textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
-    })
-    .catch(function(e){ document.getElementById("lst").innerHTML = '<div class="empty">Erreur: ' + e.message + '</div>'; });
-}
-function loadRecent() {
-  var recent = _all.slice(0, 5);
-  var el = document.getElementById("recent-list");
-  if (!recent.length) { el.innerHTML = '<div class="empty">Aucun signalement</div>'; return; }
-  var h = "";
-  for (var i = 0; i < recent.length; i++) {
-    var r = recent[i];
-    h += '<div class="card" onclick="doOp(\'' + r.id + '\')" style="cursor:pointer">';
-    h += '<div class="r1"><div><div class="cc">' + (r.tracking_code || "") + '</div><div class="ct">' + (TL2[r.type] || r.type || "Autre") + '</div></div>';
-    h += '<div class="cdt">' + ago(r.created_at) + '</div></div>';
-    h += '<div class="cx">' + (r.description || "(aucune description)") + '</div></div>';
+function doFil(){var q=document.getElementById("fq").value.toLowerCase();var el=document.getElementById("lst");if(!el)return;el.innerHTML=renderCards(q?_all.filter(function(r){return(r.description||"").toLowerCase().indexOf(q)>-1||(r.tracking_code||"").toLowerCase().indexOf(q)>-1||(r.type||"").toLowerCase().indexOf(q)>-1;}):_all);}
+function renderCards(lst){
+  if(!lst.length)return"<div class='empty'>Aucun signalement</div>";
+  var h="";
+  for(var i=0;i<lst.length;i++){var r=lst[i];
+    var unread=r.status==="nouveau"?" unread":"";
+    h+="<div class='rep-card"+unread+"' onclick='openRep(\""+r.id+"\")'>'>";
+    h+="<div class='rep-row1'>'>";
+    h+="<div><div class='rep-code'>"+(r.tracking_code||r.case_number||"")+"</div>";
+    h+="<div class='rep-type'>"+(TL[r.type]||r.type||"Autre")+"</div></div>";
+    h+="<div class='rep-date'>"+ago(r.created_at)+"</div></div>";
+    h+="<div class='rep-desc'>"+(r.description||"(aucune description)")+"</div>";
+    h+="<div class='rep-tags'>";
+    h+="<span class='tag "+(SC[r.status]||"tnew")+"'>"+(SN[r.status]||r.status)+"</span>";
+    if(r.urgency&&r.urgency!=="faible")h+="<span class='tag turg'>"+r.urgency+"</span>";
+    if(r.anonymous||r.is_anonymous)h+="<span class='tag tanon'>Anonyme</span>";
+    if(r.assigned_to_name)h+="<span class='tag tassign'>"+r.assigned_to_name+"</span>";
+    h+="</div></div>";
   }
-  el.innerHTML = h;
+  return h;
 }
-function doFil() {
-  var q = document.getElementById("fq").value.toLowerCase();
-  doRen(q ? _all.filter(function(r){ return (r.description || "").toLowerCase().indexOf(q) > -1 || (r.tracking_code || "").toLowerCase().indexOf(q) > -1; }) : _all);
+function openRep(id){
+  var r=null;for(var i=0;i<_all.length;i++)if(_all[i].id===id){r=_all[i];break;}
+  if(!r)return;_curRep=r;
+  document.getElementById("rep-title").textContent=(r.tracking_code||"Signalement");
+  document.getElementById("ov-rep").className="ov on";
+  showTab("detail");
+  loadMedias(id);
 }
-function doRen(lst) {
-  var el = document.getElementById("lst");
-  if (!el) return;
-  if (!lst.length) { el.innerHTML = '<div class="empty">Aucun signalement</div>'; return; }
-  var h = "";
-  for (var i = 0; i < lst.length; i++) {
-    var r = lst[i];
-    var sub = _subAdmins.find(function(s){ return s.id === r.assigned_to; });
-    h += '<div class="card" onclick="doOp(\'' + r.id + '\')">';
-    if (sub) h += '<span class="assigned-badge">&#128100; ' + sub.name + '</span>';
-    h += '<div class="r1"><div><div class="cc">' + (r.tracking_code || "") + '</div><div class="ct">' + (TL2[r.type] || r.type || "Autre") + '</div></div><div class="cdt">' + ago(r.created_at) + '</div></div>';
-    h += '<div class="cx">' + (r.description || "(aucune description)") + '</div>';
-    h += '<div class="tgs"><span class="tag ' + (SC[r.status] || "tnew") + '">' + (SN[r.status] || r.status) + '</span>';
-    if (r.urgency) h += '<span class="tag ' + (UGC[r.urgency] || "tug-f") + '">' + r.urgency + '</span>';
-    if (r.anonymous) h += '<span class="tag tan">Anonyme</span>';
-    if (r.reporter_role) h += '<span class="tag tan">' + r.reporter_role + '</span>';
-    h += '</div></div>';
-  }
-  el.innerHTML = h;
-}
-function doOp(id) {
-  var r = null;
-  for (var i = 0; i < _all.length; i++) if (_all[i].id === id) { r = _all[i]; break; }
-  if (!r) return;
-  _currentId = id;
-  nav("reports");
-  document.getElementById("m-code").textContent = r.tracking_code || "Signalement";
-  document.getElementById("m-status-badge").textContent = SN[r.status] || r.status;
-  document.getElementById("d-code").textContent = r.tracking_code || "";
-  document.getElementById("d-type").textContent = TL2[r.type] || r.type || "";
-  document.getElementById("d-role").textContent = r.reporter_role || "Non renseigné";
-  document.getElementById("d-desc").textContent = r.description || "";
-  document.getElementById("d-loc").textContent = r.location || "-";
-  document.getElementById("d-cls").textContent = r.classe || "-";
-  document.getElementById("d-anon").textContent = r.anonymous ? "Oui" : "Non";
-  document.getElementById("d-email").textContent = r.reporter_email || "(anonyme)";
-  document.getElementById("d-date").textContent = new Date(r.created_at).toLocaleString("fr-FR");
-  document.getElementById("d-urg").innerHTML = '<span class="ub ' + (r.urgency || "faible") + '">' + (r.urgency || "faible") + '</span>';
-  ["sb-n","sb-p","sb-r"].forEach(function(id){ document.getElementById(id).classList.remove("on"); });
-  var sbMap = { nouveau: "sb-n", en_cours: "sb-p", resolu: "sb-r" };
-  if (sbMap[r.status]) document.getElementById(sbMap[r.status]).classList.add("on");
-  document.getElementById("reply-txt").value = r.admin_reply || "";
-  document.getElementById("note-txt").value = r.internal_notes || "";
-  document.getElementById("reply-confirm").style.display = "none";
-  // Remplir sous-admins dans le select
-  var sel = document.getElementById("assign-sel");
-  sel.innerHTML = '<option value="">Non assigné</option>';
-  _subAdmins.forEach(function(s){
-    var opt = document.createElement("option");
-    opt.value = s.id; opt.textContent = s.name + " (" + s.role + ")";
-    if (r.assigned_to === s.id) opt.selected = true;
-    sel.appendChild(opt);
+function showTab(t){
+  var tabs=["detail","media","reply","note","history"];
+  tabs.forEach(function(x){
+    var pane=document.getElementById("tab-"+x);if(pane)pane.className="mtab-pane"+(x===t?" active":"");
   });
-  mtab(0);
-  document.getElementById("ov").classList.add("on");
+  document.querySelectorAll(".mtab").forEach(function(b,i){b.className="mtab"+(tabs[i]===t?" active":"");});
+  if(t==="detail")renderDetail();
+  if(t==="reply")renderReply();
+  if(t==="note")renderNote();
+  if(t==="history")loadHistory();
 }
-function loadMedias(id) {
-  var el = document.getElementById("media-content");
-  el.innerHTML = '<div class="spin">Chargement médias...</div>';
-  fetch(SUPA + "/rest/v1/report_files?report_id=eq." + id + "&select=*", { headers: { apikey: SK, Authorization: "Bearer " + SK } })
-    .then(function(r){ return r.json(); })
-    .then(function(files){
-      if (!Array.isArray(files) || !files.length) { el.innerHTML = '<div class="empty">Aucun média joint</div>'; return; }
-      var h = '<div class="media-grid">';
-      files.forEach(function(f){
-        var isVideo = f.mime_type && f.mime_type.startsWith("video/");
-        var signedUrl = SUPA + "/storage/v1/object/sign/report-files/" + f.file_path + "?token=" + SK;
-        if (isVideo) {
-          h += '<div class="media-item" onclick="window.open(\'' + signedUrl + '\')">';
-          h += '<video src="' + signedUrl + '" style="width:100%;height:100%;object-fit:cover"></video></div>';
-        } else {
-          h += '<div class="media-item" onclick="window.open(\'' + signedUrl + '\')">';
-          h += '<img src="' + signedUrl + '" onerror="this.parentElement.innerHTML='&#128247;'" alt="">';
-          h += '</div>';
-        }
-      });
-      h += '</div><div style="font-size:.75rem;color:#9ca3af;margin-top:.75rem">' + files.length + ' fichier(s) joint(s)</div>';
-      el.innerHTML = h;
-    })
-    .catch(function(){ el.innerHTML = '<div class="empty">Impossible de charger les médias</div>'; });
+function renderDetail(){
+  var r=_curRep;if(!r)return;
+  var stBtns=["nouveau","en_cours","resolu"].map(function(s){return"<button class='"+(r.status===s?"on":"")+"' onclick='doSt(\""+r.id+"\",\""+s+"\")'>"+SN[s]+"</button>";}).join("");
+  var assignOpts="<option value=''>(Non attribue)</option>";
+  for(var i=0;i<_subs.length;i++)assignOpts+="<option value='"+_subs[i].id+"' "+(r.assigned_to===_subs[i].id?"selected":"")+">"+_subs[i].name+"</option>";
+  var h="";
+  h+="<div class='fl'><label>Code</label><p style='font-family:monospace'>"+(r.tracking_code||r.case_number||"")+"</p></div>";
+  h+="<div class='form-row'>";
+  h+="<div class='fl'><label>Type</label><p>"+(TL[r.type]||r.type||"-")+"</p></div>";
+  h+="<div class='fl'><label>Urgence</label><p><span class='ub "+(r.urgency||"faible")+"'>"+(r.urgency||"faible")+"</span></p></div>";
+  h+="</div>";
+  h+="<div class='fl'><label>Description</label><p style='white-space:pre-wrap'>"+(r.description||"-")+"</p></div>";
+  if(r.location)h+="<div class='fl'><label>Lieu</label><p>"+r.location+"</p></div>";
+  h+="<div class='form-row'>";
+  h+="<div class='fl'><label>Role</label><p>"+(r.reporter_role||"-")+"</p></div>";
+  h+="<div class='fl'><label>Anonyme</label><p>"+(r.anonymous||r.is_anonymous?"Oui":"Non")+"</p></div>";
+  h+="</div>";
+  if(r.reporter_email)h+="<div class='fl'><label>Email contact</label><p>"+r.reporter_email+"</p></div>";
+  if(r.classe||r.class_name||r.reporter_class)h+="<div class='fl'><label>Classe</label><p>"+(r.classe||r.class_name||r.reporter_class)+"</p></div>";
+  h+="<div class='fl'><label>Recu le</label><p>"+new Date(r.created_at).toLocaleString("fr-FR")+"</p></div>";
+  h+="<div class='fl'><label>Statut</label><div class='status-btns'>"+stBtns+"</div></div>";
+  h+="<div class='fl'><label>Attribuer a</label><select onchange='doAssign(\""+r.id+"\",this.value)'>"+assignOpts+"</select></div>";
+  document.getElementById("tab-detail").innerHTML=h;
 }
-function loadTimeline(id) {
-  var el = document.getElementById("timeline-content");
-  var r = null;
-  for (var i = 0; i < _all.length; i++) if (_all[i].id === id) { r = _all[i]; break; }
-  if (!r) { el.innerHTML = '<div class="empty">Aucun historique</div>'; return; }
-  var h = "";
-  h += '<div class="tl-item"><div class="tl-dot"></div><div class="tl-line"><div class="tl-act">Signalement reçu</div><div class="tl-dt">' + new Date(r.created_at).toLocaleString("fr-FR") + '</div></div></div>';
-  if (r.admin_reply) h += '<div class="tl-item"><div class="tl-dot" style="background:#10b981"></div><div class="tl-line"><div class="tl-act">Réponse envoyée</div><div class="tl-dt">Voir onglet Réponse</div></div></div>';
-  if (r.status === "en_cours") h += '<div class="tl-item"><div class="tl-dot" style="background:#f59e0b"></div><div class="tl-line"><div class="tl-act">Pris en charge</div><div class="tl-dt">' + new Date(r.updated_at || r.created_at).toLocaleString("fr-FR") + '</div></div></div>';
-  if (r.status === "resolu") h += '<div class="tl-item"><div class="tl-dot" style="background:#10b981"></div><div class="tl-line"><div class="tl-act">Résolu</div><div class="tl-dt">' + new Date(r.updated_at || r.created_at).toLocaleString("fr-FR") + '</div></div></div>';
-  el.innerHTML = h || '<div class="empty">Aucun historique</div>';
-}
-function doSt(s) {
-  if (!_currentId) return;
-  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ status: s, updated_at: new Date().toISOString() }) })
-    .then(function(){
-      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].status = s; break; }
-      doRen(_all);
-      ["sb-n","sb-p","sb-r"].forEach(function(id){ document.getElementById(id).classList.remove("on"); });
-      var sbMap = { nouveau: "sb-n", en_cours: "sb-p", resolu: "sb-r" };
-      if (sbMap[s]) document.getElementById(sbMap[s]).classList.add("on");
-      document.getElementById("m-status-badge").textContent = SN[s] || s;
-      // Notifier eleve si email fourni
-      var r = null;
-      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { r = _all[i]; break; }
-      if (r && r.reporter_email) {
-        fetch("/api/notify/status-update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackingCode: r.tracking_code, newStatus: s, email: r.reporter_email, schoolId: _sid }) }).catch(function(){});
+function loadMedias(reportId){
+  var tabEl=document.getElementById("tab-media");
+  tabEl.innerHTML="<div class='spin'>Chargement medias...</div>";
+  fetch(SU+"/rest/v1/report_files?report_id=eq."+reportId+"&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}})
+    .then(function(r){return r.json();}).then(function(files){
+      if(!Array.isArray(files)||!files.length){tabEl.innerHTML="<div class='empty'>Aucun fichier joint</div>";return;}
+      var h="<div class='media-grid'>";
+      for(var i=0;i<files.length;i++){
+        var f=files[i];
+        var isVid=f.is_video||(f.mime_type&&f.mime_type.indexOf("video")>-1);
+        var isImg=f.is_photo||(f.mime_type&&f.mime_type.indexOf("image")>-1);
+        var rawUrl=SU+"/storage/v1/object/authenticated/report-files/"+f.file_path;
+        h+="<div class='media-thumb' onclick='window.open(\""+rawUrl+"\")' title='"+(f.file_name||"fichier")+"'>";
+        if(isImg)h+="<img src='"+rawUrl+"' onerror='this.parentElement.innerHTML=\"&#128247;\"' loading='lazy'>";
+        else if(isVid)h+="<span style='font-size:2.5rem'>&#127909;</span><div class='play-icon'>VIDEO</div>";
+        else h+="<span style='font-size:2.5rem'>&#128196;</span>";
+        h+="</div>";
       }
-    });
+      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s) — cliquer pour ouvrir</p>";
+      tabEl.innerHTML=h;
+    }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur: "+e.message+"</div>";});
 }
-function doAssign() {
-  if (!_currentId) return;
-  var val = document.getElementById("assign-sel").value;
-  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ assigned_to: val || null, updated_at: new Date().toISOString() }) })
-    .then(function(){
-      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].assigned_to = val || null; break; }
-      doRen(_all);
-    });
+function renderReply(){
+  var r=_curRep;if(!r)return;
+  var h="<div class='fl'><label>Reponse a l'eleve</label>";
+  h+="<textarea id='rep-txt' style='min-height:120px'>"+(r.admin_reply||r.staff_reply||"")+"</textarea>";
+  h+="<p style='font-size:.75rem;color:var(--muted);margin-top:.375rem'>";
+  if(r.reporter_email)h+="Email de notification: "+r.reporter_email;
+  else h+="(pas d'email fourni — pas de notification)";
+  h+="</p></div>";
+  h+="<button class='btn btn-primary' onclick='doReply(\""+r.id+"\")'>Envoyer la reponse</button>";
+  if(r.reply_sent_at)h+="<p style='font-size:.75rem;color:var(--success);margin-top:.5rem'>Derniere reponse envoyee le "+new Date(r.reply_sent_at).toLocaleString("fr-FR")+"</p>";
+  document.getElementById("tab-reply").innerHTML=h;
 }
-function doSaveReply() {
-  if (!_currentId) return;
-  var v = document.getElementById("reply-txt").value;
-  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ admin_reply: v, updated_at: new Date().toISOString() }) })
-    .then(function(){
-      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].admin_reply = v; break; }
-      // Envoyer email a l eleve si email fourni
-      var r = null;
-      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { r = _all[i]; break; }
-      if (r && r.reporter_email && v) {
-        fetch("/api/notify/staff-reply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackingCode: r.tracking_code, email: r.reporter_email, message: v, schoolId: _sid }) }).catch(function(){});
+function renderNote(){
+  var r=_curRep;if(!r)return;
+  var h="<div class='fl'><label>Note interne (visible equipe uniquement)</label>";
+  h+="<textarea id='note-txt' style='min-height:120px'>"+(r.internal_notes||r.admin_note||"")+"</textarea></div>";
+  h+="<button class='btn btn-primary' onclick='doNote(\""+r.id+"\")'>Enregistrer note</button>";
+  document.getElementById("tab-note").innerHTML=h;
+}
+function loadHistory(){
+  var tabEl=document.getElementById("tab-history");tabEl.innerHTML="<div class='spin'>...</div>";
+  if(!_curRep)return;
+  fetch(SU+"/rest/v1/report_messages?report_id=eq."+_curRep.id+"&order=created_at.asc&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}})
+    .then(function(r){return r.json();}).then(function(msgs){
+      if(!Array.isArray(msgs)||!msgs.length){tabEl.innerHTML="<div class='empty'>Aucun historique</div>";return;}
+      var h="<ul class='timeline'>";
+      for(var i=0;i<msgs.length;i++){var m=msgs[i];
+        h+="<li class='tl-item'>'><div class='tl-dot'></div>";
+        h+="<div><div>"+( m.message||"")+"</div><div class='tl-time'>"+new Date(m.created_at).toLocaleString("fr-FR")+" - "+(m.author_type||"")+"</div></div>";
+        h+="</li>";
       }
-      document.getElementById("reply-confirm").style.display = "block";
-    });
+      h+="</ul>";tabEl.innerHTML=h;
+    }).catch(function(){tabEl.innerHTML="<div class='empty'>Erreur chargement</div>";});
 }
-function doSaveNote() {
-  if (!_currentId) return;
-  var v = document.getElementById("note-txt").value;
-  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ internal_notes: v, updated_at: new Date().toISOString() }) })
-    .then(function(){
-      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].internal_notes = v; break; }
-      document.getElementById("note-txt").style.border = "1.5px solid #10b981";
-      setTimeout(function(){ document.getElementById("note-txt").style.border = "1.5px solid #fbbf24"; }, 2000);
-    });
-}
-function loadTeam() {
-  var el = document.getElementById("team-grid");
-  el.innerHTML = '<div class="spin">Chargement...</div>';
-  fetch(SUPA + "/rest/v1/sub_admins?school_id=eq." + _sid + "&is_active=eq.true&select=*", { headers: { apikey: SK, Authorization: "Bearer " + SK } })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (!Array.isArray(data)) { el.innerHTML = '<div class="empty">Aucun sous-administrateur</div>'; return; }
-      _subAdmins = data;
-      if (!data.length) { el.innerHTML = '<div class="empty">Aucun sous-administrateur ajouté</div>'; return; }
-      var h = "";
-      data.forEach(function(s){
-        h += '<div class="team-card">';
-        h += '<div class="tc-name">' + s.name + '</div>';
-        h += '<div class="tc-role">' + (s.role || "") + '</div>';
-        if (s.email) h += '<div style="font-size:.8rem;color:#374151;margin-bottom:.5rem">' + s.email + '</div>';
-        h += '<div>Code: <span class="tc-code">' + (s.admin_code || "-") + '</span></div>';
-        h += '<div class="tc-actions"><button class="btn btn-danger btn-sm" onclick="doRemoveSub(\'' + s.id + '\')">Retirer</button></div>';
-        h += '</div>';
-      });
-      el.innerHTML = h;
-    })
-    .catch(function(){ el.innerHTML = '<div class="empty">Erreur chargement équipe</div>'; });
-}
-function genCode() {
-  var c = "SS"; var ch = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  for (var i = 0; i < 6; i++) c += ch[Math.floor(Math.random() * ch.length)];
-  return c;
-}
-function showAddSub() {
-  if (_subAdmins.length >= 4) { alert("Maximum 4 sous-administrateurs atteint."); return; }
-  document.getElementById("sub-name").value = "";
-  document.getElementById("sub-email").value = "";
-  document.getElementById("sub-result").style.display = "none";
-  document.getElementById("ov-sub").classList.add("on");
-}
-function closeSubModal() { document.getElementById("ov-sub").classList.remove("on"); }
-function doAddSub() {
-  var name = document.getElementById("sub-name").value.trim();
-  var role = document.getElementById("sub-role").value;
-  var email = document.getElementById("sub-email").value.trim();
-  if (!name) { alert("Nom requis"); return; }
-  var code = genCode();
-  fetch(SUPA + "/rest/v1/sub_admins", { method: "POST", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ school_id: _sid, name: name, role: role, email: email, admin_code: code, is_active: true }) })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var res = document.getElementById("sub-result");
-      res.innerHTML = "✓ Sous-admin créé ! Code d'accès: <strong>" + code + "</strong>";
-      res.style.display = "block";
-      loadTeam();
-    })
-    .catch(function(){ alert("Erreur lors de la création"); });
-}
-function doRemoveSub(id) {
-  if (!confirm("Retirer ce sous-administrateur ?")) return;
-  fetch(SUPA + "/rest/v1/sub_admins?id=eq." + id, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json" }, body: JSON.stringify({ is_active: false }) })
-    .then(function(){ loadTeam(); });
-}
-function loadSettings() {
-  var el = document.getElementById("settings-info");
-  fetch(SUPA + "/rest/v1/schools?id=eq." + _sid + "&select=*", { headers: { apikey: SK, Authorization: "Bearer " + SK } })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var s = Array.isArray(d) ? d[0] : null;
-      if (!s) { el.innerHTML = '<div class="empty">Données non trouvées</div>'; return; }
-      el.innerHTML = '<div class="fl2"><div class="fl"><label>Nom</label><p>' + s.name + '</p></div><div class="fl"><label>Ville</label><p>' + (s.city || "-") + '</p></div></div><div class="fl2"><div class="fl"><label>Code postal</label><p>' + (s.postal_code || "-") + '</p></div><div class="fl"><label>Plan</label><p>' + (s.plan_code || "-") + '</p></div></div><div class="fl"><label>Email admin</label><p>' + (s.admin_email || "-") + '</p></div><div class="fl"><label>Sous-domaine</label><p><a href="https://' + s.slug + '.safeschool.fr" target="_blank">' + s.slug + '.safeschool.fr</a></p></div>';
-    });
-}
-function exportCSV() {
-  if (!_all.length) { alert("Aucun signalement à exporter"); return; }
-  var headers = ["Code","Type","Urgence","Statut","Description","Lieu","Classe","Role","Anonyme","Email","Date"];
-  var rows = _all.map(function(r){
-    return [r.tracking_code,r.type,r.urgency,r.status,(r.description||"").replace(/,/g," "),(r.location||""),(r.classe||""),(r.reporter_role||""),(r.anonymous?"Oui":"Non"),(r.reporter_email||""),new Date(r.created_at).toLocaleString("fr-FR")].join(",");
+function doSt(id,s){
+  fetch(SU+"/rest/v1/reports?id=eq."+id,{method:"PATCH",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({status:s,updated_at:new Date().toISOString()})}).then(function(){
+    var r=null;for(var i=0;i<_all.length;i++)if(_all[i].id===id){r=_all[i];break;}
+    if(r){r.status=s;if(_curRep&&_curRep.id===id)_curRep.status=s;}
+    doLoad();renderDetail();
+    if((r&&r.reporter_email)||(_curRep&&_curRep.reporter_email)){
+      var email=(r&&r.reporter_email)||(_curRep&&_curRep.reporter_email)||"";
+      var code=(r&&r.tracking_code)||(_curRep&&_curRep.tracking_code)||"";
+      if(email)fetch("/api/notify/status-update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({trackingCode:code,newStatus:s,email:email,schoolId:_sid})}).catch(function(){});
+    }
   });
-  var csv = headers.join(",") + "
-" + rows.join("
-");
-  var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  var a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "signalements-" + _slug + "-" + new Date().toISOString().slice(0,10) + ".csv";
-  a.click();
 }
-function printReport() {
-  if (!_currentId) return;
-  var r = null;
-  for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { r = _all[i]; break; }
-  if (!r) return;
-  var w = window.open("", "_blank");
-  w.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>Signalement " + r.tracking_code + "</title><style>body{font-family:Arial,sans-serif;padding:2rem;max-width:700px;margin:0 auto}h1{color:#1a1a2e}table{width:100%;border-collapse:collapse;margin-top:1rem}td{padding:.5rem;border:1px solid #e5e7eb;font-size:.9rem}td:first-child{font-weight:bold;background:#f8fafc;width:30%}@media print{button{display:none}}</style></head><body>");
-  w.document.write("<h1>&#128737;&#65039; SafeSchool — Dossier " + r.tracking_code + "</h1>");
-  w.document.write("<table>");
-  w.document.write("<tr><td>Code</td><td>" + (r.tracking_code||"") + "</td></tr>");
-  w.document.write("<tr><td>Type</td><td>" + (TL2[r.type]||r.type||"") + "</td></tr>");
-  w.document.write("<tr><td>Urgence</td><td>" + (r.urgency||"") + "</td></tr>");
-  w.document.write("<tr><td>Statut</td><td>" + (SN[r.status]||r.status||"") + "</td></tr>");
-  w.document.write("<tr><td>Description</td><td>" + (r.description||"") + "</td></tr>");
-  w.document.write("<tr><td>Lieu</td><td>" + (r.location||"-") + "</td></tr>");
-  w.document.write("<tr><td>Classe</td><td>" + (r.classe||"-") + "</td></tr>");
-  w.document.write("<tr><td>Rôle</td><td>" + (r.reporter_role||"-") + "</td></tr>");
-  w.document.write("<tr><td>Date</td><td>" + new Date(r.created_at).toLocaleString("fr-FR") + "</td></tr>");
-  if (r.admin_reply) w.document.write("<tr><td>Réponse admin</td><td>" + r.admin_reply + "</td></tr>");
-  w.document.write("</table><br><button onclick=window.print()>Imprimer</button></body></html>");
-  w.document.close();
+function doReply(id){
+  var v=document.getElementById("rep-txt").value;
+  if(!v.trim()){alert("Saisir une reponse avant d'envoyer.");return;}
+  var r=_curRep;
+  fetch(SU+"/rest/v1/reports?id=eq."+id,{method:"PATCH",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({admin_reply:v,reply_sent_at:new Date().toISOString(),status:"en_cours",updated_at:new Date().toISOString()})}).then(function(){
+    if(r){r.admin_reply=v;r.reply_sent_at=new Date().toISOString();}
+    if(r&&r.reporter_email){
+      fetch("/api/notify/staff-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({trackingCode:r.tracking_code||"",email:r.reporter_email,message:v,schoolId:_sid})}).then(function(){alert("Reponse enregistree et email envoye!");}).catch(function(){alert("Reponse enregistree (email echoue).");});
+    } else { alert("Reponse enregistree. (pas d'email)"); }
+    doLoad();
+  });
 }
-function doCl() { document.getElementById("ov").classList.remove("on"); }
-function doOut() { localStorage.clear(); document.cookie = "ss_admin_token=; path=/; max-age=0"; location.href = "/admin/login"; }
-
-// === LEA IA ===
-var _leaData = null;
-var _leaReport = "";
-
-function loadLea() {
-  if (!_tok) return;
-  // Baromètre immédiat (pas besoin de clé Anthropic)
-  fetch("/api/lea/barometer", { method: "POST", headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" } })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var score = d.score || 0;
-      var pct = score + "%";
-      var el = document.getElementById("baro-ring");
-      if (el) { el.style.setProperty("--bc", d.couleur || "#10b981"); el.style.setProperty("--bp", pct); }
-      var es = document.getElementById("baro-score");
-      if (es) { es.textContent = score; es.style.color = d.couleur || "#10b981"; }
-      var niveauTxt = { faible: "&#127881; Niveau FAIBLE", modere: "&#9888;&#65039; Niveau MOD&#201;R&#201;", eleve: "&#128308; Niveau &#201;LEV&#201;", critique: "&#128680; Niveau CRITIQUE" };
-      var en = document.getElementById("baro-niveau");
-      if (en) en.innerHTML = niveauTxt[d.niveau] || d.niveau || "-";
-      if (document.getElementById("bl-total")) document.getElementById("bl-total").textContent = d.total || 0;
-      if (document.getElementById("bl-new")) document.getElementById("bl-new").textContent = d.nouveau || 0;
-      if (document.getElementById("bl-urg")) document.getElementById("bl-urg").textContent = d.critique_urgent || 0;
-      if (document.getElementById("bl-30")) document.getElementById("bl-30").textContent = d.last30 || 0;
-    })
-    .catch(function(e){ console.error("Baromètre error:", e); });
-  // Analyse IA (nécessite ANTHROPIC_API_KEY)
-  var syEl = document.getElementById("lea-synthese");
-  if (syEl) syEl.innerHTML = '<div class="lea-loading"><span class="spin-icon">&#129302;</span><br>L&#233;a analyse vos donn&#233;es...</div>';
-  fetch("/api/lea/analyze", { method: "POST", headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" } })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      _leaData = d;
-      if (d.error || !d.analysis) {
-        var msg = d.analysis ? "" : "L'analyse IA n'est pas encore activ&#233;e. Configurez ANTHROPIC_API_KEY dans Netlify.";
-        if (syEl) syEl.innerHTML = '<div style="color:#92400e;background:#fef3c7;padding:1rem;border-radius:8px;font-size:.875rem">&#9888;&#65039; ' + msg + '</div>';
-        return;
-      }
-      var a = d.analysis;
-      // Synthèse
-      var tendCls = { hausse: "tendance-hausse", stable: "tendance-stable", baisse: "tendance-baisse" };
-      var tendIco = { hausse: "&#8679;", stable: "&#8596;", baisse: "&#8681;" };
-      var synHtml = '<p style="font-size:.9rem;color:#374151;line-height:1.6;margin-bottom:1rem">' + (a.synthese || "") + '</p>';
-      synHtml += '<div style="display:flex;align-items:center;gap:.75rem"><span class="tendance-badge ' + (tendCls[a.tendance] || "tendance-stable") + '">' + (tendIco[a.tendance] || "") + " Tendance " + (a.tendance || "stable") + '</span></div>';
-      if (a.message_equipe) synHtml += '<div style="margin-top:1rem;padding:.875rem;background:#eff6ff;border-radius:8px;border-left:4px solid #6366f1;font-size:.875rem;color:#1e40af;font-style:italic">&#128140; ' + a.message_equipe + '</div>';
-      if (syEl) syEl.innerHTML = synHtml;
-      // Points d'attention
-      var ptEl = document.getElementById("lea-points");
-      if (ptEl && a.points_attention) {
-        ptEl.innerHTML = (a.points_attention || []).map(function(pt){
-          return '<div class="point-item"><span style="color:#ef4444;flex-shrink:0">&#9679;</span><span>' + pt + '</span></div>';
-        }).join("");
-        if (!a.points_attention.length) ptEl.innerHTML = '<div style="color:#9ca3af;font-size:.875rem">Aucun point critique identifi&#233;</div>';
-      }
-      // Conseils
-      var coEl = document.getElementById("lea-conseils");
-      if (coEl && a.conseils) {
-        coEl.innerHTML = (a.conseils || []).map(function(c, i){
-          return '<div class="conseil-item"><div class="conseil-num">' + (i+1) + '</div><div style="font-size:.875rem;color:#374151">' + c + '</div></div>';
-        }).join("");
-        if (!a.conseils.length) coEl.innerHTML = '<div style="color:#9ca3af;font-size:.875rem">Aucun conseil sp&#233;cifique</div>';
-      }
-    })
-    .catch(function(e){
-      if (syEl) syEl.innerHTML = '<div style="color:#6b7280;font-size:.875rem">Erreur connexion IA: ' + e.message + '</div>';
-    });
+function doNote(id){
+  var v=document.getElementById("note-txt").value;
+  fetch(SU+"/rest/v1/reports?id=eq."+id,{method:"PATCH",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({internal_notes:v,updated_at:new Date().toISOString()})}).then(function(){
+    if(_curRep)_curRep.internal_notes=v;
+    alert("Note enregistree!");
+  });
 }
-
-function generateReport() {
-  var secEl = document.getElementById("lea-report-section");
-  var conEl = document.getElementById("lea-report-content");
-  if (secEl) secEl.style.display = "block";
-  if (conEl) conEl.innerHTML = '<div class="lea-loading"><span class="spin-icon">&#129302;</span><br>L&#233;a r&#233;dige votre rapport...</div>';
-  fetch("/api/lea/report", { method: "POST", headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" } })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      _leaReport = d.html || "";
-      if (d.error || !d.html) {
-        if (conEl) conEl.innerHTML = '<div style="color:#92400e">Erreur: ' + (d.error || "L'IA n'est pas configur&#233;e") + '</div>';
-        return;
-      }
-      if (conEl) conEl.innerHTML = d.html;
-      if (secEl) secEl.scrollIntoView({ behavior: "smooth" });
-    })
-    .catch(function(e){ if (conEl) conEl.innerHTML = '<div style="color:#6b7280">Erreur: ' + e.message + '</div>'; });
+function doAssign(id,subId){
+  var sub=null;for(var i=0;i<_subs.length;i++)if(_subs[i].id===subId){sub=_subs[i];break;}
+  var nm=sub?sub.name:"";
+  fetch(SU+"/rest/v1/reports?id=eq."+id,{method:"PATCH",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({assigned_to:subId||null,assigned_to_name:nm,updated_at:new Date().toISOString()})}).then(function(){
+    if(_curRep){_curRep.assigned_to=subId;_curRep.assigned_to_name=nm;}
+    doLoad();
+  });
 }
-
-function printLeaReport() {
-  if (!_leaReport) return;
-  var w = window.open("", "_blank");
-  w.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>Rapport Léa SafeSchool</title><style>body{font-family:Arial,sans-serif;padding:2rem;max-width:800px;margin:0 auto}h1,h2,h3{color:#1a1a2e}table{width:100%;border-collapse:collapse}td,th{padding:.5rem;border:1px solid #e5e7eb}@media print{button{display:none}}</style></head><body>");
-  w.document.write(_leaReport);
-  w.document.write("<br><button onclick=window.print()>Imprimer</button></body></html>");
-  w.document.close();
+function loadTeam(){
+  if(!_sid)return;
+  fetch(SU+"/rest/v1/sub_admins?school_id=eq."+_sid+"&order=created_at.asc&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(data){
+    _subs=Array.isArray(data)?data:[];
+    var el=document.getElementById("sa-list");if(!el)return;
+    if(!_subs.length){el.innerHTML="<p style='color:var(--muted);font-size:.875rem'>Aucun sous-admin. Ajoutez-en jusqu'a 4.</p>";return;}
+    var h="";
+    for(var i=0;i<_subs.length;i++){var sa=_subs[i];
+      h+="<div class='sa-card'>";
+      h+="<div class='sa-info'><div class='name'>"+sa.name+"</div><div class='meta'>"+(sa.role||"")+(sa.email?" - "+sa.email:"")+"</div></div>";
+      h+="<div style='display:flex;align-items:center;gap:.5rem'><span class='sa-code'>"+(sa.admin_code||"")+"</span>";
+      h+="<button class='btn btn-danger btn-sm' onclick='delSA(\""+sa.id+"\")'>Retirer</button></div>";
+      h+="</div>";
+    }
+    el.innerHTML=h;
+  });
+  fetch(SU+"/rest/v1/staff?school_id=eq."+_sid+"&order=full_name.asc&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(data){
+    _stfs=Array.isArray(data)?data:[];
+    var el=document.getElementById("staff-list");if(!el)return;
+    if(!_stfs.length){el.innerHTML="<p style='color:var(--muted);font-size:.875rem'>Aucun personnel. Ajoutez-en.</p>";return;}
+    var h="<table class='staff-table'><thead><tr><th>Nom</th><th>Role</th><th>Email</th><th></th></tr></thead><tbody>";
+    for(var i=0;i<_stfs.length;i++){var st=_stfs[i];
+      h+="<tr><td>"+st.full_name+"</td><td>"+(st.role||"-")+"</td><td>"+(st.email||"-")+"</td>";
+      h+="<td><button class='btn btn-danger btn-sm' onclick='delStaff(\""+st.id+"\")'>&#10005;</button></td></tr>";
+    }
+    h+="</tbody></table>";el.innerHTML=h;
+  });
 }
-// Init
-doLoad();
-loadTeam();
-setInterval(doLoad, 30000);
-</script>
-</body></html>
+function showAddSubAdmin(){
+  if(_subs.length>=4){alert("Maximum 4 sous-admins atteint.");return;}
+  document.getElementById("ov-sa").className="ov on";
+}
+function closeSA(){document.getElementById("ov-sa").className="ov";}
+function genCode(){return"SS"+Math.random().toString(36).substring(2,6).toUpperCase()+Math.floor(10+Math.random()*90);}
+function doAddSA(){
+  var name=document.getElementById("sa-name").value.trim();
+  var role=document.getElementById("sa-role").value;
+  var email=document.getElementById("sa-email").value.trim();
+  if(!name){alert("Nom requis");return;}
+  var code=genCode();
+  fetch(SU+"/rest/v1/sub_admins",{method:"POST",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({school_id:_sid,name:name,role:role,email:email,admin_code:code,is_active:true})}).then(function(){
+    closeSA();loadTeam();alert("Sous-admin ajoute! Code: "+code);
+  });
+}
+function delSA(id){if(!confirm("Retirer ce sous-admin ?"))return;fetch(SU+"/rest/v1/sub_admins?id=eq."+id,{method:"DELETE",headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(){loadTeam();});}
+function showAddStaff(){document.getElementById("ov-staff").className="ov on";}
+function closeStaff(){document.getElementById("ov-staff").className="ov";}
+function doAddStaff(){
+  var name=document.getElementById("st-name").value.trim();
+  var role=document.getElementById("st-role").value.trim();
+  var email=document.getElementById("st-email").value.trim();
+  var phone=document.getElementById("st-phone").value.trim();
+  if(!name){alert("Nom requis");return;}
+  fetch(SU+"/rest/v1/staff",{method:"POST",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({school_id:_sid,full_name:name,role:role,email:email,phone:phone,is_active:true})}).then(function(){
+    closeStaff();loadTeam();
+  });
+}
+function delStaff(id){if(!confirm("Retirer ce personnel ?"))return;fetch(SU+"/rest/v1/staff?id=eq."+id,{method:"DELETE",headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(){loadTeam();});}
+function loadSettings(){
+  fetch(SU+"/rest/v1/schools?id=eq."+_sid+"&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(d){
+    var s=d[0];if(!s)return;
+    document.getElementById("set-name").textContent=s.name||"-";
+    document.getElementById("set-city").textContent=s.city||"-";
+    document.getElementById("set-cp").textContent=s.postal_code||"-";
+    document.getElementById("set-email").textContent=s.admin_email||"-";
+    document.getElementById("set-code").textContent=s.admin_code||_code||"-";
+    document.getElementById("set-url").innerHTML="<a href='https://"+s.slug+".safeschool.fr' target='_blank'>https://"+s.slug+".safeschool.fr</a>";
+  });
+}
+function closeRep(){document.getElementById("ov-rep").className="ov";}
+function doOut(){localStorage.clear();document.cookie="ss_admin_token=; path=/; max-age=0";location.href="/admin/login";}
+doLoad();setInterval(doLoad,30000);
+if(_sid)fetch(SU+"/rest/v1/sub_admins?school_id=eq."+_sid+"&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(d){_subs=Array.isArray(d)?d:[];});
+</script></body></html>
