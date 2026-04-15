@@ -2224,6 +2224,16 @@ function rNext(){
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
 async function submitReport(){
+  // LECTURE rData + appel endpoint sécurisé
+  if(typeof rData !== 'undefined' && (localStorage.getItem('ss_current_etab_slug')||(currentEtab&&currentEtab.slug))){
+    var _sl=localStorage.getItem('ss_current_etab_slug')||(currentEtab?currentEtab.slug:'');
+    try{
+      var _res=await fetch('/api/establishments/submit-report/'+_sl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:rData.harassmentType||rData.type||'autre',description:rData.description||'',location:rData.location||'',urgency:'faible',anonymous:rData.isAnonymous!==false,reporter_role:rData.reporterType||'eleve',reporter_email:rData.reporterEmail||rData.email||'',classe:rData.classe||'',reporter_name:rData.reporterName||rData.name||''})});
+      var _d=await _res.json();
+      if(_res.ok&&_d.ok){window._lastReportId=_d.report_id;window._lastSlug=_sl;showConfirmation(_d.tracking_code,{});return;}
+    }catch(_e){console.warn('[SS] endpoint err:',_e);}
+  }
+
   
 
   try {
@@ -2483,6 +2493,35 @@ async function submitReport(){
   }
 }
 function showConfirmation(code,report){
+  // Upload automatique des fichiers joints (photos/vidéos/PDF)
+  setTimeout(async function(){
+    try {
+      if(typeof rData === 'undefined' || !rData.files || rData.files.length === 0) return;
+      var _rid = window._lastReportId;
+      var _sid = currentEtab ? currentEtab.id : null;
+      if(!_rid || !_sid) return;
+      var SUPA='https://bsytkpgdxvlddzuwaabp.supabase.co', SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A';
+      var photoCnt=0, videoCnt=0, pdfCnt=0;
+      for(var i=0; i<rData.files.length; i++){
+        var f=rData.files[i]; if(!f) continue;
+        var isVideo=f.type&&f.type.startsWith('video/');
+        var isPdf=f.type==='application/pdf';
+        var isPhoto=!isVideo&&!isPdf&&f.type&&f.type.startsWith('image/');
+        if(isPhoto&&photoCnt>=5)continue;
+        if(isVideo&&videoCnt>=2)continue;
+        if(isPdf&&pdfCnt>=2)continue;
+        if(f.size>(isVideo?52428800:10485760))continue;
+        var path=_sid+'/'+_rid+'/'+Date.now()+'_'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+        var up=await fetch(SUPA+'/storage/v1/object/report-files/'+path,{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f});
+        if(up.ok){
+          await fetch(SUPA+'/rest/v1/report_files',{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({report_id:_rid,school_id:_sid,file_path:path,file_name:f.name,file_type:isVideo?'video':isPdf?'pdf':'photo',file_size:f.size,mime_type:f.type,is_video:!!isVideo,is_photo:!!isPhoto})});
+          if(isPhoto)photoCnt++;if(isVideo)videoCnt++;if(isPdf)pdfCnt++;
+        }
+      }
+      if(photoCnt+videoCnt+pdfCnt>0) console.log('[SS] '+( photoCnt+videoCnt+pdfCnt)+' fichier(s) uploadé(s)');
+    }catch(e){console.warn('[SS] Upload error:',e);}
+  },1500);
+
   document.getElementById('report-container').innerHTML=`
   <div class="succ">
     <div class="succ-icon">✅</div>
@@ -4447,7 +4486,7 @@ function toggleDarkMode() {
 // SUPABASE CONFIG & AUTH
 // ═══════════════════════════════════════════
 const SS_SUPABASE_URL = "https://bsytkpgdxvlddzuwaabp.supabase.co";
-const SS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A";
+const SS_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
 
 window.ENV_SUPABASE_URL = SS_SUPABASE_URL;
 window.ENV_SUPABASE_KEY = SS_SUPABASE_ANON_KEY;
