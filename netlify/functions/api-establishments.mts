@@ -266,7 +266,7 @@ export default async (req: Request, context: Context) => {
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     
     // JWT Bearer token check
     const authHdr = req.headers.get('Authorization') || '';
@@ -341,7 +341,7 @@ export default async (req: Request, context: Context) => {
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
