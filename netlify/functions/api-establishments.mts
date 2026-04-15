@@ -34,7 +34,7 @@ async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; rema
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
@@ -268,23 +268,23 @@ export default async (req: Request, context: Context) => {
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
     const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     
-    // Vérifier aussi le JWT Bearer token
+    // JWT Bearer token check
     const authHdr = req.headers.get('Authorization') || '';
-    if(!okRL && authHdr.startsWith('Bearer ')) {
+    if (!okRL && authHdr.startsWith('Bearer ')) {
       try {
-        const tokRL = authHdr.replace('Bearer ', '');
+        const tokRL = authHdr.slice(7);
         const secRL = Netlify.env.get('ADMIN_JWT_SECRET') || 'safeschool_change_me';
-        const [hRL, pRL, sRL] = tokRL.split('.');
-        if(hRL && pRL && sRL) {
+        const parts = tokRL.split('.');
+        if (parts.length === 3) {
           const kRL = await crypto.subtle.importKey('raw', new TextEncoder().encode(secRL), {name:'HMAC',hash:'SHA-256'}, false, ['verify']);
-          const sbRL = Uint8Array.from(atob(sRL.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
-          const validRL = await crypto.subtle.verify('HMAC', kRL, sbRL, new TextEncoder().encode(hRL+'.'+pRL));
-          if(validRL) {
-            const dRL = JSON.parse(atob(pRL.replace(/-/g,'+').replace(/_/g,'/')));
-            if(dRL.exp > Math.floor(Date.now()/1000) && dRL.slug === slug2) okRL = true;
+          const sbRL = Uint8Array.from(atob(parts[2].replace(/-/g,'+').replace(/_/g,'/')), (c:string) => c.charCodeAt(0));
+          const validRL = await crypto.subtle.verify('HMAC', kRL, sbRL, new TextEncoder().encode(parts[0]+'.'+parts[1]));
+          if (validRL) {
+            const dRL = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+            if (dRL.exp > Math.floor(Date.now()/1000) && dRL.slug === slug2) okRL = true;
           }
         }
-      } catch(_e) {}
+      } catch (_e) {}
     }
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
