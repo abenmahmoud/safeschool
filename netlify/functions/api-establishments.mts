@@ -34,7 +34,7 @@ async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; rema
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
@@ -266,7 +266,7 @@ export default async (req: Request, context: Context) => {
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
@@ -295,7 +295,7 @@ export default async (req: Request, context: Context) => {
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
@@ -455,6 +455,30 @@ export default async (req: Request, context: Context) => {
     if (!listRes.ok) return cors({ error: 'Erreur lecture Supabase' }, 500, req);
     const listData = await listRes.json();
     return cors({ ok: true, reports: listData, total: listData.length }, 200, req);
+  }
+
+  // === ADMIN JWT LOGIN ===
+  if (req.method === 'POST' && path.startsWith('/admin-jwt/')) {
+    const slugJ = (path.split('/admin-jwt/')[1] || '').split('?')[0].toLowerCase();
+    let bodyJ: any = {};
+    try { bodyJ = await req.json(); } catch {}
+    const codeJ = String(bodyJ.admin_code || '').trim();
+    if (!slugJ || !codeJ) return cors({ error: 'Params requis' }, 400, req);
+    const suJ = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skJ = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const resJ = await fetch(`${suJ}/rest/v1/schools?slug=eq.${encodeURIComponent(slugJ)}&select=id,name,slug,is_active,admin_code,plan_code`, { headers: { apikey: skJ, Authorization: 'Bearer ' + skJ } });
+    const schJ: any[] = await resJ.json();
+    if (!schJ?.length || !schJ[0].is_active) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const scJ = schJ[0];
+    if (!scJ.admin_code || codeJ !== scJ.admin_code) return cors({ error: 'Code incorrect' }, 401, req);
+    const secJ = Netlify.env.get('ADMIN_JWT_SECRET') || 'safeschool_change_me';
+    const hJ = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const pJ = btoa(JSON.stringify({ slug: slugJ, school_id: scJ.id, school_name: scJ.name, plan: scJ.plan_code || 'standard', role: 'admin', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400 })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const mJ = hJ + '.' + pJ;
+    const kJ = await crypto.subtle.importKey('raw', new TextEncoder().encode(secJ), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sJ = await crypto.subtle.sign('HMAC', kJ, new TextEncoder().encode(mJ));
+    const tokJ = mJ + '.' + btoa(String.fromCharCode(...new Uint8Array(sJ))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return new Response(JSON.stringify({ ok: true, token: tokJ, school_name: scJ.name, role: 'admin' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Set-Cookie': 'ss_admin_token=' + tokJ + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400' } });
   }
 
   if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401, req);
