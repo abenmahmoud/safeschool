@@ -235,6 +235,341 @@ export default async (req: Request, context: Context) => {
     const path = url.pathname.replace('/api/establishments', '');
     const store = getStore({ name: 'establishments', consistency: 'strong' });
 
+
+  // === LOGIN ADMIN + JWT (avant tout authCheck) ===
+  if (req.method === 'POST' && path.startsWith('/admin-jwt/')) {
+    const slugJwt = path.replace('/admin-jwt/', '').split('?')[0].toLowerCase();
+    let bodyJwt: any = {};
+    try { bodyJwt = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const codeJwt = String(bodyJwt.admin_code || '').trim();
+    if (!slugJwt || !codeJwt) return cors({ error: 'Parametres requis' }, 400, req);
+    const suJwt = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skJwt = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const rJwt = await fetch(suJwt + '/rest/v1/schools?slug=eq.' + encodeURIComponent(slugJwt) + '&select=id,name,slug,is_active,admin_code,plan_code', {
+      headers: { 'apikey': skJwt, 'Authorization': 'Bearer ' + skJwt }
+    });
+    const schoolsJwt: any[] = await rJwt.json();
+    if (!schoolsJwt?.length || !schoolsJwt[0].is_active) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolJwt = schoolsJwt[0];
+    if (!schoolJwt.admin_code || codeJwt !== schoolJwt.admin_code) return cors({ error: 'Code incorrect' }, 401, req);
+    const secretJwt = Netlify.env.get('ADMIN_JWT_SECRET') || 'safeschool_change_me_in_env';
+    const h64 = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    const p64 = btoa(JSON.stringify({ slug: slugJwt, school_id: schoolJwt.id, school_name: schoolJwt.name, plan: schoolJwt.plan_code || 'standard', role: 'admin', iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000)+86400 })).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    const msg = h64 + '.' + p64;
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secretJwt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+    const token = msg + '.' + btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    return new Response(JSON.stringify({ ok: true, token, school_name: schoolJwt.name, role: 'admin' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Set-Cookie': 'ss_admin_token=' + token + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400' }
+    });
+  }
+  // SIGNALEMENT PUBLIC - AVANT authCheck
+  if (req.method === 'POST' && path.startsWith('/submit-report/')) {
+    const slugSR = (path.split('/submit-report/')[1] || '').split('?')[0].toLowerCase();
+    if (!slugSR) return cors({ error: 'Slug manquant' }, 400, req);
+    const idxSR = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const schoolSR = idxSR.find((e: any) => e.slug === slugSR);
+    if (!schoolSR?.id) return cors({ error: 'Etablissement inconnu: ' + slugSR }, 404, req);
+    let bodySR: any = {};
+    try { bodySR = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const alphaSR = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let codeSR = 'RPT-'; for (let i = 0; i < 8; i++) codeSR += alphaSR[Math.floor(Math.random() * alphaSR.length)];
+    const suSR = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skSR = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const resSR = await fetch(suSR + '/rest/v1/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': skSR, 'Authorization': 'Bearer ' + skSR, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ school_id: schoolSR.id, tracking_code: codeSR, type: String(bodySR.type || 'autre').substring(0, 100), description: String(bodySR.description || '').substring(0, 2000), location: String(bodySR.location || '').substring(0, 500), urgency: (['faible','moyen','eleve','critique'].includes(bodySR.urgency) ? bodySR.urgency : 'faible'), anonymous: bodySR.anonymous !== false, reporter_role: String(bodySR.reporter_role || 'eleve').substring(0, 50), reporter_email: String(bodySR.reporter_email || bodySR.contact || '').substring(0, 200), classe: String(bodySR.classe || bodySR.class_name || bodySR.victim_class || '').substring(0, 100), status: 'nouveau', source_channel: 'web', created_at: new Date().toISOString() }),
+    });
+    if (!resSR.ok) { const eSR = await resSR.text(); return cors({ error: 'Erreur DB', d: eSR.substring(0, 100) }, 500, req); }
+    const dataSR = await resSR.json();
+    return cors({ ok: true, tracking_code: codeSR, report_id: dataSR[0]?.id }, 201, req);
+  }
+  // LISTE SIGNALEMENTS ADMIN
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
+    const acRL = req.headers.get('x-admin-code') || '';
+    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
+    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
+    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
+    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
+    const dataRL = await resRL.json();
+    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
+  }
+
+    // Public endpoint: get establishment by slug (for app subdomain routing)
+    if (req.method === 'GET' && path.startsWith('/by-slug/')) {
+      const slug = path.replace('/by-slug/', '');
+      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+      const entry = index.find((e: any) => e.slug === slug && e.is_active);
+      if (!entry) return cors({ error: 'Etablissement non trouvÃÂÃÂ©' }, 404, req);
+      const data = await store.get(`school_${entry.id}`, { type: 'json' });
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    return cors({ ok: true, reports: [], total: 0, debug: true }, 200, req);
+  }
+  // === LISTE SIGNALEMENTS ADMIN ===
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
+    const acRL = req.headers.get('x-admin-code') || '';
+    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
+    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
+    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
+    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
+    const dataRL = await resRL.json();
+    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
+  }
+      if (!data) return cors({ error: 'DonnÃÂÃÂ©es non trouvÃÂÃÂ©es' }, 404, req);import { getStore } from '@netlify/blobs';
+import type { Context, Config } from '@netlify/functions';
+import crypto from 'node:crypto';
+
+// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ V10 EU ÃÂ¢ÃÂÃÂ Environment-driven auth ÃÂ¢ÃÂÃÂ NO hardcoded fallbacks ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+const SUPERADMIN_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+const SUPERADMIN_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
+const SUPABASE_URL = Netlify.env.get('SUPABASE_URL') || '';
+const SUPABASE_SERVICE_KEY =
+  Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') ||
+  Netlify.env.get('SUPABASE_ANON_KEY') ||
+  '';
+
+// Base domain used for tenant URLs.
+// Recommended for your current OVH + Netlify setup:
+//   app.safeschool.fr
+const TENANT_BASE_DOMAIN = Netlify.env.get('TENANT_BASE_DOMAIN') || 'safeschool.fr';
+const NETLIFY_TARGET = Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app';
+
+// ---------------------------------------------------------------------------
+// Rate limiting ÃÂ¢ÃÂÃÂ 5 login attempts per IP per 15 minutes
+// ---------------------------------------------------------------------------
+const LOGIN_RATE_LIMIT = 5;
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+
+async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; remaining: number }> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+
+  if (req.method === 'GET' && path.startsWith('/reports/')) {
+    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
+    const acRL = req.headers.get('x-admin-code') || '';
+    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
+    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
+    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
+    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
+    const dataRL = await resRL.json();
+    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
+  }
+
+  const key = `school_login_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = (await store.get(key, { type: 'json' })) as any;
+  } catch {
+    entry = null;
+  }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < LOGIN_RATE_WINDOW_MS) || [];
+  if (recent.length >= LOGIN_RATE_LIMIT) return { blocked: true, remaining: 0 };
+  return { blocked: false, remaining: LOGIN_RATE_LIMIT - recent.length };
+}
+
+async function recordLoginAttempt(ip: string): Promise<void> {
+  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  const key = `school_login_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const now = Date.now();
+  let entry: { attempts: number[] } | null = null;
+  try {
+    entry = (await store.get(key, { type: 'json' })) as any;
+  } catch {
+    entry = null;
+  }
+  const recent = entry?.attempts?.filter((ts: number) => now - ts < LOGIN_RATE_WINDOW_MS) || [];
+  recent.push(now);
+  await store.setJSON(key, { attempts: recent });
+}
+
+function authCheck(req: Request): boolean {
+  if (!SUPERADMIN_EMAIL || !SUPERADMIN_PASS) return false;
+  const auth = req.headers.get('x-sa-token');
+  if (!auth) return false;
+  try {
+    const decoded = atob(auth);
+    return decoded === `${SUPERADMIN_EMAIL}:${SUPERADMIN_PASS}`;
+  } catch {
+    return false;
+  }
+}
+
+function sanitize(str: string): string {
+  return String(str).replace(/[<>]/g, '').trim();
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildSchoolDomain(slug: string): string {
+  return `${slug}.${TENANT_BASE_DOMAIN}`;
+}
+
+function buildSchoolUrl(slug: string): string {
+  return `https://${buildSchoolDomain(slug)}`;
+}
+
+
+// Auto-register subdomain on Netlify DNS zone when establishment is created
+async function registerNetlifyDomain(slug: string): Promise<void> {
+  const token = Netlify.env.get('NETLIFY_API_TOKEN');
+  const dnsZoneId = Netlify.env.get('NETLIFY_DNS_ZONE_ID');
+  if (!token || !dnsZoneId) { console.warn('[DNS] NETLIFY_API_TOKEN or NETLIFY_DNS_ZONE_ID missing'); return; }
+  const hostname = buildSchoolDomain(slug);
+  try {
+    // VÃ©rifier si l'entrÃ©e existe dÃ©jÃ 
+    const existing = await fetch('https://api.netlify.com/api/v1/dns_zones/' + dnsZoneId + '/dns_records', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => r.json());
+    if (existing.find((rec: any) => rec.hostname === hostname)) {
+      console.log('[DNS] Already exists: ' + hostname); return;
+    }
+    // Ajouter l'entrÃ©e CNAME
+    const res = await fetch('https://api.netlify.com/api/v1/dns_zones/' + dnsZoneId + '/dns_records', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'NETLIFY', hostname: hostname, value: Netlify.env.get('NETLIFY_TARGET') || 'safeschoolproject.netlify.app', ttl: 3600 })
+    });
+    if (res.ok) { console.log('[DNS] Registered: ' + hostname); }
+    else { console.warn('[DNS] Failed:', await res.text()); }
+  } catch(e) { console.warn('[DNS] Error:', e); }
+}
+
+const escapedTenantBaseDomain = escapeRegex(TENANT_BASE_DOMAIN);
+const tenantOriginRegex = new RegExp(`^https:\\/\\/[a-z0-9-]+\\.${escapedTenantBaseDomain}$`);
+
+const ALLOWED_ORIGINS = [
+  'https://darling-muffin-21eb90.netlify.app',
+  Netlify.env.get('SITE_URL') || '',
+  Netlify.env.get('DEPLOY_PRIME_URL') || '',
+  `https://${TENANT_BASE_DOMAIN}`,
+].filter(Boolean);
+
+function getAllowedOrigin(req: Request): string {
+  const origin = req.headers.get('origin') || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (tenantOriginRegex.test(origin)) return origin;
+  if (/^https:\/\/[a-z0-9-]+--darling-muffin-21eb90\.netlify\.app$/.test(origin)) return origin;
+  return ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
+}
+
+function cors(body: any, status = 200, req?: Request) {
+  const allowedOrigin = req
+    ? getAllowedOrigin(req)
+    : ALLOWED_ORIGINS[0] || 'https://darling-muffin-21eb90.netlify.app';
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Headers': 'Content-Type, x-sa-token, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      Vary: 'Origin',
+    },
+  });
+}
+
+function genAdminCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'SS';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function genSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30);
+}
+
+// Sync school to Supabase (non-blocking, best-effort)
+async function syncToSupabase(school: any, store: any): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/schools`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      },
+      body: JSON.stringify({
+        id: school.id,
+        name: school.name,
+        slug: school.slug,
+        ville: school.city || null,
+        email_contact: school.email || null,
+        plan: school.plan,
+        status: school.status,
+        max_students: school.max_students,
+        max_reports_month: school.max_reports,
+        max_admins: school.max_admins,
+        expires_at: school.expires_at,
+      }),
+    });
+    if (res.ok) {
+      try {
+        const supaData = await res.json();
+        if (Array.isArray(supaData) && supaData.length > 0 && supaData[0].id) {
+          school.supabase_id = supaData[0].id;
+          await store.setJSON(`school_${school.id}`, school);
+        }
+      } catch {
+        /* ignore parse errors */
+      }
+    } else {
+      console.warn('Supabase sync failed:', res.status, await res.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.warn('Supabase sync error:', e);
+  }
+}
+
+export default async (req: Request, context: Context) => {
+  try {
+    if (req.method === 'OPTIONS') {
+      return cors({ ok: true }, 200, req);
+    }
+
+    const url = new URL(req.url);
+    const path = url.pathname.replace('/api/establishments', '');
+    const store = getStore({ name: 'establishments', consistency: 'strong' });
+
   // SIGNALEMENT PUBLIC - AVANT authCheck
   if (req.method === 'POST' && path.startsWith('/submit-report/')) {
     const slugSR = (path.split('/submit-report/')[1] || '').split('?')[0].toLowerCase();
