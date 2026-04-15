@@ -300,23 +300,32 @@ function loadMedias(reportId){
   var tabEl=document.getElementById("tab-media");
   tabEl.innerHTML="<div class='spin'>Chargement medias...</div>";
   fetch(SU+"/rest/v1/report_files?report_id=eq."+reportId+"&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}})
-    .then(function(r){return r.json();}).then(function(files){
-      if(!Array.isArray(files)||!files.length){tabEl.innerHTML="<div class='empty'>Aucun fichier joint</div>";return;}
+  .then(function(r){return r.json();}).then(function(files){
+    if(!Array.isArray(files)||!files.length){tabEl.innerHTML="<div class='empty'>Aucun fichier joint</div>";return;}
+    var paths=files.map(function(f){return f.file_path;});
+    fetch(SU+"/storage/v1/object/sign/report-files",{
+      method:"POST",
+      headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json"},
+      body:JSON.stringify({expiresIn:3600,paths:paths})
+    }).then(function(r){return r.json();}).then(function(signed){
+      var signMap={};
+      if(Array.isArray(signed)){for(var s=0;s<signed.length;s++){if(signed[s].signedURL)signMap[paths[s]]=SU+"/storage/v1"+signed[s].signedURL;}}
       var h="<div class='media-grid'>";
       for(var i=0;i<files.length;i++){
         var f=files[i];
         var isVid=f.is_video||(f.mime_type&&f.mime_type.indexOf("video")>-1);
         var isImg=f.is_photo||(f.mime_type&&f.mime_type.indexOf("image")>-1);
-        var rawUrl=SU+"/storage/v1/object/authenticated/report-files/"+f.file_path;
-        h+="<div class='media-thumb' onclick='window.open(\""+rawUrl+"\")' title='"+(f.file_name||"fichier")+"'>";
-        if(isImg)h+="<img src='"+rawUrl+"' onerror='this.parentElement.innerHTML=\"&#128247;\"' loading='lazy'>";
+        var url=signMap[f.file_path]||"";
+        h+="<div class='media-thumb' onclick='window.open(""+url+"")'>";
+        if(isImg)h+="<img src='"+url+"' onerror='this.parentElement.innerHTML="&#128247;"' loading='lazy'>";
         else if(isVid)h+="<span style='font-size:2.5rem'>&#127909;</span><div class='play-icon'>VIDEO</div>";
         else h+="<span style='font-size:2.5rem'>&#128196;</span>";
         h+="</div>";
       }
-      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s) — cliquer pour ouvrir</p>";
+      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s)</p>";
       tabEl.innerHTML=h;
     }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur: "+e.message+"</div>";});
+  }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur: "+e.message+"</div>";});
 }
 function renderReply(){
   var r=_curRep;if(!r)return;
