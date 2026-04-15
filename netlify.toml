@@ -40,6 +40,42 @@ for = "/api/*"
   Cache-Control = "no-store, no-cache, must-revalidate"
 
 # Admin caché - chemin secret uniquement
+
+[[redirects]]
+from = "/admin/login"
+to = "/admin/login.html"
+status = 200
+
+[[redirects]]
+from = "/admin/dashboard"
+to = "/admin/dashboard.html"
+status = 200
+
+[[redirects]]
+from = "/api/admin/login"
+to = "/.netlify/functions/api-admin-login"
+status = 200
+
+[[redirects]]
+from = "/api/admin/verify-token"
+to = "/.netlify/functions/api-admin-verify"
+status = 200
+
+[[redirects]]
+from = "/api/admin/files/*"
+to = "/.netlify/functions/api-admin-files"
+status = 200
+
+[[redirects]]
+from = "/api/establishments/reports"
+to = "/.netlify/functions/api-admin-reports"
+status = 200
+
+[[redirects]]
+from = "/api/establishments/reports/*"
+to = "/.netlify/functions/api-admin-reports"
+status = 200
+
 [[redirects]]
 from = "/gestion-interne-ss-2026"
 to = "/gestion-interne-ss-2026.html"
