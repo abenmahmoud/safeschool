@@ -196,7 +196,7 @@ if(!_t||!_s){location.href="/admin/login";}
 try{var _p=JSON.parse(atob(_t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));_sid=_p.school_id||"";}catch(e){}
 document.getElementById("sb-school-name").textContent=_nm;
 document.getElementById("topbar-school").textContent=_nm;
-var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcÃ¨lement:"Cyber"};
+var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcèlement:"Cyber"};
 var SN={nouveau:"Nouveau",en_cours:"En cours",resolu:"Resolu"};
 var SC={nouveau:"tnew",en_cours:"tprog",resolu:"tdone"};
 function ago(d){var m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return"instant";if(m<60)return m+"min";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"j";}
@@ -300,32 +300,23 @@ function loadMedias(reportId){
   var tabEl=document.getElementById("tab-media");
   tabEl.innerHTML="<div class='spin'>Chargement medias...</div>";
   fetch(SU+"/rest/v1/report_files?report_id=eq."+reportId+"&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}})
-  .then(function(r){return r.json();}).then(function(files){
-    if(!Array.isArray(files)||!files.length){tabEl.innerHTML="<div class='empty'>Aucun fichier joint</div>";return;}
-    var paths=files.map(function(f){return f.file_path;});
-    fetch(SU+"/storage/v1/object/sign/report-files",{
-      method:"POST",
-      headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json"},
-      body:JSON.stringify({expiresIn:3600,paths:paths})
-    }).then(function(r){return r.json();}).then(function(signed){
-      var signMap={};
-      if(Array.isArray(signed)){for(var s=0;s<signed.length;s++){if(signed[s].signedURL)signMap[paths[s]]=SU+"/storage/v1"+signed[s].signedURL;}}
+    .then(function(r){return r.json();}).then(function(files){
+      if(!Array.isArray(files)||!files.length){tabEl.innerHTML="<div class='empty'>Aucun fichier joint</div>";return;}
       var h="<div class='media-grid'>";
       for(var i=0;i<files.length;i++){
         var f=files[i];
         var isVid=f.is_video||(f.mime_type&&f.mime_type.indexOf("video")>-1);
         var isImg=f.is_photo||(f.mime_type&&f.mime_type.indexOf("image")>-1);
-        var url=signMap[f.file_path]||(SU+"/storage/v1/object/public/report-files/"+f.file_path);
-        h+="<div class='media-thumb' onclick='window.open(\""+(url.replace(/"/g,"&quot;"))+"\")' title='"+(f.file_name||"fichier")+"'>";
-        if(isImg)h+="<img src='"+url+"' onerror='this.parentElement.innerHTML=\"&#128247;\"' loading='lazy'>";
+        var rawUrl=SU+"/storage/v1/object/authenticated/report-files/"+f.file_path;
+        h+="<div class='media-thumb' onclick='window.open(\""+rawUrl+"\")' title='"+(f.file_name||"fichier")+"'>";
+        if(isImg)h+="<img src='"+rawUrl+"' onerror='this.parentElement.innerHTML=\"&#128247;\"' loading='lazy'>";
         else if(isVid)h+="<span style='font-size:2.5rem'>&#127909;</span><div class='play-icon'>VIDEO</div>";
         else h+="<span style='font-size:2.5rem'>&#128196;</span>";
         h+="</div>";
       }
-      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s) \u2014 cliquer pour ouvrir</p>";
+      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s) — cliquer pour ouvrir</p>";
       tabEl.innerHTML=h;
-    }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur signed URL: "+e.message+"</div>";});
-  }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur: "+e.message+"</div>";});
+    }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur: "+e.message+"</div>";});
 }
 function renderReply(){
   var r=_curRep;if(!r)return;
@@ -333,7 +324,7 @@ function renderReply(){
   h+="<textarea id='rep-txt' style='min-height:120px'>"+(r.admin_reply||r.staff_reply||"")+"</textarea>";
   h+="<p style='font-size:.75rem;color:var(--muted);margin-top:.375rem'>";
   if(r.reporter_email)h+="Email de notification: "+r.reporter_email;
-  else h+="(pas d'email fourni â pas de notification)";
+  else h+="(pas d'email fourni — pas de notification)";
   h+="</p></div>";
   h+="<button class='btn btn-primary' onclick='doReply(\""+r.id+"\")'>Envoyer la reponse</button>";
   if(r.reply_sent_at)h+="<p style='font-size:.75rem;color:var(--success);margin-top:.5rem'>Derniere reponse envoyee le "+new Date(r.reply_sent_at).toLocaleString("fr-FR")+"</p>";
