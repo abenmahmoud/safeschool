@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { Context, Config } from '@netlify/functions';
 export default async (req: Request, _ctx: Context) => {
   const ok = (d: object, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
