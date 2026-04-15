@@ -2224,50 +2224,7 @@ function rNext(){
 }
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
 async function submitReport(){
-  // INJECTION: endpoint submit-report
-  var _slug = localStorage.getItem('ss_current_etab_slug') || (currentEtab ? currentEtab.slug : '');
-  if(_slug) {
-    try {
-      // Lire les données depuis les variables de la vraie submitReport (définies juste après)
-      // On intercepte AVANT que la vraie logique s'exécute
-      var _schoolId = currentEtab && currentEtab.id ? currentEtab.id : null;
-      // Les vars type/urgence/description sont définies dans la vraie submitReport
-      // On les lit depuis le DOM directement comme la vraie fonction
-      var _rType = typeof rptType !== 'undefined' ? rptType : null;
-      var _rDesc = typeof rptDesc !== 'undefined' ? rptDesc : null;
-      var _rUrg = typeof rptUrgence !== 'undefined' ? rptUrgence : null;
-      var _rAnon = typeof rptAnonymous !== 'undefined' ? rptAnonymous : true;
-      var _rRole = typeof rptRole !== 'undefined' ? rptRole : 'eleve';
-      var _rLoc = typeof rptLocation !== 'undefined' ? rptLocation : null;
-      var _rClasse = typeof rptClasse !== 'undefined' ? rptClasse : null;
-      var _rEmail = typeof rptEmail !== 'undefined' ? rptEmail : null;
-      var _rName = typeof rptName !== 'undefined' ? rptName : null;
-      // Si on n'a pas les vars locales, on lit les inputs du DOM
-      if(!_rType) _rType = document.getElementById('r-type')?.dataset?.value || null;
-      if(!_rDesc) _rDesc = document.getElementById('r-desc')?.value || document.getElementById('r-description')?.value || null;
-      var _res = await fetch('/api/establishments/submit-report/' + _slug, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          type: _rType || 'autre',
-          description: _rDesc || '',
-          location: _rLoc || '',
-          urgency: 'faible',
-          anonymous: _rAnon !== false,
-          reporter_email: _rEmail || '',
-          classe: _rClasse || '',
-          reporter_role: _rRole || 'eleve',
-          reporter_name: _rName || ''
-        })
-      });
-      var _data = await _res.json();
-      if(_res.ok && _data.ok) {
-        showConfirmation(_data.tracking_code, {});
-        return;
-      }
-      console.warn('[SafeSchool] Endpoint failed:', _data.error);
-    } catch(_e) { console.warn('[SafeSchool] Endpoint error:', _e); }
-  }
+  
 
   try {
     var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
