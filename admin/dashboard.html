@@ -112,7 +112,14 @@ const adminCode = localStorage.getItem('ss_admin_code') || '';
 const slug = localStorage.getItem('ss_admin_slug') || new URLSearchParams(location.search).get('etab');
 const sname = localStorage.getItem('ss_admin_school') || '';
 if(!tok || !slug){ location.href='/admin/login'; }
-document.getElementById('sname').textContent = sname;
+try {
+  const parts2 = tok.split('.');
+  const pl2 = JSON.parse(atob(parts2[1].replace(/-/g,'+').replace(/_/g,'/')));
+  const city2 = pl2.city || localStorage.getItem('ss_admin_city') || '';
+  const pc2 = pl2.postal_code || localStorage.getItem('ss_admin_postal') || '';
+  const displayName = city2 ? sname + ' • ' + city2 + (pc2 ? ' (' + pc2 + ')' : '') : sname;
+  document.getElementById('sname').textContent = displayName;
+} catch(e) { document.getElementById('sname').textContent = sname; }
 let all = [];
 
 async function api(url, opts={}) {
