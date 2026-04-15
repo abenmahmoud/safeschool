@@ -29,78 +29,86 @@ input:focus{border-color:#667eea;}
 <body>
 <div class="card">
   <div class="logo">
-    <div class="logo-icon">🛡️</div>
+    <div class="logo-icon">&#x1F6E1;&#xFE0F;</div>
     <h1>SafeSchool</h1>
     <p>Connexion espace administrateur</p>
   </div>
-  <form id="loginForm" action="#" onsubmit="doLogin(event)" autocomplete="on" novalidate>
-    <div class="field">
-      <label for="email">Email administrateur</label>
-      <input type="email" id="email" name="email" placeholder="proviseur@etablissement.fr" autocomplete="email" required>
-    </div>
-    <div class="field">
-      <label for="code">Code d'accès</label>
-      <input type="password" id="code" name="code" placeholder="Code reçu (ex: SSABCD12)" autocomplete="current-password" required>
-      <div class="hint">Code fourni lors de la création de votre espace SafeSchool</div>
-    </div>
-    <button type="submit" class="btn" id="btn">Se connecter</button>
-    <div class="error" id="err"></div>
-  </form>
-  <div class="help">Problème ? <a href="mailto:support@safeschool.fr">support@safeschool.fr</a></div>
+  <div class="field">
+    <label>Email administrateur</label>
+    <input type="email" id="email" placeholder="proviseur@etablissement.fr" autocomplete="email">
+  </div>
+  <div class="field">
+    <label>Code d'acces</label>
+    <input type="password" id="code" placeholder="Code recu (ex: SSABCD12)" autocomplete="current-password">
+    <div class="hint">Code fourni lors de la creation de votre espace SafeSchool</div>
+  </div>
+  <button class="btn" id="btn" onclick="doLogin()">Se connecter</button>
+  <div class="error" id="err"></div>
+  <div class="help">Probleme ? <a href="mailto:support@safeschool.fr">support@safeschool.fr</a></div>
 </div>
 <script>
-// urlSlug lu dynamiquement dans doLogin
+// Lire slug depuis URL au chargement
+var _slug = new URLSearchParams(location.search).get('etab') || '';
 
-async function doLogin(e) {
-  e.preventDefault();
-  const urlSlug = new URLSearchParams(location.search).get('etab') || '';
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const code = document.getElementById('code').value.trim().toUpperCase();
-  const btn = document.getElementById('btn');
-  const err = document.getElementById('err');
+// Permettre Entree
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogin() {
+  var email = document.getElementById('email').value.trim().toLowerCase();
+  var code = document.getElementById('code').value.trim().toUpperCase();
+  var btn = document.getElementById('btn');
+  var err = document.getElementById('err');
   err.style.display = 'none';
   if (!email || !code) { showErr('Remplissez tous les champs'); return; }
   btn.disabled = true;
   btn.textContent = 'Connexion...';
   try {
-    let token = null, slug = null, schoolName = null;
-    // Essai 1 : avec le slug en URL (plus rapide)
-    if (urlSlug) {
-      const r = await fetch('/api/establishments/admin-jwt/' + urlSlug, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
+    var token = null, slug = null, schoolName = null;
+    // Essai 1 : avec slug en URL
+    if (_slug) {
+      var r1 = await fetch('/api/establishments/admin-jwt/' + _slug, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ admin_code: code })
       });
-      const d = await r.json();
-      if (r.ok && d.ok) { token = d.token; slug = urlSlug; schoolName = d.school_name; }
+      var d1 = await r1.json();
+      if (r1.ok && d1.ok) { token = d1.token; slug = _slug; schoolName = d1.school_name; }
     }
-    // Essai 2 : par email + code (sans slug)
+    // Essai 2 : par email si pas de slug ou echec
     if (!token) {
-      const r2 = await fetch('/api/establishments/admin-jwt-by-email', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ email, admin_code: code })
+      var r2 = await fetch('/api/establishments/admin-jwt-by-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, admin_code: code })
       });
-      const d2 = await r2.json();
+      var d2 = await r2.json();
       if (r2.ok && d2.ok) { token = d2.token; slug = d2.slug; schoolName = d2.school_name; }
-      else { showErr(d2.error || 'Email ou code incorrect'); btn.disabled=false; btn.textContent='Se connecter'; return; }
+      else { showErr(d2.error || 'Email ou code incorrect'); btn.disabled = false; btn.textContent = 'Se connecter'; return; }
     }
-    // Succès — stocker et rediriger
+    // Stocker et rediriger
     localStorage.setItem('ss_admin_token', token);
     localStorage.setItem('ss_admin_slug', slug);
     localStorage.setItem('ss_admin_code', code);
     localStorage.setItem('ss_admin_school', schoolName || slug);
     try {
-      const pl = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+      var pl = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
       if (pl.city) localStorage.setItem('ss_admin_city', pl.city);
       if (pl.postal_code) localStorage.setItem('ss_admin_postal', pl.postal_code);
-    } catch(_) {}
-    location.href = '/admin/dashboard.html?etab=' + slug;
-  } catch(_) {
-    showErr('Erreur de connexion. Réessayez.');
+    } catch(e) {}
+    window.location.href = '/admin/dashboard.html?etab=' + slug;
+  } catch(e) {
+    showErr('Erreur de connexion. Reessayez.');
     btn.disabled = false;
     btn.textContent = 'Se connecter';
   }
 }
-function showErr(msg) { const e=document.getElementById('err'); e.textContent=msg; e.style.display='block'; }
+function showErr(msg) {
+  var e = document.getElementById('err');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
 </script>
 </body>
 </html>
