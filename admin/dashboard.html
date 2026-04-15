@@ -4,164 +4,615 @@
 <title>SafeSchool Admin</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111}
-.bar{background:#1a1a2e;color:#fff;padding:.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.bar h1{font-size:1rem;font-weight:700}
-.bar .rt{display:flex;align-items:center;gap:1rem;font-size:.85rem;color:#a5b4fc}
-.bar button{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;padding:.35rem .8rem;border-radius:6px;cursor:pointer}
-.wrap{max-width:1100px;margin:0 auto;padding:1.25rem}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.875rem;margin-bottom:1.25rem}
-.stat{background:#fff;border-radius:10px;padding:1rem 1.25rem;border:1px solid #e5e7eb}
-.stat .n{font-size:1.875rem;font-weight:700}.stat .l{font-size:.75rem;color:#6b7280;margin-top:.15rem}
-.sn .n{color:#2563eb}.su .n{color:#dc2626}
-.fi{display:flex;gap:.625rem;margin-bottom:.875rem;flex-wrap:wrap}
-.fi select,.fi input{padding:.45rem .8rem;border:1px solid #d1d5db;border-radius:7px;font-size:.875rem;background:#fff;outline:none}
-.fi input{flex:1;min-width:180px}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f2f5;color:#111;display:flex;min-height:100vh}
+/* Sidebar */
+.sb{width:220px;background:#1a1a2e;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:50;overflow-y:auto}
+.sb-logo{padding:1.25rem 1.5rem;border-bottom:1px solid rgba(255,255,255,.1);font-size:1rem;font-weight:700}
+.sb-school{padding:.5rem 1.5rem .75rem;font-size:.75rem;color:#a5b4fc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-nav{flex:1;padding:.75rem 0}
+.sb-nav a{display:flex;align-items:center;gap:.625rem;padding:.65rem 1.5rem;color:#cbd5e1;font-size:.875rem;text-decoration:none;cursor:pointer;transition:background .15s}
+.sb-nav a:hover,.sb-nav a.on{background:rgba(255,255,255,.08);color:#fff}
+.sb-nav a.on{border-left:3px solid #6366f1}
+.sb-nav .ico{font-size:1rem;width:1.25rem;text-align:center}
+.sb-nav .sep{padding:.4rem 1.5rem;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-top:.5rem}
+.sb-foot{padding:1rem 1.5rem;border-top:1px solid rgba(255,255,255,.1)}
+.sb-foot button{width:100%;padding:.55rem;background:transparent;border:1px solid rgba(255,255,255,.2);color:#cbd5e1;border-radius:6px;cursor:pointer;font-size:.8rem}
+.sb-foot button:hover{background:rgba(255,255,255,.08);color:#fff}
+/* Main */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar h2{font-size:1.1rem;font-weight:700;color:#111}
+.topbar .actions{display:flex;align-items:center;gap:.75rem}
+.page{padding:1.5rem;display:none}
+.page.on{display:block}
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:#fff;border-radius:12px;padding:1.25rem;border:1px solid #e5e7eb;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,#6366f1)}
+.stat .n{font-size:2rem;font-weight:700;color:var(--c,#111)}
+.stat .l{font-size:.75rem;color:#6b7280;margin-top:.2rem}
+.stat.s1{--c:#6366f1}.stat.s2{--c:#f59e0b}.stat.s3{--c:#10b981}.stat.s4{--c:#ef4444}
+/* Filters */
+.filters{display:flex;gap:.625rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.filters select,.filters input{padding:.5rem .875rem;border:1px solid #d1d5db;border-radius:8px;font-size:.875rem;background:#fff;outline:none}
+.filters input{flex:1;min-width:200px}
+.btn{display:inline-flex;align-items:center;gap:.375rem;padding:.5rem 1rem;border-radius:8px;font-size:.875rem;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:#6366f1;color:#fff}.btn-primary:hover{background:#4f46e5}
+.btn-outline{background:#fff;color:#374151;border:1px solid #d1d5db}.btn-outline:hover{border-color:#6366f1;color:#6366f1}
+.btn-sm{padding:.35rem .75rem;font-size:.8rem}
+.btn-danger{background:#fff;color:#dc2626;border:1px solid #fecaca}.btn-danger:hover{background:#fef2f2}
+/* List */
 .lst{display:flex;flex-direction:column;gap:.625rem}
-.cd{background:#fff;border-radius:10px;padding:1.125rem;border:1px solid #e5e7eb;cursor:pointer}
-.cd:hover{box-shadow:0 4px 16px rgba(0,0,0,.09)}
-.r1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem}
-.cc{font-size:.7rem;font-family:monospace;color:#9ca3af;font-weight:600}
-.ct{font-size:.95rem;font-weight:600}
-.cx{font-size:.875rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
-.tg{display:flex;gap:.45rem;margin-top:.5rem;flex-wrap:wrap}
-.tg span{display:inline-flex;align-items:center;padding:.175rem .55rem;border-radius:20px;font-size:.7rem;font-weight:500}
-.tnew{background:#dbeafe;color:#1d4ed8}.tpg{background:#fef3c7;color:#92400e}.tdn{background:#d1fae5;color:#065f46}.tan{background:#f3f4f6;color:#4b5563}.tug{background:#fee2e2;color:#991b1b}
-.dt{font-size:.75rem;color:#9ca3af;white-space:nowrap}
-.mt{text-align:center;padding:3rem;color:#9ca3af}.sp{text-align:center;padding:2.5rem;color:#6b7280}
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:1.5rem}
+.card{background:#fff;border-radius:10px;padding:1.125rem;border:1px solid #e5e7eb;cursor:pointer;transition:box-shadow .15s;position:relative}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:#c7d2fe}
+.card .r1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem}
+.card .cc{font-size:.7rem;font-family:monospace;color:#9ca3af;font-weight:600}
+.card .ct{font-size:.95rem;font-weight:600}
+.card .cx{font-size:.875rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px}
+.card .tgs{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap;align-items:center}
+.card .cdt{font-size:.75rem;color:#9ca3af;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;padding:.175rem .55rem;border-radius:20px;font-size:.7rem;font-weight:500}
+.tnew{background:#dbeafe;color:#1d4ed8}.tpg{background:#fef3c7;color:#92400e}.tdn{background:#d1fae5;color:#065f46}.tan{background:#f3f4f6;color:#4b5563}
+.tug-c{background:#fee2e2;color:#991b1b}.tug-e{background:#ffedd5;color:#9a3412}.tug-m{background:#fef3c7;color:#92400e}.tug-f{background:#f0fdf4;color:#166534}
+.card .assigned-badge{position:absolute;top:.75rem;right:.75rem;font-size:.7rem;background:#e0e7ff;color:#4338ca;padding:.15rem .5rem;border-radius:20px}
+/* Modal */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;overflow-y:auto;padding:1.5rem}
 .ov.on{display:flex;align-items:flex-start;justify-content:center}
-.mb{background:#fff;border-radius:14px;width:100%;max-width:660px;overflow:hidden}
-.mh{background:#1a1a2e;color:#fff;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
-.mh h2{font-size:1rem}.mh button{background:transparent;border:none;color:#fff;font-size:1.3rem;cursor:pointer}
-.mc{padding:1.25rem}
-.fl{margin-bottom:.875rem}.fl label{display:block;font-size:.7rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem}.fl p{font-size:.9rem}
-.sb{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}
-.sb button{padding:.4rem .875rem;border-radius:7px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;font-size:.82rem;font-weight:500}
-.sb button.on{border-color:#4f46e5;background:#ede9fe;color:#4f46e5}
-textarea{width:100%;padding:.65rem;border:1.5px solid #d1d5db;border-radius:7px;font-size:.875rem;resize:vertical;min-height:80px;margin-top:.5rem}
-textarea:focus{outline:none;border-color:#4f46e5}
-.sv{margin-top:.5rem;padding:.55rem 1.125rem;background:#4f46e5;color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:500}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:720px;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,.15)}
+.mhead{background:#1a1a2e;color:#fff;padding:1.125rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
+.mhead h2{font-size:1rem;font-weight:600}
+.mhead .mactions{display:flex;align-items:center;gap:.5rem}
+.mhead button{background:transparent;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;padding:.25rem}
+.mhead button:hover{color:#fff}
+.mtabs{display:flex;border-bottom:1px solid #e5e7eb;background:#f8fafc}
+.mtab{padding:.75rem 1.25rem;font-size:.875rem;cursor:pointer;color:#6b7280;border-bottom:2px solid transparent;transition:all .15s}
+.mtab.on{color:#6366f1;border-bottom-color:#6366f1;background:#fff}
+.mpanel{padding:1.25rem;display:none}.mpanel.on{display:block}
+.fl{margin-bottom:1rem}.fl label{display:block;font-size:.7rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}.fl p{font-size:.9rem;color:#111}
+.fl2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.625rem;margin-top:.5rem}
+.media-item{border-radius:8px;overflow:hidden;aspect-ratio:1;background:#f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:center;border:1px solid #e2e8f0}
+.media-item img,.media-item video{width:100%;height:100%;object-fit:cover}
+.media-item:hover{border-color:#6366f1}
+.status-btns{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
+.status-btns button{padding:.4rem .875rem;border-radius:7px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;font-size:.82rem;font-weight:500}
+.status-btns button.on{border-color:#6366f1;background:#e0e7ff;color:#4338ca}
+.reply-box{width:100%;padding:.75rem;border:1.5px solid #d1d5db;border-radius:8px;font-size:.875rem;resize:vertical;min-height:100px;font-family:inherit}
+.reply-box:focus{outline:none;border-color:#6366f1}
+.note-box{width:100%;padding:.75rem;border:1.5px solid #fbbf24;border-radius:8px;font-size:.875rem;resize:vertical;min-height:80px;background:#fffbeb;font-family:inherit}
+.note-box:focus{outline:none;border-color:#f59e0b}
+.timeline{display:flex;flex-direction:column;gap:.75rem}
+.tl-item{display:flex;gap:.75rem;align-items:flex-start}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:#6366f1;margin-top:.35rem;flex-shrink:0}
+.tl-line{display:flex;flex-direction:column;gap:.1rem}
+.tl-line .tl-act{font-size:.875rem;color:#111}
+.tl-line .tl-dt{font-size:.75rem;color:#9ca3af}
+.assign-sel{width:100%;padding:.65rem;border:1.5px solid #d1d5db;border-radius:8px;font-size:.875rem;background:#fff;outline:none}
+.assign-sel:focus{border-color:#6366f1}
+/* Empty / spin */
+.empty{text-align:center;padding:3rem;color:#9ca3af}.spin{text-align:center;padding:2.5rem;color:#6b7280}
+/* Team page */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+.team-card{background:#fff;border-radius:12px;padding:1.25rem;border:1px solid #e5e7eb}
+.team-card .tc-name{font-size:1rem;font-weight:600;margin-bottom:.25rem}
+.team-card .tc-role{font-size:.8rem;color:#6b7280;margin-bottom:.5rem}
+.team-card .tc-code{font-family:monospace;font-size:.85rem;background:#f1f5f9;padding:.25rem .6rem;border-radius:6px;display:inline-block}
+.team-card .tc-actions{display:flex;gap:.5rem;margin-top:.75rem}
 .ub{display:inline-block;padding:.2rem .6rem;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase}
 .ub.critique{background:#fee2e2;color:#991b1b}.ub.eleve{background:#ffedd5;color:#9a3412}.ub.moyen{background:#fef3c7;color:#92400e}.ub.faible{background:#f0fdf4;color:#166534}
+@media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}}
 </style></head><body>
-<div class="bar">
-<h1>&#128737;&#65039; SafeSchool</h1>
-<div class="rt"><span id="snm"></span><button onclick="doOut()">D&#233;connexion</button></div>
+<!-- Sidebar -->
+<div class="sb">
+  <div class="sb-logo">&#128737;&#65039; SafeSchool</div>
+  <div class="sb-school" id="sb-school">Chargement...</div>
+  <nav class="sb-nav">
+    <a onclick="nav('dash')" id="nav-dash" class="on"><span class="ico">&#128196;</span>Tableau de bord</a>
+    <a onclick="nav('reports')" id="nav-reports"><span class="ico">&#128204;</span>Signalements</a>
+    <a onclick="nav('team')" id="nav-team"><span class="ico">&#128101;</span>&#201;quipe</a>
+    <div class="sep">Outils</div>
+    <a onclick="nav('settings')" id="nav-settings"><span class="ico">&#9881;&#65039;</span>Param&#232;tres</a>
+  </nav>
+  <div class="sb-foot"><button onclick="doOut()">D&#233;connexion</button></div>
 </div>
-<div class="wrap">
-<div class="stats">
-<div class="stat"><div class="n" id="c0">&#8212;</div><div class="l">Total</div></div>
-<div class="stat sn"><div class="n" id="c1">&#8212;</div><div class="l">Nouveaux</div></div>
-<div class="stat"><div class="n" id="c2">&#8212;</div><div class="l">En cours</div></div>
-<div class="stat"><div class="n" id="c3">&#8212;</div><div class="l">R&#233;solus</div></div>
-<div class="stat su"><div class="n" id="c4">&#8212;</div><div class="l">Urgents</div></div>
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <h2 id="page-title">Tableau de bord</h2>
+    <div class="actions">
+      <span style="font-size:.8rem;color:#6b7280" id="last-update"></span>
+      <button class="btn btn-outline btn-sm" onclick="doLoad()">&#8635; Actualiser</button>
+    </div>
+  </div>
+  <!-- Page: Tableau de bord -->
+  <div class="page on" id="pg-dash">
+    <div class="stats">
+      <div class="stat s1"><div class="n" id="c0">-</div><div class="l">Total signalements</div></div>
+      <div class="stat s2"><div class="n" id="c1">-</div><div class="l">Nouveaux</div></div>
+      <div class="stat s3"><div class="n" id="c2">-</div><div class="l">En cours</div></div>
+      <div class="stat s4"><div class="n" id="c3">-</div><div class="l">Urgents non trait&#233;s</div></div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:1.25rem;border:1px solid #e5e7eb;margin-bottom:1rem">
+      <div style="font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.75rem">&#127381; Derniers signalements</div>
+      <div id="recent-list"><div class="spin">Chargement...</div></div>
+    </div>
+  </div>
+  <!-- Page: Signalements -->
+  <div class="page" id="pg-reports">
+    <div class="filters">
+      <select id="fst" onchange="doLoad()"><option value="">Tous statuts</option><option value="nouveau">Nouveau</option><option value="en_cours">En cours</option><option value="resolu">R&#233;solu</option></select>
+      <select id="ftp" onchange="doLoad()"><option value="">Tous types</option><option value="physique">Physique</option><option value="verbal">Verbal</option><option value="exclusion">Exclusion</option><option value="cyberharcèlement">Cyber</option><option value="autre">Autre</option></select>
+      <select id="fug" onchange="doLoad()"><option value="">Toutes urgences</option><option value="critique">Critique</option><option value="eleve">&#201;lev&#233;e</option><option value="moyen">Moyenne</option><option value="faible">Faible</option></select>
+      <input type="text" id="fq" placeholder="&#128269; Rechercher code, description..." oninput="doFil()">
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8595; CSV</button>
+    </div>
+    <div class="lst" id="lst"><div class="spin">Chargement...</div></div>
+  </div>
+  <!-- Page: Equipe -->
+  <div class="page" id="pg-team">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div>
+        <div style="font-size:.875rem;color:#6b7280">Maximum 4 sous-administrateurs</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="showAddSub()">+ Ajouter sous-admin</button>
+    </div>
+    <div class="team-grid" id="team-grid"><div class="spin">Chargement...</div></div>
+  </div>
+  <!-- Page: Parametres -->
+  <div class="page" id="pg-settings">
+    <div style="background:#fff;border-radius:12px;padding:1.5rem;border:1px solid #e5e7eb;max-width:600px">
+      <div style="font-size:1rem;font-weight:600;margin-bottom:1rem">Informations &#233;tablissement</div>
+      <div id="settings-info"><div class="spin">Chargement...</div></div>
+    </div>
+  </div>
 </div>
-<div class="fi">
-<select id="fst" onchange="doLoad()"><option value="">Tous statuts</option><option value="nouveau">Nouveaux</option><option value="en_cours">En cours</option><option value="resolu">R&#233;solus</option></select>
-<select id="ftp" onchange="doLoad()"><option value="">Tous types</option><option value="physique">Physique</option><option value="verbal">Verbal</option><option value="exclusion">Exclusion</option><option value="autre">Autre</option></select>
-<select id="fug" onchange="doLoad()"><option value="">Toutes urgences</option><option value="critique">Critique</option><option value="eleve">&#201;lev&#233;e</option><option value="moyen">Moyenne</option><option value="faible">Faible</option></select>
-<input type="text" id="fq" placeholder="Rechercher..." oninput="doFil()">
-</div>
-<div class="lst" id="lst"><div class="sp">Chargement...</div></div>
-</div>
+<!-- Modal signalement -->
 <div class="ov" id="ov" onclick="if(event.target===this)doCl()">
-<div class="mb"><div class="mh"><h2 id="omtit">Signalement</h2><button onclick="doCl()">&#x2715;</button></div>
-<div class="mc" id="ombod"></div></div>
+  <div class="mbox">
+    <div class="mhead">
+      <h2 id="m-code">Signalement</h2>
+      <div class="mactions">
+        <span id="m-status-badge" style="font-size:.75rem;padding:.2rem .6rem;border-radius:20px;background:#e0e7ff;color:#4338ca"></span>
+        <button onclick="printReport()" title="Imprimer">&#128424;</button>
+        <button onclick="doCl()">&#x2715;</button>
+      </div>
+    </div>
+    <div class="mtabs">
+      <div class="mtab on" onclick="mtab(0)">D&#233;tail</div>
+      <div class="mtab" onclick="mtab(1)">M&#233;dias</div>
+      <div class="mtab" onclick="mtab(2)">R&#233;ponse</div>
+      <div class="mtab" onclick="mtab(3)">Note interne</div>
+      <div class="mtab" onclick="mtab(4)">Historique</div>
+    </div>
+    <!-- Tab 0: Detail -->
+    <div class="mpanel on" id="mp0">
+      <div class="fl2">
+        <div class="fl"><label>Code</label><p id="d-code" style="font-family:monospace"></p></div>
+        <div class="fl"><label>Urgence</label><p id="d-urg"></p></div>
+      </div>
+      <div class="fl2">
+        <div class="fl"><label>Type</label><p id="d-type"></p></div>
+        <div class="fl"><label>R&#244;le d&#233;clarant</label><p id="d-role"></p></div>
+      </div>
+      <div class="fl"><label>Description</label><p id="d-desc" style="white-space:pre-wrap;line-height:1.5"></p></div>
+      <div class="fl2">
+        <div class="fl"><label>Lieu</label><p id="d-loc"></p></div>
+        <div class="fl"><label>Classe</label><p id="d-cls"></p></div>
+      </div>
+      <div class="fl2">
+        <div class="fl"><label>Anonyme</label><p id="d-anon"></p></div>
+        <div class="fl"><label>Email contact</label><p id="d-email"></p></div>
+      </div>
+      <div class="fl"><label>Re&#231;u le</label><p id="d-date"></p></div>
+      <div class="fl">
+        <label>Statut</label>
+        <div class="status-btns">
+          <button id="sb-n" onclick="doSt('nouveau')">Nouveau</button>
+          <button id="sb-p" onclick="doSt('en_cours')">En cours</button>
+          <button id="sb-r" onclick="doSt('resolu')">R&#233;solu</button>
+        </div>
+      </div>
+      <div class="fl">
+        <label>Assigner &#224;</label>
+        <select class="assign-sel" id="assign-sel" onchange="doAssign()">
+          <option value="">Non assign&#233;</option>
+        </select>
+      </div>
+    </div>
+    <!-- Tab 1: Medias -->
+    <div class="mpanel" id="mp1">
+      <div id="media-content"><div class="spin">Chargement m&#233;dias...</div></div>
+    </div>
+    <!-- Tab 2: Reponse -->
+    <div class="mpanel" id="mp2">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:.85rem;color:#1e40af">
+        &#9993;&#65039; Si l'&#233;l&#232;ve a fourni son email, il recevra cette r&#233;ponse automatiquement.
+      </div>
+      <div class="fl">
+        <label>R&#233;ponse &#224; l'&#233;l&#232;ve</label>
+        <textarea class="reply-box" id="reply-txt" placeholder="Votre r&#233;ponse visible par l'&#233;l&#232;ve..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="doSaveReply()" style="margin-top:.5rem">
+        &#128233; Envoyer la r&#233;ponse
+      </button>
+      <div id="reply-confirm" style="display:none;margin-top:.75rem;padding:.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.85rem;color:#166534">
+        &#10003; R&#233;ponse enregistr&#233;e. Email envoy&#233; si l'&#233;l&#232;ve a fourni son adresse.
+      </div>
+    </div>
+    <!-- Tab 3: Note interne -->
+    <div class="mpanel" id="mp3">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:.85rem;color:#92400e">
+        &#128274; Cette note est visible uniquement par l'&#233;quipe d'administration.
+      </div>
+      <div class="fl">
+        <label>Note interne</label>
+        <textarea class="note-box" id="note-txt" placeholder="Note pour l'&#233;quipe (invisible par l'&#233;l&#232;ve)..."></textarea>
+      </div>
+      <button class="btn btn-outline" onclick="doSaveNote()" style="margin-top:.5rem">
+        &#128190; Enregistrer la note
+      </button>
+    </div>
+    <!-- Tab 4: Historique -->
+    <div class="mpanel" id="mp4">
+      <div class="timeline" id="timeline-content">
+        <div class="spin">Chargement...</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal ajouter sous-admin -->
+<div class="ov" id="ov-sub" onclick="if(event.target===this)closeSubModal()">
+  <div class="mbox" style="max-width:480px">
+    <div class="mhead"><h2>Ajouter un sous-administrateur</h2><button onclick="closeSubModal()">&#x2715;</button></div>
+    <div style="padding:1.25rem">
+      <div class="fl"><label>Nom complet</label><input type="text" id="sub-name" class="assign-sel" placeholder="Jean Dupont"></div>
+      <div class="fl"><label>R&#244;le</label><select id="sub-role" class="assign-sel"><option value="CPE">CPE</option><option value="Proviseur adjoint">Proviseur adjoint</option><option value="Infirmier">Infirmier(e)</option><option value="Assistante sociale">Assistante sociale</option><option value="Conseiller">Conseiller</option></select></div>
+      <div class="fl"><label>Email</label><input type="email" id="sub-email" class="assign-sel" placeholder="cpe@lycee.fr"></div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem">
+        <button class="btn btn-outline" onclick="closeSubModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="doAddSub()">Cr&#233;er le sous-admin</button>
+      </div>
+      <div id="sub-result" style="display:none;margin-top:.75rem;padding:.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.85rem;color:#166534"></div>
+    </div>
+  </div>
 </div>
 <script>
-var _t=localStorage.getItem("ss_admin_token")||"";
-var _s=localStorage.getItem("ss_admin_slug")||new URLSearchParams(location.search).get("etab")||"";
-var _nm=localStorage.getItem("ss_admin_school")||_s;
-var _sid="";var _all=[];
-var SU="https://bsytkpgdxvlddzuwaabp.supabase.co";
-var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A";
-if(!_t||!_s){location.href="/admin/login";}
-try{var _p=JSON.parse(atob(_t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));_sid=_p.school_id||"";}catch(e){}
-document.getElementById("snm").textContent=_nm;
-var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre"};
-var SN={nouveau:"Nouveau",en_cours:"En cours",resolu:"Resolu"};
-var SC={nouveau:"tnew",en_cours:"tpg",resolu:"tdn"};
-function ago(d){var m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return"instant";if(m<60)return m+"min";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"j";}
-function doLoad(){
-  if(!_sid){document.getElementById("lst").innerHTML="<div class=\"mt\">Erreur: reconnectez-vous</div>";return;}
-  var st=document.getElementById("fst").value;
-  var tp=document.getElementById("ftp").value;
-  var ug=document.getElementById("fug").value;
-  var url=SU+"/rest/v1/reports?school_id=eq."+_sid+"&order=created_at.desc&limit=500";
-  if(st)url+="&status=eq."+st;
-  if(tp)url+="&type=eq."+tp;
-  if(ug)url+="&urgency=eq."+ug;
-  fetch(url,{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(data){
-    if(!Array.isArray(data)){document.getElementById("lst").innerHTML="<div class=\"mt\">Erreur: "+JSON.stringify(data).substring(0,80)+"</div>";return;}
-    _all=data;doRen(_all);
-    document.getElementById("c0").textContent=_all.length;
-    document.getElementById("c1").textContent=_all.filter(function(x){return x.status==="nouveau";}).length;
-    document.getElementById("c2").textContent=_all.filter(function(x){return x.status==="en_cours";}).length;
-    document.getElementById("c3").textContent=_all.filter(function(x){return x.status==="resolu";}).length;
-    document.getElementById("c4").textContent=_all.filter(function(x){return x.urgency==="critique"||x.urgency==="eleve";}).length;
-  }).catch(function(e){document.getElementById("lst").innerHTML="<div class=\"mt\">Erreur: "+e.message+"</div>";});
+var _tok = localStorage.getItem("ss_admin_token") || "";
+var _slug = localStorage.getItem("ss_admin_slug") || new URLSearchParams(location.search).get("etab") || "";
+var _nm = localStorage.getItem("ss_admin_school") || _slug;
+var _sid = "";
+var _all = [];
+var _subAdmins = [];
+var _currentId = "";
+var SUPA = "https://bsytkpgdxvlddzuwaabp.supabase.co";
+var SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A";
+if (!_tok || !_slug) { location.href = "/admin/login"; }
+try {
+  var _pl = JSON.parse(atob(_tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+  _sid = _pl.school_id || "";
+  document.getElementById("sb-school").textContent = _nm;
+} catch(e) {}
+var TL = { physique: "&#129340; Physique", verbal: "&#128172; Verbal", exclusion: "&#128683; Exclusion", autre: "&#10067; Autre" };
+var TL2 = { physique: "Physique", verbal: "Verbal", exclusion: "Exclusion", autre: "Autre" };
+var SN = { nouveau: "Nouveau", en_cours: "En cours", resolu: "Résolu" };
+var SC = { nouveau: "tnew", en_cours: "tpg", resolu: "tdn" };
+var UGC = { critique: "tug-c", eleve: "tug-e", moyen: "tug-m", faible: "tug-f" };
+function ago(dt) {
+  var m = Math.floor((Date.now() - new Date(dt)) / 60000);
+  if (m < 1) return "instant"; if (m < 60) return m + "min"; if (m < 1440) return Math.floor(m/60) + "h"; return Math.floor(m/1440) + "j";
 }
-function doFil(){var q=document.getElementById("fq").value.toLowerCase();doRen(q?_all.filter(function(r){return(r.description||"").toLowerCase().indexOf(q)>-1||(r.tracking_code||"").toLowerCase().indexOf(q)>-1;}):_all);}
-function doRen(lst){
-  var el=document.getElementById("lst");
-  if(!lst.length){el.innerHTML="<div class=\"mt\">Aucun signalement</div>";return;}
-  var h="";
-  for(var i=0;i<lst.length;i++){var r=lst[i];
-    h+="<div class=\"cd\" onclick=\"doOp('"+r.id+"')\">";
-    h+="<div class=\"r1\"><div><div class=\"cc\">"+(r.tracking_code||"")+"</div>";
-    h+="<div class=\"ct\">"+(TL[r.type]||r.type||"Autre")+"</div></div>";
-    h+="<div class=\"dt\">"+ago(r.created_at)+"</div></div>";
-    h+="<div class=\"cx\">"+(r.description||"(aucune description)")+"</div>";
-    h+="<div class=\"tg\"><span class=\""+(SC[r.status]||"tnew")+"\">"+( SN[r.status]||r.status)+"</span>";
-    if(r.urgency&&r.urgency!=="faible")h+="<span class=\"tug\">"+r.urgency+"</span>";
-    if(r.anonymous)h+="<span class=\"tan\">Anonyme</span>";
-    if(r.reporter_role)h+="<span class=\"tan\">"+r.reporter_role+"</span>";
-    h+="</div></div>";
+function nav(p) {
+  document.querySelectorAll(".page").forEach(function(el){ el.classList.remove("on"); });
+  document.querySelectorAll(".sb-nav a").forEach(function(el){ el.classList.remove("on"); });
+  document.getElementById("pg-" + p).classList.add("on");
+  document.getElementById("nav-" + p).classList.add("on");
+  var titles = { dash: "Tableau de bord", reports: "Signalements", team: "&#201;quipe", settings: "Param&#232;tres" };
+  document.getElementById("page-title").innerHTML = titles[p] || p;
+  if (p === "team") loadTeam();
+  if (p === "settings") loadSettings();
+}
+function mtab(i) {
+  document.querySelectorAll(".mtab").forEach(function(el, idx){ el.classList.toggle("on", idx === i); });
+  document.querySelectorAll(".mpanel").forEach(function(el, idx){ el.classList.toggle("on", idx === i); });
+  if (i === 1) loadMedias(_currentId);
+  if (i === 4) loadTimeline(_currentId);
+}
+function doLoad() {
+  if (!_sid) { document.getElementById("lst").innerHTML = '<div class="empty">Reconnectez-vous</div>'; return; }
+  var st = (document.getElementById("fst") || {}).value || "";
+  var tp = (document.getElementById("ftp") || {}).value || "";
+  var ug = (document.getElementById("fug") || {}).value || "";
+  var url = SUPA + "/rest/v1/reports?school_id=eq." + _sid + "&order=created_at.desc&limit=500";
+  if (st) url += "&status=eq." + st;
+  if (tp) url += "&type=eq." + tp;
+  if (ug) url += "&urgency=eq." + ug;
+  fetch(url, { headers: { apikey: SK, Authorization: "Bearer " + SK } })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!Array.isArray(data)) { document.getElementById("lst").innerHTML = '<div class="empty">Erreur: ' + JSON.stringify(data).substring(0,80) + '</div>'; return; }
+      _all = data;
+      doRen(_all);
+      document.getElementById("c0").textContent = _all.length;
+      document.getElementById("c1").textContent = _all.filter(function(x){ return x.status === "nouveau"; }).length;
+      document.getElementById("c2").textContent = _all.filter(function(x){ return x.status === "en_cours"; }).length;
+      document.getElementById("c3").textContent = _all.filter(function(x){ return (x.urgency === "critique" || x.urgency === "eleve") && x.status !== "resolu"; }).length;
+      loadRecent();
+      document.getElementById("last-update").textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR");
+    })
+    .catch(function(e){ document.getElementById("lst").innerHTML = '<div class="empty">Erreur: ' + e.message + '</div>'; });
+}
+function loadRecent() {
+  var recent = _all.slice(0, 5);
+  var el = document.getElementById("recent-list");
+  if (!recent.length) { el.innerHTML = '<div class="empty">Aucun signalement</div>'; return; }
+  var h = "";
+  for (var i = 0; i < recent.length; i++) {
+    var r = recent[i];
+    h += '<div class="card" onclick="doOp(\'' + r.id + '\')" style="cursor:pointer">';
+    h += '<div class="r1"><div><div class="cc">' + (r.tracking_code || "") + '</div><div class="ct">' + (TL2[r.type] || r.type || "Autre") + '</div></div>';
+    h += '<div class="cdt">' + ago(r.created_at) + '</div></div>';
+    h += '<div class="cx">' + (r.description || "(aucune description)") + '</div></div>';
   }
-  el.innerHTML=h;
+  el.innerHTML = h;
 }
-function doOp(id){
-  var r=null;for(var i=0;i<_all.length;i++)if(_all[i].id===id){r=_all[i];break;}
-  if(!r)return;
-  document.getElementById("omtit").textContent=r.tracking_code||"Signalement";
-  document.getElementById("ov").className="ov on";
-  var h="";
-  h+="<div class=\"fl\"><label>Code</label><p style=\"font-family:monospace\">"+(r.tracking_code||"")+"</p></div>";
-  h+="<div class=\"fl\"><label>Type</label><p>"+(TL[r.type]||r.type||"")+"</p></div>";
-  h+="<div class=\"fl\"><label>Urgence</label><p><span class=\"ub "+(r.urgency||"faible")+"\">"+( r.urgency||"faible")+"</span></p></div>";
-  h+="<div class=\"fl\"><label>Description</label><p style=\"white-space:pre-wrap\">"+(r.description||"")+"</p></div>";
-  if(r.location)h+="<div class=\"fl\"><label>Lieu</label><p>"+r.location+"</p></div>";
-  h+="<div class=\"fl\"><label>Role</label><p>"+(r.reporter_role||"non renseign&#233;")+"</p></div>";
-  h+="<div class=\"fl\"><label>Anonyme</label><p>"+(r.anonymous?"Oui":"Non")+"</p></div>";
-  if(r.reporter_email)h+="<div class=\"fl\"><label>Email</label><p>"+r.reporter_email+"</p></div>";
-  if(r.classe)h+="<div class=\"fl\"><label>Classe</label><p>"+r.classe+"</p></div>";
-  h+="<div class=\"fl\"><label>Re&#231;u le</label><p>"+new Date(r.created_at).toLocaleString("fr-FR")+"</p></div>";
-  var s1=r.status==="nouveau"?"on":"";var s2=r.status==="en_cours"?"on":"";var s3=r.status==="resolu"?"on":"";
-  h+="<div class=\"fl\"><label>Statut</label><div class=\"sb\">";
-  h+="<button class=\""+s1+"\" onclick=\"doSt('"+id+"','nouveau')\" >Nouveau</button>";
-  h+="<button class=\""+s2+"\" onclick=\"doSt('"+id+"','en_cours')\" >En cours</button>";
-  h+="<button class=\""+s3+"\" onclick=\"doSt('"+id+"','resolu')\" >R&#233;solu</button>";
-  h+="</div></div>";
-  h+="<div class=\"fl\"><label>R&#233;ponse</label>";
-  h+="<textarea id=\"rep\">"+(r.admin_reply||"")+"</textarea>";
-  h+="<button class=\"sv\" onclick=\"doSv('"+id+"')\" >Enregistrer</button></div>";
-  document.getElementById("ombod").innerHTML=h;
+function doFil() {
+  var q = document.getElementById("fq").value.toLowerCase();
+  doRen(q ? _all.filter(function(r){ return (r.description || "").toLowerCase().indexOf(q) > -1 || (r.tracking_code || "").toLowerCase().indexOf(q) > -1; }) : _all);
 }
-function doSt(id,s){
-  fetch(SU+"/rest/v1/reports?id=eq."+id,{method:"PATCH",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({status:s,updated_at:new Date().toISOString()})}).then(function(){
-    for(var i=0;i<_all.length;i++)if(_all[i].id===id){_all[i].status=s;break;}
-    doRen(_all);doOp(id);
+function doRen(lst) {
+  var el = document.getElementById("lst");
+  if (!el) return;
+  if (!lst.length) { el.innerHTML = '<div class="empty">Aucun signalement</div>'; return; }
+  var h = "";
+  for (var i = 0; i < lst.length; i++) {
+    var r = lst[i];
+    var sub = _subAdmins.find(function(s){ return s.id === r.assigned_to; });
+    h += '<div class="card" onclick="doOp(\'' + r.id + '\')">';
+    if (sub) h += '<span class="assigned-badge">&#128100; ' + sub.name + '</span>';
+    h += '<div class="r1"><div><div class="cc">' + (r.tracking_code || "") + '</div><div class="ct">' + (TL2[r.type] || r.type || "Autre") + '</div></div><div class="cdt">' + ago(r.created_at) + '</div></div>';
+    h += '<div class="cx">' + (r.description || "(aucune description)") + '</div>';
+    h += '<div class="tgs"><span class="tag ' + (SC[r.status] || "tnew") + '">' + (SN[r.status] || r.status) + '</span>';
+    if (r.urgency) h += '<span class="tag ' + (UGC[r.urgency] || "tug-f") + '">' + r.urgency + '</span>';
+    if (r.anonymous) h += '<span class="tag tan">Anonyme</span>';
+    if (r.reporter_role) h += '<span class="tag tan">' + r.reporter_role + '</span>';
+    h += '</div></div>';
+  }
+  el.innerHTML = h;
+}
+function doOp(id) {
+  var r = null;
+  for (var i = 0; i < _all.length; i++) if (_all[i].id === id) { r = _all[i]; break; }
+  if (!r) return;
+  _currentId = id;
+  nav("reports");
+  document.getElementById("m-code").textContent = r.tracking_code || "Signalement";
+  document.getElementById("m-status-badge").textContent = SN[r.status] || r.status;
+  document.getElementById("d-code").textContent = r.tracking_code || "";
+  document.getElementById("d-type").textContent = TL2[r.type] || r.type || "";
+  document.getElementById("d-role").textContent = r.reporter_role || "Non renseigné";
+  document.getElementById("d-desc").textContent = r.description || "";
+  document.getElementById("d-loc").textContent = r.location || "-";
+  document.getElementById("d-cls").textContent = r.classe || "-";
+  document.getElementById("d-anon").textContent = r.anonymous ? "Oui" : "Non";
+  document.getElementById("d-email").textContent = r.reporter_email || "(anonyme)";
+  document.getElementById("d-date").textContent = new Date(r.created_at).toLocaleString("fr-FR");
+  document.getElementById("d-urg").innerHTML = '<span class="ub ' + (r.urgency || "faible") + '">' + (r.urgency || "faible") + '</span>';
+  ["sb-n","sb-p","sb-r"].forEach(function(id){ document.getElementById(id).classList.remove("on"); });
+  var sbMap = { nouveau: "sb-n", en_cours: "sb-p", resolu: "sb-r" };
+  if (sbMap[r.status]) document.getElementById(sbMap[r.status]).classList.add("on");
+  document.getElementById("reply-txt").value = r.admin_reply || "";
+  document.getElementById("note-txt").value = r.internal_notes || "";
+  document.getElementById("reply-confirm").style.display = "none";
+  // Remplir sous-admins dans le select
+  var sel = document.getElementById("assign-sel");
+  sel.innerHTML = '<option value="">Non assigné</option>';
+  _subAdmins.forEach(function(s){
+    var opt = document.createElement("option");
+    opt.value = s.id; opt.textContent = s.name + " (" + s.role + ")";
+    if (r.assigned_to === s.id) opt.selected = true;
+    sel.appendChild(opt);
   });
+  mtab(0);
+  document.getElementById("ov").classList.add("on");
 }
-function doSv(id){
-  var v=document.getElementById("rep").value;
-  fetch(SU+"/rest/v1/reports?id=eq."+id,{method:"PATCH",headers:{apikey:SK,Authorization:"Bearer "+SK,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({admin_reply:v,updated_at:new Date().toISOString()})}).then(function(){
-    for(var i=0;i<_all.length;i++)if(_all[i].id===id){_all[i].admin_reply=v;break;}
-    alert("Enregistr&#233; !");
+function loadMedias(id) {
+  var el = document.getElementById("media-content");
+  el.innerHTML = '<div class="spin">Chargement médias...</div>';
+  fetch(SUPA + "/rest/v1/report_files?report_id=eq." + id + "&select=*", { headers: { apikey: SK, Authorization: "Bearer " + SK } })
+    .then(function(r){ return r.json(); })
+    .then(function(files){
+      if (!Array.isArray(files) || !files.length) { el.innerHTML = '<div class="empty">Aucun média joint</div>'; return; }
+      var h = '<div class="media-grid">';
+      files.forEach(function(f){
+        var isVideo = f.mime_type && f.mime_type.startsWith("video/");
+        var signedUrl = SUPA + "/storage/v1/object/sign/report-files/" + f.file_path + "?token=" + SK;
+        if (isVideo) {
+          h += '<div class="media-item" onclick="window.open(\'' + signedUrl + '\')">';
+          h += '<video src="' + signedUrl + '" style="width:100%;height:100%;object-fit:cover"></video></div>';
+        } else {
+          h += '<div class="media-item" onclick="window.open(\'' + signedUrl + '\')">';
+          h += '<img src="' + signedUrl + '" onerror="this.parentElement.innerHTML='&#128247;'" alt="">';
+          h += '</div>';
+        }
+      });
+      h += '</div><div style="font-size:.75rem;color:#9ca3af;margin-top:.75rem">' + files.length + ' fichier(s) joint(s)</div>';
+      el.innerHTML = h;
+    })
+    .catch(function(){ el.innerHTML = '<div class="empty">Impossible de charger les médias</div>'; });
+}
+function loadTimeline(id) {
+  var el = document.getElementById("timeline-content");
+  var r = null;
+  for (var i = 0; i < _all.length; i++) if (_all[i].id === id) { r = _all[i]; break; }
+  if (!r) { el.innerHTML = '<div class="empty">Aucun historique</div>'; return; }
+  var h = "";
+  h += '<div class="tl-item"><div class="tl-dot"></div><div class="tl-line"><div class="tl-act">Signalement reçu</div><div class="tl-dt">' + new Date(r.created_at).toLocaleString("fr-FR") + '</div></div></div>';
+  if (r.admin_reply) h += '<div class="tl-item"><div class="tl-dot" style="background:#10b981"></div><div class="tl-line"><div class="tl-act">Réponse envoyée</div><div class="tl-dt">Voir onglet Réponse</div></div></div>';
+  if (r.status === "en_cours") h += '<div class="tl-item"><div class="tl-dot" style="background:#f59e0b"></div><div class="tl-line"><div class="tl-act">Pris en charge</div><div class="tl-dt">' + new Date(r.updated_at || r.created_at).toLocaleString("fr-FR") + '</div></div></div>';
+  if (r.status === "resolu") h += '<div class="tl-item"><div class="tl-dot" style="background:#10b981"></div><div class="tl-line"><div class="tl-act">Résolu</div><div class="tl-dt">' + new Date(r.updated_at || r.created_at).toLocaleString("fr-FR") + '</div></div></div>';
+  el.innerHTML = h || '<div class="empty">Aucun historique</div>';
+}
+function doSt(s) {
+  if (!_currentId) return;
+  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ status: s, updated_at: new Date().toISOString() }) })
+    .then(function(){
+      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].status = s; break; }
+      doRen(_all);
+      ["sb-n","sb-p","sb-r"].forEach(function(id){ document.getElementById(id).classList.remove("on"); });
+      var sbMap = { nouveau: "sb-n", en_cours: "sb-p", resolu: "sb-r" };
+      if (sbMap[s]) document.getElementById(sbMap[s]).classList.add("on");
+      document.getElementById("m-status-badge").textContent = SN[s] || s;
+      // Notifier eleve si email fourni
+      var r = null;
+      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { r = _all[i]; break; }
+      if (r && r.reporter_email) {
+        fetch("/api/notify/status-update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackingCode: r.tracking_code, newStatus: s, email: r.reporter_email, schoolId: _sid }) }).catch(function(){});
+      }
+    });
+}
+function doAssign() {
+  if (!_currentId) return;
+  var val = document.getElementById("assign-sel").value;
+  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ assigned_to: val || null, updated_at: new Date().toISOString() }) })
+    .then(function(){
+      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].assigned_to = val || null; break; }
+      doRen(_all);
+    });
+}
+function doSaveReply() {
+  if (!_currentId) return;
+  var v = document.getElementById("reply-txt").value;
+  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ admin_reply: v, updated_at: new Date().toISOString() }) })
+    .then(function(){
+      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].admin_reply = v; break; }
+      // Envoyer email a l eleve si email fourni
+      var r = null;
+      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { r = _all[i]; break; }
+      if (r && r.reporter_email && v) {
+        fetch("/api/notify/staff-reply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trackingCode: r.tracking_code, email: r.reporter_email, message: v, schoolId: _sid }) }).catch(function(){});
+      }
+      document.getElementById("reply-confirm").style.display = "block";
+    });
+}
+function doSaveNote() {
+  if (!_currentId) return;
+  var v = document.getElementById("note-txt").value;
+  fetch(SUPA + "/rest/v1/reports?id=eq." + _currentId, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ internal_notes: v, updated_at: new Date().toISOString() }) })
+    .then(function(){
+      for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { _all[i].internal_notes = v; break; }
+      document.getElementById("note-txt").style.border = "1.5px solid #10b981";
+      setTimeout(function(){ document.getElementById("note-txt").style.border = "1.5px solid #fbbf24"; }, 2000);
+    });
+}
+function loadTeam() {
+  var el = document.getElementById("team-grid");
+  el.innerHTML = '<div class="spin">Chargement...</div>';
+  fetch(SUPA + "/rest/v1/sub_admins?school_id=eq." + _sid + "&is_active=eq.true&select=*", { headers: { apikey: SK, Authorization: "Bearer " + SK } })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!Array.isArray(data)) { el.innerHTML = '<div class="empty">Aucun sous-administrateur</div>'; return; }
+      _subAdmins = data;
+      if (!data.length) { el.innerHTML = '<div class="empty">Aucun sous-administrateur ajouté</div>'; return; }
+      var h = "";
+      data.forEach(function(s){
+        h += '<div class="team-card">';
+        h += '<div class="tc-name">' + s.name + '</div>';
+        h += '<div class="tc-role">' + (s.role || "") + '</div>';
+        if (s.email) h += '<div style="font-size:.8rem;color:#374151;margin-bottom:.5rem">' + s.email + '</div>';
+        h += '<div>Code: <span class="tc-code">' + (s.admin_code || "-") + '</span></div>';
+        h += '<div class="tc-actions"><button class="btn btn-danger btn-sm" onclick="doRemoveSub(\'' + s.id + '\')">Retirer</button></div>';
+        h += '</div>';
+      });
+      el.innerHTML = h;
+    })
+    .catch(function(){ el.innerHTML = '<div class="empty">Erreur chargement équipe</div>'; });
+}
+function genCode() {
+  var c = "SS"; var ch = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (var i = 0; i < 6; i++) c += ch[Math.floor(Math.random() * ch.length)];
+  return c;
+}
+function showAddSub() {
+  if (_subAdmins.length >= 4) { alert("Maximum 4 sous-administrateurs atteint."); return; }
+  document.getElementById("sub-name").value = "";
+  document.getElementById("sub-email").value = "";
+  document.getElementById("sub-result").style.display = "none";
+  document.getElementById("ov-sub").classList.add("on");
+}
+function closeSubModal() { document.getElementById("ov-sub").classList.remove("on"); }
+function doAddSub() {
+  var name = document.getElementById("sub-name").value.trim();
+  var role = document.getElementById("sub-role").value;
+  var email = document.getElementById("sub-email").value.trim();
+  if (!name) { alert("Nom requis"); return; }
+  var code = genCode();
+  fetch(SUPA + "/rest/v1/sub_admins", { method: "POST", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ school_id: _sid, name: name, role: role, email: email, admin_code: code, is_active: true }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var res = document.getElementById("sub-result");
+      res.innerHTML = "✓ Sous-admin créé ! Code d'accès: <strong>" + code + "</strong>";
+      res.style.display = "block";
+      loadTeam();
+    })
+    .catch(function(){ alert("Erreur lors de la création"); });
+}
+function doRemoveSub(id) {
+  if (!confirm("Retirer ce sous-administrateur ?")) return;
+  fetch(SUPA + "/rest/v1/sub_admins?id=eq." + id, { method: "PATCH", headers: { apikey: SK, Authorization: "Bearer " + SK, "Content-Type": "application/json" }, body: JSON.stringify({ is_active: false }) })
+    .then(function(){ loadTeam(); });
+}
+function loadSettings() {
+  var el = document.getElementById("settings-info");
+  fetch(SUPA + "/rest/v1/schools?id=eq." + _sid + "&select=*", { headers: { apikey: SK, Authorization: "Bearer " + SK } })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var s = Array.isArray(d) ? d[0] : null;
+      if (!s) { el.innerHTML = '<div class="empty">Données non trouvées</div>'; return; }
+      el.innerHTML = '<div class="fl2"><div class="fl"><label>Nom</label><p>' + s.name + '</p></div><div class="fl"><label>Ville</label><p>' + (s.city || "-") + '</p></div></div><div class="fl2"><div class="fl"><label>Code postal</label><p>' + (s.postal_code || "-") + '</p></div><div class="fl"><label>Plan</label><p>' + (s.plan_code || "-") + '</p></div></div><div class="fl"><label>Email admin</label><p>' + (s.admin_email || "-") + '</p></div><div class="fl"><label>Sous-domaine</label><p><a href="https://' + s.slug + '.safeschool.fr" target="_blank">' + s.slug + '.safeschool.fr</a></p></div>';
+    });
+}
+function exportCSV() {
+  if (!_all.length) { alert("Aucun signalement à exporter"); return; }
+  var headers = ["Code","Type","Urgence","Statut","Description","Lieu","Classe","Role","Anonyme","Email","Date"];
+  var rows = _all.map(function(r){
+    return [r.tracking_code,r.type,r.urgency,r.status,(r.description||"").replace(/,/g," "),(r.location||""),(r.classe||""),(r.reporter_role||""),(r.anonymous?"Oui":"Non"),(r.reporter_email||""),new Date(r.created_at).toLocaleString("fr-FR")].join(",");
   });
+  var csv = headers.join(",") + "
+" + rows.join("
+");
+  var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "signalements-" + _slug + "-" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
 }
-function doCl(){document.getElementById("ov").className="ov";}
-function doOut(){localStorage.clear();document.cookie="ss_admin_token=; path=/; max-age=0";location.href="/admin/login";}
-doLoad();setInterval(doLoad,30000);
-</script></body></html>
+function printReport() {
+  if (!_currentId) return;
+  var r = null;
+  for (var i = 0; i < _all.length; i++) if (_all[i].id === _currentId) { r = _all[i]; break; }
+  if (!r) return;
+  var w = window.open("", "_blank");
+  w.document.write("<!DOCTYPE html><html><head><meta charset=UTF-8><title>Signalement " + r.tracking_code + "</title><style>body{font-family:Arial,sans-serif;padding:2rem;max-width:700px;margin:0 auto}h1{color:#1a1a2e}table{width:100%;border-collapse:collapse;margin-top:1rem}td{padding:.5rem;border:1px solid #e5e7eb;font-size:.9rem}td:first-child{font-weight:bold;background:#f8fafc;width:30%}@media print{button{display:none}}</style></head><body>");
+  w.document.write("<h1>&#128737;&#65039; SafeSchool — Dossier " + r.tracking_code + "</h1>");
+  w.document.write("<table>");
+  w.document.write("<tr><td>Code</td><td>" + (r.tracking_code||"") + "</td></tr>");
+  w.document.write("<tr><td>Type</td><td>" + (TL2[r.type]||r.type||"") + "</td></tr>");
+  w.document.write("<tr><td>Urgence</td><td>" + (r.urgency||"") + "</td></tr>");
+  w.document.write("<tr><td>Statut</td><td>" + (SN[r.status]||r.status||"") + "</td></tr>");
+  w.document.write("<tr><td>Description</td><td>" + (r.description||"") + "</td></tr>");
+  w.document.write("<tr><td>Lieu</td><td>" + (r.location||"-") + "</td></tr>");
+  w.document.write("<tr><td>Classe</td><td>" + (r.classe||"-") + "</td></tr>");
+  w.document.write("<tr><td>Rôle</td><td>" + (r.reporter_role||"-") + "</td></tr>");
+  w.document.write("<tr><td>Date</td><td>" + new Date(r.created_at).toLocaleString("fr-FR") + "</td></tr>");
+  if (r.admin_reply) w.document.write("<tr><td>Réponse admin</td><td>" + r.admin_reply + "</td></tr>");
+  w.document.write("</table><br><button onclick=window.print()>Imprimer</button></body></html>");
+  w.document.close();
+}
+function doCl() { document.getElementById("ov").classList.remove("on"); }
+function doOut() { localStorage.clear(); document.cookie = "ss_admin_token=; path=/; max-age=0"; location.href = "/admin/login"; }
+// Init
+doLoad();
+loadTeam();
+setInterval(doLoad, 30000);
+</script>
+</body></html>
