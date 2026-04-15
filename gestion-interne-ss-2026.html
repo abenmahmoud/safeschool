@@ -117,11 +117,9 @@ tr:hover td{background:rgba(99,102,241,.03)}
       <h1>SafeSchool</h1>
       <p>Super Admin - Fondateur uniquement</p>
     </div>
-    <div class="f"><label>Email</label><form id="sa-login-form" onsubmit="doSaLogin(event)" autocomplete="on">
-<input type="email" id="lem" placeholder="admin@safeschool.fr"></div>
+    <div class="f"><label>Email</label><input type="email" id="lem" placeholder="admin@safeschool.fr"></div>
     <div class="f"><label>Mot de passe</label><input type="password" id="lpw" placeholder="Mot de passe"></div>
     <button class="btn bfull" id="lbtn">Connexion Super Admin</button>
-</form>
     <div class="err" id="lerr"></div>
     <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Fondateur</p>
     <div style="margin-top:18px;padding:14px;background:#0f172a;border:1px solid #334155;border-radius:10px">
@@ -144,8 +142,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
     <div class="ni" id="n-notif" onclick="showPage('notif')"><span class="ni-icon">&#128276;</span> Notifications</div>
     <div class="ni" id="n-push" onclick="showPage('push')"><span class="ni-icon">&#128241;</span> Push / PWA</div>
     <div class="ni" id="n-health" onclick="showPage('health')"><span class="ni-icon">&#128994;</span> Monitoring</div>
-    <div style="padding:12px 20px"><a href="/pricing" target="_blank" style="display:block;padding:10px 14px;background:linear-gradient(135deg,
-        postal_code: (document.getElementById('cp') ? document.getElementById('cp').value.trim() : ''),#6366f1,#8b5cf6);border-radius:10px;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;text-align:center;transition:.2s">&#127760; Page vitrine / Pricing</a></div>
+    <div style="padding:12px 20px"><a href="/pricing" target="_blank" style="display:block;padding:10px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;text-align:center;transition:.2s">&#127760; Page vitrine / Pricing</a></div>
     <div class="sbf"><button class="btn bs bsm bfull" onclick="doLogout()">Deconnexion</button></div>
   </nav>
   <main class="mn">
@@ -203,10 +200,6 @@ tr:hover td{background:rgba(99,102,241,.03)}
           <div class="fr2">
             <div class="f"><label>Nom *</label><input type="text" id="cn" placeholder="Lycee Jean Moulin" oninput="onNm()"></div>
             <div class="f"><label>Ville</label><input type="text" id="cv" placeholder="Drancy"></div>
-            <div>
-              <label style="display:block;font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:.4rem">CODE POSTAL *</label>
-              <input id="cp" type="text" maxlength="5" placeholder="93700" style="width:100%;padding:.65rem .875rem;background:#374151;border:1px solid #4b5563;border-radius:8px;color:#fff;font-size:.9rem">
-            </div>
           </div>
           <div class="fr2">
             <div class="f"><label>Email contact *</label><input type="email" id="ce" placeholder="proviseur@etablissement.fr"></div>
@@ -448,35 +441,7 @@ tr:hover td{background:rgba(99,102,241,.03)}
 </div>
 <div class="toast" id="tst"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-async function doSaLogin(e) {
-  if(e) e.preventDefault();
-  const email = document.getElementById('lem').value.trim();
-  const pass = document.getElementById('lpw').value;
-  if(!email || !pass) return;
-  const btn = document.querySelector('#sa-login-form button');
-  if(btn) btn.disabled = true;
-  try {
-    const r = await fetch('/api/superadmin/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({email, password: pass})
-    });
-    const d = await r.json();
-    if(d.ok && d.token) {
-      ['sa_token','sa_session','super_admin_token','saToken','safeschool_sa_token'].forEach(k => localStorage.setItem(k, d.token));
-      localStorage.setItem('sa_authenticated', '1');
-      location.reload();
-    } else {
-      alert('Identifiants incorrects');
-      if(btn) btn.disabled = false;
-    }
-  } catch(err) {
-    alert('Erreur de connexion');
-    if(btn) btn.disabled = false;
-  }
-}
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════ CONFIG ═══════════
 var API_BASE = '/api';
@@ -630,16 +595,9 @@ function rstCr() {
   rdQu();
 }
 function onNm() {
-  var slug = document.[
-      document.getElementById('cn').value,
-      document.getElementById('cv').value,
-      (document.getElementById('cp') ? document.getElementById('cp').value : '')
-    ].filter(Boolean).join(' ')
-    .toLowerCase()
+  var slug = document.getElementById('cn').value.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim().replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
+    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
   document.getElementById('csl').value = slug;
   document.getElementById('sdp').textContent = slug ? slug + '.safeschool.fr' : 'nom-lycee.safeschool.fr';
   if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = slug + '.safeschool.fr'; }
