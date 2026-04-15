@@ -100,6 +100,18 @@ export default async (req: Request, context: Context) => {
   const clientIp = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
 
   // ─── POST /api/superadmin/login ───
+
+  // === VERIFY TOKEN SA ===
+  if (path === '/verify') {
+    const authH = req.headers.get('Authorization') || '';
+    const tok = authH.replace('Bearer ', '').trim();
+    const SA_EMAIL = Netlify.env.get('SUPERADMIN_EMAIL') || '';
+    const SA_PASS = Netlify.env.get('SUPERADMIN_PASS') || '';
+    const expected = btoa(SA_EMAIL + ':' + SA_PASS);
+    if (!tok || tok !== expected) return cors({ error: 'Token invalide' }, 401, req);
+    return cors({ ok: true, email: SA_EMAIL, role: 'superadmin' }, 200, req);
+  }
+
   if (req.method === 'POST' && path === '/login') {
     // Rate limit check
     const rateCheck = await checkRateLimit(clientIp);
