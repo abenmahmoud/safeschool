@@ -224,31 +224,35 @@ function doLoad(){
     document.getElementById("c3").textContent=_all.filter(function(x){return x.status==="resolu";}).length;
     document.getElementById("c4").textContent=_all.filter(function(x){return x.urgency==="critique"||x.urgency==="eleve";}).length;
     var recent=_all.slice(0,5);
-    var dashEl=document.getElementById("dash-recent");if(dashEl)dashEl.innerHTML=renderCards(recent);
-    var lstEl=document.getElementById("lst");if(lstEl)lstEl.innerHTML=renderCards(_all);
+    var dashEl=document.getElementById("dash-recent");if(dashEl){dashEl.innerHTML=renderCards(recent);attachCardClicks(dashEl);}
+    var lstEl=document.getElementById("lst");if(lstEl){lstEl.innerHTML=renderCards(_all);attachCardClicks(lstEl);}
   }).catch(function(e){console.error(e);});
 }
-function doFil(){var q=document.getElementById("fq").value.toLowerCase();var el=document.getElementById("lst");if(!el)return;el.innerHTML=renderCards(q?_all.filter(function(r){return(r.description||"").toLowerCase().indexOf(q)>-1||(r.tracking_code||"").toLowerCase().indexOf(q)>-1||(r.type||"").toLowerCase().indexOf(q)>-1;}):_all);}
+function doFil(){var q=document.getElementById("fq").value.toLowerCase();var el=document.getElementById("lst");if(!el)return;var fr=renderCards(q?_all.filter(function(r){return(r.description||"").toLowerCase().indexOf(q)>-1||(r.tracking_code||"").toLowerCase().indexOf(q)>-1||(r.type||"").toLowerCase().indexOf(q)>-1;}):_all);el.innerHTML=fr;attachCardClicks(el);}
 function renderCards(lst){
-  if(!lst.length)return"<div class='empty'>Aucun signalement</div>";
-  var h="";
-  for(var i=0;i<lst.length;i++){var r=lst[i];
-    var unread=r.status==="nouveau"?" unread":"";
-    h+="<div class='rep-card"+unread+"' onclick='openRep(\""+r.id+"\")'>'>";
-    h+="<div class='rep-row1'>'>";
-    h+="<div><div class='rep-code'>"+(r.tracking_code||r.case_number||"")+"</div>";
-    h+="<div class='rep-type'>"+(TL[r.type]||r.type||"Autre")+"</div></div>";
-    h+="<div class='rep-date'>"+ago(r.created_at)+"</div></div>";
-    h+="<div class='rep-desc'>"+(r.description||"(aucune description)")+"</div>";
-    h+="<div class='rep-tags'>";
-    h+="<span class='tag "+(SC[r.status]||"tnew")+"'>"+(SN[r.status]||r.status)+"</span>";
-    if(r.urgency&&r.urgency!=="faible")h+="<span class='tag turg'>"+r.urgency+"</span>";
-    if(r.anonymous||r.is_anonymous)h+="<span class='tag tanon'>Anonyme</span>";
-    if(r.assigned_to_name)h+="<span class='tag tassign'>"+r.assigned_to_name+"</span>";
-    h+="</div></div>";
+  if(!lst.length)return '<div class="empty">Aucun signalement</div>';
+  var h='';
+  for(var i=0;i<lst.length;i++){
+    var r=lst[i];
+    var cls='rep-card'+(r.status==='nouveau'?' unread':'');
+    var sc=SC[r.status]||'tnew'; var sn=SN[r.status]||r.status;
+    var tp=TL[r.type]||r.type||'Autre';
+    h+='<div class="'+cls+'" data-id="'+r.id+'">';
+    h+='<div class="rep-row1">';
+    h+='<div><div class="rep-code">'+(r.tracking_code||r.case_number||'')+'</div>';
+    h+='<div class="rep-type">'+tp+'</div></div>';
+    h+='<div class="rep-date">'+ago(r.created_at)+'</div></div>';
+    h+='<div class="rep-desc">'+(r.description||'(aucune description)')+'</div>';
+    h+='<div class="rep-tags">';
+    h+='<span class="tag '+sc+'">'+sn+'</span>';
+    if(r.urgency&&r.urgency!=='faible')h+='<span class="tag turg">'+r.urgency+'</span>';
+    if(r.anonymous||r.is_anonymous)h+='<span class="tag tanon">Anonyme</span>';
+    if(r.assigned_to_name)h+='<span class="tag tassign">'+r.assigned_to_name+'</span>';
+    h+='</div></div>';
   }
   return h;
 }
+function attachCardClicks(el){if(!el)return;el.querySelectorAll('[data-id]').forEach(function(c){c.onclick=function(){openRep(c.getAttribute('data-id'));};});}
 function openRep(id){
   var r=null;for(var i=0;i<_all.length;i++)if(_all[i].id===id){r=_all[i];break;}
   if(!r)return;_curRep=r;
