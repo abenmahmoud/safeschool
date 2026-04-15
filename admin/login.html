@@ -63,6 +63,7 @@ async function doLogin(){
     if(r.ok && d.ok){
       localStorage.setItem('ss_admin_token', d.token);
       localStorage.setItem('ss_admin_slug', slug);
+      localStorage.setItem('ss_admin_code', code);
       localStorage.setItem('ss_admin_school', d.school_name);
       localStorage.setItem('ss_admin_role', d.role);
       location.href = '/admin/dashboard.html?etab=' + slug;
