@@ -117,9 +117,11 @@ tr:hover td{background:rgba(99,102,241,.03)}
       <h1>SafeSchool</h1>
       <p>Super Admin - Fondateur uniquement</p>
     </div>
-    <div class="f"><label>Email</label><input type="email" id="lem" placeholder="admin@safeschool.fr"></div>
+    <div class="f"><label>Email</label><form id="sa-login-form" onsubmit="doSaLogin(event)" autocomplete="on">
+<input type="email" id="lem" placeholder="admin@safeschool.fr"></div>
     <div class="f"><label>Mot de passe</label><input type="password" id="lpw" placeholder="Mot de passe"></div>
     <button class="btn bfull" id="lbtn">Connexion Super Admin</button>
+</form>
     <div class="err" id="lerr"></div>
     <p style="text-align:center;font-size:.72rem;color:#334155;margin-top:14px">Acces restreint - Fondateur</p>
     <div style="margin-top:18px;padding:14px;background:#0f172a;border:1px solid #334155;border-radius:10px">
@@ -446,7 +448,35 @@ tr:hover td{background:rgba(99,102,241,.03)}
 </div>
 <div class="toast" id="tst"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+async function doSaLogin(e) {
+  if(e) e.preventDefault();
+  const email = document.getElementById('lem').value.trim();
+  const pass = document.getElementById('lpw').value;
+  if(!email || !pass) return;
+  const btn = document.querySelector('#sa-login-form button');
+  if(btn) btn.disabled = true;
+  try {
+    const r = await fetch('/api/superadmin/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pass})
+    });
+    const d = await r.json();
+    if(d.ok && d.token) {
+      ['sa_token','sa_session','super_admin_token','saToken','safeschool_sa_token'].forEach(k => localStorage.setItem(k, d.token));
+      localStorage.setItem('sa_authenticated', '1');
+      location.reload();
+    } else {
+      alert('Identifiants incorrects');
+      if(btn) btn.disabled = false;
+    }
+  } catch(err) {
+    alert('Erreur de connexion');
+    if(btn) btn.disabled = false;
+  }
+}
+</script>
 <script>
 // ═══════════ CONFIG ═══════════
 var API_BASE = '/api';
