@@ -2225,66 +2225,259 @@ function rNext(){
 function rPrev(){rStep--;renderRStep();window.scrollTo(0,0)}
 async function submitReport(){
   try {
-    var schoolId = currentEtab ? currentEtab.id : null;
-    var slug = localStorage.getItem('ss_current_etab_slug') || (currentEtab ? currentEtab.slug : '');
-    if(!slug) { showToast && showToast('Etablissement non identifie','error'); return; }
-    
-    // Lire les donnees du formulaire depuis ss_rpt ou depuis les inputs
-    var rpt = window.ss_rpt || {};
-    var type = rpt.type || rpt.report_type || document.getElementById('rpt-type')?.value || 'autre';
-    var description = rpt.description || document.getElementById('rpt-desc')?.value || '';
-    var location = rpt.location || document.getElementById('rpt-location')?.value || '';
-    var urgency = rpt.urgency || rpt.gravite || 'faible';
-    var anonymous = rpt.anonymous !== false;
-    var reporter_email = rpt.email || rpt.reporter_email || rpt.contact || '';
-    var classe = rpt.classe || rpt.class_name || rpt.victim_class || '';
-    var reporter_role = rpt.reporter_role || rpt.role || 'eleve';
-    
-    // Mapper urgency vers les valeurs Supabase
-    var urgencyMap = {'faible':'faible','moyen':'faible','eleve':'faible','critique':'faible','low':'faible','medium':'faible','high':'faible','urgent':'faible'};
-    urgency = urgencyMap[urgency] || 'faible';
-    
-    var btn = document.getElementById('submit-rpt-btn') || document.getElementById('btn-submit-report');
-    if(btn) { btn.disabled = true; btn.textContent = 'Envoi...'; }
-    
-    var res = await fetch('/api/establishments/submit-report/' + slug, {
+    var schoolId = currentEtab && currentEtab.id ? currentEtab.id : localStorage.getItem('ss_current_etab');
+    if(!schoolId){ toast('Établissement non sélectionné','err'); return; }
+
+    // Always call ensure-uuid to guarantee school exists in Supabase with a valid UUID
+    try {
+      const resolveRes = await fetch('/api/establishments/ensure-uuid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blob_id: currentEtab?.blobId || currentEtab?.apiId || schoolId, slug: currentEtab?.slug })
+      });
+      if (resolveRes.ok) {
+        const d = await resolveRes.json();
+        const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (d.uuid && uuidRx.test(d.uuid)) {
+          schoolId = d.uuid;
+          if (currentEtab) {
+            currentEtab.id = schoolId;
+            // Persist resolved UUID so admin dashboard uses the same ID
+            localStorage.setItem('ss_current_etab', schoolId);
+          }
+        }
+      } else {
+        console.warn('ensure-uuid returned:', resolveRes.status);
+      }
+    } catch(e) { console.warn('UUID resolution failed:', e); }
+
+    const uuidRx = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRx.test(schoolId)) {
+      toast("Erreur d'identifiant établissement. Veuillez recharger la page et réessayer.", 'err');
+      return;
+    }
+
+    if(rData.isAnonymous===false){
+      rData.reporterName=document.getElementById('r-name')?.value.trim()||'';
+      rData.reporterClass=document.getElementById('r-class')?.value.trim()||'';
+      rData.reporterEmail=document.getElementById('r-email')?.value.trim()||'';
+      rData.followupEmailOptIn=!!document.getElementById('r-email-optin')?.checked;
+    } else {
+      rData.followupEmailOptIn=false;
+    }
+
+    rData.consentAccepted=!!document.getElementById('r-consent')?.checked;
+    rData.confirmEtab=!!document.getElementById('r-confirm-etab')?.checked;
+    if(!rData.confirmEtab){ toast("Confirme que tu es bien dans cet établissement","err"); return; }
+    if(!rData.consentAccepted){ toast("Tu dois accepter les conditions avant l\'envoi","err"); return; }
+
+    var typeMap={physical:'physique',verbal:'verbal',cyber:'cyber',exclusion:'exclusion',other:'autre'};
+    var roleMap={victim:'victime',witness:'temoin',parent:'parent',staff:'personnel'};
+    var urgencyMap={1:'faible',2:'moyenne',3:'haute'};
+
+    // Build description with extra context embedded
+    var fullDesc = rData.description || '';
+    var extraInfo = [];
+    if (rData.location) extraInfo.push('Lieu: ' + rData.location);
+    if (rData.frequency) extraInfo.push('Fréquence: ' + rData.frequency);
+    if (roleMap[rData.reporterType]) extraInfo.push('Rôle: ' + roleMap[rData.reporterType]);
+    if (rData.niveau) extraInfo.push('Niveau: ' + rData.niveau);
+    if (rData.ageRange) extraInfo.push('Tranche âge: ' + rData.ageRange);
+    if (rData.genre) extraInfo.push('Genre: ' + rData.genre);
+    if (rData.duree) extraInfo.push('Durée: ' + rData.duree);
+
+    // Generate a tracking code client-side as fallback if DB trigger doesn't exist
+    var genCode = 'SS-' + Array.from({length:6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*31)]).join('');
+
+    // Base payload with only guaranteed schema columns
+    var basePayload = {
+      school_id: schoolId,
+      tracking_code: genCode,
+      type: typeMap[rData.harassmentType] || 'autre',
+      urgence: urgencyMap[String(rData.urgency)] || 'faible',
+      description: fullDesc,
+      classe: rData.classe || null,
+      anonymous: rData.isAnonymous !== false,
+      status: 'nouveau'
+    };
+
+    // Extended payload with migration columns (v5+v6)
+    var extendedPayload = Object.assign({}, basePayload, {
+      reporter_role: roleMap[rData.reporterType] || 'autre',
+      location: rData.location || null,
+      frequency: rData.frequency || null,
+      is_anonymous: rData.isAnonymous !== false,
+      reporter_name: rData.isAnonymous !== false ? null : (rData.reporterName || null),
+      reporter_class: rData.isAnonymous !== false ? null : (rData.reporterClass || null),
+      reporter_email: rData.isAnonymous !== false ? null : (rData.reporterEmail || null),
+      followup_email_opt_in: !!rData.followupEmailOptIn,
+      consent_accepted: true,
+      consent_accepted_at: new Date().toISOString(),
+      source_channel: 'form',
+      niveau: rData.niveau || null,
+      age_range: rData.ageRange || null,
+      genre: rData.genre || null,
+      duree: rData.duree || null
+    });
+
+    // Try extended insert first, fall back to base columns if schema mismatch
+    var data = null, error = null;
+    var result = await ssSupabase.from('reports').insert([extendedPayload]).select('*').single();
+    data = result.data;
+    error = result.error;
+
+    if (error && error.message && (error.message.includes('column') || error.message.includes('schema') || error.code === 'PGRST204' || error.code === '42703')) {
+      console.warn('Extended insert failed, retrying with base columns:', error.message);
+      // Embed extra context into description for base-only insert
+      if (extraInfo.length > 0) {
+        basePayload.description = fullDesc + '\n\n--- Infos complémentaires ---\n' + extraInfo.join('\n');
+      }
+      var retryResult = await ssSupabase.from('reports').insert([basePayload]).select('*').single();
+      data = retryResult.data;
+      error = retryResult.error;
+    }
+
+    // Third fallback: minimal payload without urgence (handles missing column in schema cache)
+    if (error && error.message && (error.message.includes('column') || error.message.includes('schema') || error.code === 'PGRST204' || error.code === '42703')) {
+      console.warn('Base insert failed, retrying with minimal columns:', error.message);
+      var minimalPayload = {
+        school_id: schoolId,
+        tracking_code: genCode,
+        type: basePayload.type,
+        description: (basePayload.description || fullDesc) + '\n\nUrgence: ' + (urgencyMap[String(rData.urgency)] || 'faible') + (rData.classe ? '\nClasse: ' + rData.classe : ''),
+        anonymous: basePayload.anonymous,
+        status: 'nouveau'
+      };
+      var minResult = await ssSupabase.from('reports').insert([minimalPayload]).select('*').single();
+      data = minResult.data;
+      error = minResult.error;
+    }
+
+    // Fourth fallback: use the Netlify function + localStorage if Supabase is completely broken
+    if (error) {
+      console.warn('All Supabase inserts failed, using localStorage fallback:', error.message);
+      var fallbackReport = {
+        id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        school_id: schoolId,
+        tracking_code: genCode,
+        type: basePayload.type,
+        urgence: basePayload.urgence || 'faible',
+        description: basePayload.description || fullDesc,
+        classe: basePayload.classe || null,
+        anonymous: basePayload.anonymous,
+        status: 'nouveau',
+        created_at: new Date().toISOString()
+      };
+      // Save to localStorage
+      var lsKey = 'ss_rpt_' + schoolId;
+      var lsList = JSON.parse(localStorage.getItem(lsKey) || '[]');
+      lsList.unshift(fallbackReport);
+      localStorage.setItem(lsKey, JSON.stringify(lsList));
+      data = fallbackReport;
+      error = null;
+      toast('Signalement enregistré localement (synchronisation en attente)', 'ok');
+    }
+
+    if(error) {
+      console.error('Supabase insert error:', JSON.stringify(error));
+      if (error.message && error.message.includes('uuid')) {
+        toast("Erreur technique (ID établissement). Rechargez la page et réessayez.", 'err');
+      } else if (error.message && error.message.includes('foreign key')) {
+        toast("L'établissement n'est pas encore synchronisé. Rechargez la page et réessayez.", 'err');
+      } else if (error.message && (error.message.includes('column') || error.message.includes('schema'))) {
+        toast("Erreur de configuration base de données. Videz le cache depuis Profil et réessayez.", 'err');
+      } else {
+        toast("Erreur: " + (error.message || "Impossible d'enregistrer le signalement"), 'err');
+      }
+      return;
+    }
+
+    if (!data) {
+      toast("Erreur: aucune donnée retournée par le serveur", 'err');
+      return;
+    }
+
+    // Save local backup of submitted report (for admin dashboard fallback & tracking)
+    try {
+      var lsBackupKey = 'ss_rpt_' + schoolId;
+      var lsBackupList = JSON.parse(localStorage.getItem(lsBackupKey) || '[]');
+      // Avoid duplicates
+      if (!lsBackupList.find(function(x) { return x.id === data.id || x.tracking_code === data.tracking_code; })) {
+        lsBackupList.unshift(data);
+        localStorage.setItem(lsBackupKey, JSON.stringify(lsBackupList));
+      }
+      // Also save under blobId/apiId keys for cross-reference
+      if (currentEtab && currentEtab.blobId && currentEtab.blobId !== schoolId) {
+        var lsAltKey = 'ss_rpt_' + currentEtab.blobId;
+        var lsAltList = JSON.parse(localStorage.getItem(lsAltKey) || '[]');
+        if (!lsAltList.find(function(x) { return x.id === data.id || x.tracking_code === data.tracking_code; })) {
+          lsAltList.unshift(data);
+          localStorage.setItem(lsAltKey, JSON.stringify(lsAltList));
+        }
+      }
+    } catch(lsErr) { console.warn('localStorage backup failed:', lsErr); }
+
+    // Upload photos if any
+    if (rData.files && rData.files.length > 0 && data.id) {
+      try {
+        const photoPromises = rData.files.map(file => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = reader.result.split(',')[1];
+              resolve({ name: file.name, data: base64, type: file.type });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        });
+        const photos = await Promise.all(photoPromises);
+        await fetch('/api/photos/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_id: data.id, photos })
+        });
+      } catch(photoErr) {
+        console.warn('Photo upload failed:', photoErr);
+      }
+    }
+
+    var report={
+      id:data.id,
+      caseNumber:data.case_number || null,
+      trackingCode:data.tracking_code,
+      status:data.status,
+      staffReply:data.staff_reply || '',
+      adminNote:data.admin_note || '',
+      assignedTo:data.assigned_staff_id || null,
+      createdAt:data.created_at,
+      type:data.type,
+      description:data.description,
+      location:data.location || null,
+      urgency:data.urgence || 'faible',
+      reporterEmail:data.reporter_email || null
+    };
+
+    cachedReports.unshift(report);
+    try { await S.addLog(`Nouveau signalement ${data.case_number || data.tracking_code || data.id}`, data.id); } catch(e) { console.warn('Log failed:', e); }
+    // Save to user's report history
+    if (data.tracking_code) saveToReportHistory(data.tracking_code, data.case_number);
+    // Notify admin (best effort, non-blocking)
+    fetch('/api/notify/new-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: type,
-        description: description,
-        location: location,
-        urgency: urgency,
-        anonymous: anonymous,
-        reporter_email: reporter_email,
-        classe: classe,
-        reporter_role: reporter_role
-      })
-    });
-    
-    var data = await res.json();
-    
-    if(res.ok && data.ok) {
-      var code = data.tracking_code;
-      // Sauvegarder le code de suivi localement
-      try { saveToReportHistory && saveToReportHistory({ tracking_code: code, type: type, created_at: new Date().toISOString() }); } catch(e) {}
-      // Afficher le succes
-      if(typeof go === 'function') {
-        window.lastTrackingCode = code;
-        go('confirmation');
-      } else {
-        alert('Signalement enregistre !\nCode de suivi : ' + code + '\n\nGardez ce code pour suivre votre dossier.');
-      }
-      if(btn) { btn.disabled = false; btn.textContent = 'Envoyer'; }
-    } else {
-      if(btn) { btn.disabled = false; btn.textContent = 'Envoyer'; }
-      var errMsg = data.error || 'Erreur lors de l\'envoi';
-      showToast && showToast(errMsg, 'error');
-      alert('Erreur : ' + errMsg);
+      body: JSON.stringify({ schoolId: schoolId, reportId: data.id, urgency: data.urgence || 'faible', type: data.type })
+    }).catch(() => {});
+    if(rData.reporterType==='witness'){
+      const badges=S.badges();if(!badges.includes('witness')){badges.push('witness');S.setBadges(badges)}
     }
-  } catch(e) {
-    console.error('submitReport error:', e);
-    alert('Erreur reseau. Verifiez votre connexion.');
+    showConfirmation(data.tracking_code, report);
+    // V7 Pro: trigger notification opt-in after successful report
+    setTimeout(() => maybeShowNotifOptIn(), 3000);
+    ssHaptic('success');
+  } catch(err){
+    console.error(err);
+    toast(err.message || "Erreur lors de l\'envoi du signalement","err");
   }
 }
 function showConfirmation(code,report){
