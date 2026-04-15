@@ -1565,4 +1565,37 @@ rdQu();
   };
 })();
 </script>
+<script>
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    var p = _origFetch.apply(this, arguments);
+    // Intercepter uniquement les appels superadmin (création école)
+    var isCreate = opts && opts.method === 'POST' && typeof url === 'string' && (url.includes('superadmin') || url.includes('etablissement') || url.includes('school'));
+    if (!isCreate) return p;
+    return p.then(function(resp) {
+      var clone = resp.clone();
+      clone.json().then(function(data) {
+        if (!data || !data.ok || !data.slug) return;
+        // Récupérer les champs du formulaire
+        var name = (document.getElementById('cn') || {}).value || data.name || '';
+        var city = (document.getElementById('cv') || {}).value || data.city || '';
+        var cp = (document.getElementById('cp') || {}).value || data.postal_code || '';
+        var adminCode = data.password || data.admin_code || (document.getElementById('cap') || {}).value || '';
+        var adminEmail = (document.getElementById('cae') || {}).value || '';
+        var adminName = (document.getElementById('ce') || {}).value || '';
+        // Appel sync
+        fetch('/api/school-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-sa-token': 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=' },
+          body: JSON.stringify({ name: name, slug: data.slug, city: city, postal_code: cp, admin_code: adminCode, admin_email: adminEmail, admin_name: adminName })
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          console.log('[SafeSchool] school-sync:', JSON.stringify(d));
+        }).catch(function(e) { console.warn('[SafeSchool] school-sync error:', e); });
+      }).catch(function(){});
+      return resp;
+    });
+  };
+})();
+</script>
 </body>
