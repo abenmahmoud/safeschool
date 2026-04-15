@@ -34,7 +34,7 @@ async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; rema
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
@@ -233,28 +233,6 @@ export default async (req: Request, context: Context) => {
 
     const url = new URL(req.url);
     const path = url.pathname.replace('/api/establishments', '');
-  // ADMIN JWT LOGIN
-  if (req.method === 'POST' && path.startsWith('/admin-jwt/')) {
-    const sJ = (path.split('/admin-jwt/')[1]||'').split('?')[0].toLowerCase();
-    let bJ: any = {}; try { bJ = await req.json(); } catch {}
-    const cJ = String(bJ.admin_code||'').trim();
-    if (!sJ || !cJ) return cors({error:'Params requis'},400,req);
-    const suJ = Netlify.env.get('aSUPABASE_URL')||Netlify.env.get('SUPABASE_URL')||'';
-    const skJ = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
-    const rJ = await fetch(suJ+'/rest/v1/schools?slug=eq.'+sJ+'&select=id,name,slug,city,postal_code,is_active,admin_code,plan_code',{headers:{apikey:skJ,Authorization:'Bearer '+skJ}});
-    const schs: any[] = await rJ.json();
-    if (!schs?.length||!schs[0].is_active) return cors({error:'Etablissement non trouve'},404,req);
-    const sc=schs[0];
-    if (!sc.admin_code||cJ!==sc.admin_code) return cors({error:'Code incorrect'},401,req);
-    const sec=Netlify.env.get('ADMIN_JWT_SECRET')||'safeschool_change_me';
-    const h64=btoa(JSON.stringify({alg:'HS256',typ:'JWT'})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-    const p64=btoa(JSON.stringify({slug:sJ,school_id:sc.id,school_name:sc.name,city:sc.city||'',postal_code:sc.postal_code||'',role:'admin',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+86400})).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-    const msg=h64+'.'+p64;
-    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(sec),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-    const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(msg));
-    const tok=msg+'.'+btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-    return new Response(JSON.stringify({ok:true,token:tok,school_name:sc.name,city:sc.city||'',postal_code:sc.postal_code||'',role:'admin'}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Set-Cookie':'ss_admin_token='+tok+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400'}});
-  }
     const store = getStore({ name: 'establishments', consistency: 'strong' });
 
   // SIGNALEMENT PUBLIC - AVANT authCheck
@@ -288,7 +266,7 @@ export default async (req: Request, context: Context) => {
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
@@ -317,7 +295,7 @@ export default async (req: Request, context: Context) => {
     const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
+    const okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
