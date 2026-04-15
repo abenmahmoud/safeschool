@@ -305,6 +305,36 @@ export default async (req: Request, context: Context) => {
     return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
   }
       if (!data) return cors({ error: 'DonnÃÂÃÂ©es non trouvÃÂÃÂ©es' }, 404, req);
+  // === LOGIN ADMIN + GÉNÉRATION JWT (endpoint sécurisé) ===
+  if (req.method === 'POST' && path.startsWith('/admin-jwt/')) {
+    const slugJwt = path.replace('/admin-jwt/', '').split('?')[0].toLowerCase();
+    if (!slugJwt) return cors({ error: 'Slug requis' }, 400, req);
+    let bodyJwt: any = {};
+    try { bodyJwt = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
+    const codeJwt = String(bodyJwt.admin_code || '').trim();
+    if (!codeJwt) return cors({ error: 'Code requis' }, 400, req);
+    const suJwt = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const skJwt = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const rJwt = await fetch(suJwt + '/rest/v1/schools?slug=eq.' + encodeURIComponent(slugJwt) + '&select=id,name,slug,is_active,admin_code,plan_code', {
+      headers: { 'apikey': skJwt, 'Authorization': 'Bearer ' + skJwt }
+    });
+    const schoolsJwt: any[] = await rJwt.json();
+    if (!schoolsJwt?.length || !schoolsJwt[0].is_active) return cors({ error: 'Etablissement non trouve' }, 404, req);
+    const schoolJwt = schoolsJwt[0];
+    if (!schoolJwt.admin_code || codeJwt !== schoolJwt.admin_code) return cors({ error: 'Code incorrect' }, 401, req);
+    const secretJwt = Netlify.env.get('ADMIN_JWT_SECRET') || 'safeschool_change_me_in_env';
+    const headerJwt = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const payloadJwt = btoa(JSON.stringify({ slug: slugJwt, school_id: schoolJwt.id, school_name: schoolJwt.name, plan: schoolJwt.plan_code || 'standard', role: 'admin', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400 })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const msgJwt = headerJwt + '.' + payloadJwt;
+    const keyJwt = await crypto.subtle.importKey('raw', new TextEncoder().encode(secretJwt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sigJwt = await crypto.subtle.sign('HMAC', keyJwt, new TextEncoder().encode(msgJwt));
+    const tokenJwt = msgJwt + '.' + btoa(String.fromCharCode(...new Uint8Array(sigJwt))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return new Response(JSON.stringify({ ok: true, token: tokenJwt, school_name: schoolJwt.name, role: 'admin' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Set-Cookie': 'ss_admin_token=' + tokenJwt + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400' }
+    });
+  }
+
       const isAdmin = authCheck(req);
       const publicInfo: any = {
         id: (data as any).id,
