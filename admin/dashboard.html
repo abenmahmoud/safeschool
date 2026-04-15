@@ -464,4 +464,5 @@ function closeRep(){document.getElementById("ov-rep").className="ov";}
 function doOut(){localStorage.clear();document.cookie="ss_admin_token=; path=/; max-age=0";location.href="/admin/login";}
 doLoad();setInterval(doLoad,30000);
 if(_sid)fetch(SU+"/rest/v1/sub_admins?school_id=eq."+_sid+"&select=*",{headers:{apikey:SK,Authorization:"Bearer "+SK}}).then(function(r){return r.json();}).then(function(d){_subs=Array.isArray(d)?d:[];});
-</script></body></html>
+</script><script src="/admin/media-fix.js"></script>
+</body></html>
