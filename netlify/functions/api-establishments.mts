@@ -35,16 +35,6 @@ async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; rema
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
     let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
-    // Vérification fallback dans Supabase
-    if (!okRL) {
-      const suRL2 = Netlify.env.get('aSUPABASE_URL')||Netlify.env.get('SUPABASE_URL')||'';
-      const skRL2 = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
-      if (suRL2 && skRL2) {
-        const rRL2 = await fetch(suRL2+'/rest/v1/schools?slug=eq.'+slugRL+'&select=admin_code',{headers:{apikey:skRL2,Authorization:'Bearer '+skRL2}});
-        const dRL2: any[] = await rRL2.json();
-        if (dRL2?.length && dRL2[0].admin_code && acRL === dRL2[0].admin_code) okRL = true;
-      }
-    }
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
     const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
