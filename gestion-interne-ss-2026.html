@@ -1524,4 +1524,45 @@ rdQu();
   setTimeout(init, 3000);
 })();
 </script>
+
+<script>
+// SafeSchool — Intercepteur création école → sync Supabase + Netlify
+(function() {
+  const _origFetch = window.fetch;
+  window.fetch = async function(url, opts) {
+    const res = await _origFetch(url, opts);
+    try {
+      // Détecter les appels de création d'école réussis
+      const urlStr = typeof url === 'string' ? url : url?.url || '';
+      const isCreate = opts?.method === 'POST' && (
+        urlStr.includes('/add-school') || urlStr.includes('/create-school') ||
+        urlStr.includes('/add-establishment') || urlStr.includes('/superadmin/school')
+      );
+      if (isCreate && res.ok) {
+        const clone = res.clone();
+        clone.json().then(async (data) => {
+          if (!data) return;
+          const slug = data.slug || data.id || data.school_id || '';
+          const name = data.name || '';
+          const adminCode = data.password || data.admin_code || data.code || '';
+          if (!slug || !adminCode) return;
+          const SA = localStorage.getItem('sa_token') || '';
+          await _origFetch('/api/school-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-sa-token': SA },
+            body: JSON.stringify({
+              name: name, slug: slug,
+              city: data.city || '', postal_code: data.postal_code || data.cp || '',
+              admin_code: adminCode, admin_email: data.admin_email || data.email || '',
+              admin_name: data.admin_name || '', type: data.type || 'lycee',
+              plan: data.plan || 'standard', sector: data.sector || 'public'
+            })
+          }).catch(() => {});
+        }).catch(() => {});
+      }
+    } catch (_e) {}
+    return res;
+  };
+})();
+</script>
 </body>
