@@ -340,7 +340,7 @@ if (path === '/dns-catchup' && req.method === 'POST') {
     const slugs: string[] = bd.slugs || [];
     const results: any[] = [];
     for (const slug of slugs) {
-      const domain = slug + '.safeschool.fr';
+      const domain = 'https://app.safeschool.fr/?etab=' + slug;
       const r = await fetch('https://api.netlify.com/api/v1/sites/' + siteId + '/domain_aliases', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
