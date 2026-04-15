@@ -33,7 +33,7 @@ input:focus{border-color:#667eea;}
     <h1>SafeSchool</h1>
     <p>Connexion espace administrateur</p>
   </div>
-  <form id="loginForm" onsubmit="doLogin(event)" autocomplete="on" novalidate>
+  <form id="loginForm" action="#" onsubmit="doLogin(event)" autocomplete="on" novalidate>
     <div class="field">
       <label for="email">Email administrateur</label>
       <input type="email" id="email" name="email" placeholder="proviseur@etablissement.fr" autocomplete="email" required>
@@ -49,10 +49,11 @@ input:focus{border-color:#667eea;}
   <div class="help">Problème ? <a href="mailto:support@safeschool.fr">support@safeschool.fr</a></div>
 </div>
 <script>
-const urlSlug = new URLSearchParams(location.search).get('etab') || '';
+// urlSlug lu dynamiquement dans doLogin
 
 async function doLogin(e) {
   e.preventDefault();
+  const urlSlug = new URLSearchParams(location.search).get('etab') || '';
   const email = document.getElementById('email').value.trim().toLowerCase();
   const code = document.getElementById('code').value.trim().toUpperCase();
   const btn = document.getElementById('btn');
