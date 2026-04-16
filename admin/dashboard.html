@@ -185,6 +185,7 @@ a{color:var(--primary);text-decoration:none}
 <div class="fl"><label>Telephone</label><input type="tel" id="st-phone" placeholder="0612345678"></div>
 <div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:flex-end"><button class="btn btn-outline" onclick="closeStaff()">Annuler</button><button class="btn btn-primary" onclick="doAddStaff()">Ajouter</button></div>
 </div></div></div>
+<script src="/admin/dashboard-v2-bridge.js"></script>
 <script src="/admin/secure-client.js"></script>
 <script>
 var _t=localStorage.getItem("ss_admin_token")||"";
@@ -197,7 +198,7 @@ if(!_t||!_s){location.href="/admin/login";}
 try{var _p=JSON.parse(atob(_t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));_sid=_p.school_id||"";}catch(e){}
 document.getElementById("sb-school-name").textContent=_nm;
 document.getElementById("topbar-school").textContent=_nm;
-var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcèlement:"Cyber"};
+var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcÃ¨lement:"Cyber"};
 var SN={nouveau:"Nouveau",en_cours:"En cours",resolu:"Resolu"};
 var SC={nouveau:"tnew",en_cours:"tprog",resolu:"tdone"};
 function ago(d){var m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return"instant";if(m<60)return m+"min";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"j";}
@@ -315,7 +316,7 @@ function loadMedias(reportId){
         else h+="<span style='font-size:2.5rem'>&#128196;</span>";
         h+="</div>";
       }
-      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s) — cliquer pour ouvrir</p>";
+      h+="</div><p style='font-size:.75rem;color:var(--muted);margin-top:.75rem'>"+files.length+" fichier(s) â cliquer pour ouvrir</p>";
       tabEl.innerHTML=h;
     }).catch(function(e){tabEl.innerHTML="<div class='empty'>Erreur: "+e.message+"</div>";});
 }
@@ -325,7 +326,7 @@ function renderReply(){
   h+="<textarea id='rep-txt' style='min-height:120px'>"+(r.admin_reply||r.staff_reply||"")+"</textarea>";
   h+="<p style='font-size:.75rem;color:var(--muted);margin-top:.375rem'>";
   if(r.reporter_email)h+="Email de notification: "+r.reporter_email;
-  else h+="(pas d'email fourni — pas de notification)";
+  else h+="(pas d'email fourni â pas de notification)";
   h+="</p></div>";
   h+="<button class='btn btn-primary' onclick='doReply(\""+r.id+"\")'>Envoyer la reponse</button>";
   if(r.reply_sent_at)h+="<p style='font-size:.75rem;color:var(--success);margin-top:.5rem'>Derniere reponse envoyee le "+new Date(r.reply_sent_at).toLocaleString("fr-FR")+"</p>";
