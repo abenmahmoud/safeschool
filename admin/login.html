@@ -22,14 +22,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:linear-g
 <body>
 <div class="box">
   <div class="logo">
-    <div style="font-size:2rem">🛡️</div>
+    <div style="font-size:2rem">ð¡ï¸</div>
     <h1>SafeSchool</h1>
     <p>Espace administrateur</p>
   </div>
   <span class="lbl">Email administrateur</span>
   <input class="inp" type="email" id="f-email" placeholder="proviseur@lycee.fr" autocomplete="email">
-  <span class="lbl">Code d'accès</span>
-  <input class="inp" type="password" id="f-code" placeholder="Code reçu (ex: SSABCD12)" autocomplete="current-password">
+  <span class="lbl">Code d'accÃ¨s</span>
+  <input class="inp" type="password" id="f-code" placeholder="Code reÃ§u (ex: SSABCD12)" autocomplete="current-password">
   <button class="btn" id="f-btn" onclick="doLogin()">Se connecter</button>
   <div class="err" id="f-err"></div>
 </div>
@@ -70,7 +70,7 @@ async function doLogin() {
       else { showErr(d2.error || 'Email ou code incorrect'); btn.disabled=false; btn.textContent='Se connecter'; return; }
     }
     // Stocker dans localStorage ET cookie
-    localStorage.setItem('ss_admin_token', token);
+    localStorage.setItem('ss_admin_token', token); localStorage.setItem('ss_jwt', data.token || (d && d.token) || '');
     localStorage.setItem('ss_admin_slug', finalSlug);
     localStorage.setItem('ss_admin_code', code);
     localStorage.setItem('ss_admin_school', name || finalSlug);
@@ -78,7 +78,7 @@ async function doLogin() {
     // Rediriger vers dashboard
     window.location.replace('/admin/dashboard.html?etab=' + finalSlug);
   } catch(e) {
-    showErr('Erreur réseau. Réessayez.');
+    showErr('Erreur rÃ©seau. RÃ©essayez.');
     btn.disabled = false;
     btn.textContent = 'Se connecter';
   }
