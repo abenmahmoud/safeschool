@@ -191,7 +191,7 @@ var _s=localStorage.getItem("ss_admin_slug")||new URLSearchParams(location.searc
 var _nm=localStorage.getItem("ss_admin_school")||_s;
 var _code=localStorage.getItem("ss_admin_code")||"";
 var _sid="";var _all=[];var _curRep=null;var _subs=[];var _stfs=[];
-var SU="https://bsytkpgdxvlddzuwaabp.supabase.co";var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwNjU1MiwiZXhwIjoyMDkwNzgyNTUyfQ.BdAhL5ammViYicizJjmmQxELcZore8LUQc5mR1giS7A";
+var SU="https://bsytkpgdxvlddzuwaabp.supabase.co";var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeXRrcGdkeHZsZGR6dXdhYWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDY1NTIsImV4cCI6MjA5MDc4MjU1Mn0.owZw9RrqYVns97eajtPMbfhhfzHbPprBSPJ3k8jYdkI";
 if(!_t||!_s){location.href="/admin/login";}
 try{var _p=JSON.parse(atob(_t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));_sid=_p.school_id||"";}catch(e){}
 document.getElementById("sb-school-name").textContent=_nm;
