@@ -1652,7 +1652,7 @@ rdQu();
     }
     
     // Token SA: chercher dans toutes les clés connues
-    var token = localStorage.getItem('ss_jwt_v2') || localStorage.getItem('ss_jwt') || localStorage.getItem('ss_token') || localStorage.getItem('sa_token') || '';
+    var token = sessionStorage.getItem('sa_token') || (typeof TOKEN !== 'undefined' ? TOKEN : '') || localStorage.getItem('sa_token') || ''; /* V8 FIX: sa_token stored by doLogin() in sessionStorage */
     if (!token) { alert('Non connecte - veuillez vous reconnecter'); return; }
     
     var btn = document.querySelector('button[onclick*="createSch"]');
