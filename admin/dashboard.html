@@ -185,6 +185,7 @@ a{color:var(--primary);text-decoration:none}
 <div class="fl"><label>Telephone</label><input type="tel" id="st-phone" placeholder="0612345678"></div>
 <div style="margin-top:1rem;display:flex;gap:.5rem;justify-content:flex-end"><button class="btn btn-outline" onclick="closeStaff()">Annuler</button><button class="btn btn-primary" onclick="doAddStaff()">Ajouter</button></div>
 </div></div></div>
+<script src="/admin/secure-client.js"></script>
 <script>
 var _t=localStorage.getItem("ss_admin_token")||"";
 var _s=localStorage.getItem("ss_admin_slug")||new URLSearchParams(location.search).get("etab")||"";
