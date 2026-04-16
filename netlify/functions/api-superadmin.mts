@@ -155,27 +155,57 @@ export default async (req: Request, context: Context) => {
   // All routes below require authentication
   if (!authCheck(req)) return cors({ error: 'Non autorisé' }, 401);
 
-  // ─── GET /api/superadmin/dashboard — Global stats ───
+  // ─── GET /api/superadmin/dashboard — Global stats (reads from Supabase) ───
   if (req.method === 'GET' && path === '/dashboard') {
-    const store = getStore({ name: 'establishments', consistency: 'strong' });
-    const index = await store.get('_index', { type: 'json' }) as any[] || [];
+    const SU = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+    const SK = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    if (!SU || !SK) return cors({ error: 'Config Supabase manquante' }, 500);
+
+    // Fetch all schools from Supabase (source of truth)
+    const schR = await fetch(SU + '/rest/v1/schools?select=*&order=created_at.desc', {
+      headers: { apikey: SK, Authorization: 'Bearer ' + SK }
+    });
+    if (!schR.ok) return cors({ error: 'Erreur lecture schools' }, 500);
+    const supaSchools = await schR.json();
+
+    // Fetch report counts per school
+    const rptR = await fetch(SU + '/rest/v1/reports?select=school_id', {
+      headers: { apikey: SK, Authorization: 'Bearer ' + SK }
+    });
+    const reports = rptR.ok ? await rptR.json() : [];
+    const reportsBySchool: Record<string, number> = {};
+    for (const r of reports) {
+      reportsBySchool[r.school_id] = (reportsBySchool[r.school_id] || 0) + 1;
+    }
+
+    // Build schools array with UI-expected shape
+    const schools = (supaSchools as any[]).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      city: s.city || '',
+      postal_code: s.postal_code || '',
+      type: s.type || 'lycee',
+      plan: s.plan_code || 'standard',
+      status: s.is_active ? 'active' : 'expired',
+      admin_email: s.admin_email || '',
+      admin_name: s.admin_name || '',
+      admin_code: s.admin_code || '',
+      report_count: reportsBySchool[s.id] || 0,
+      created_at: s.created_at,
+      updated_at: s.updated_at
+    }));
 
     let totalReports = 0;
     let mrr = 0;
-    const schools = [];
-
-    for (const entry of index) {
-      const data = await store.get(`school_${entry.id}`, { type: 'json' }) as any;
-      if (data) {
-        schools.push(data);
-        totalReports += data.report_count || 0;
-        if (data.plan === 'pro' && data.status === 'active') mrr += 49;
-        // Enterprise is "sur devis" — custom pricing, not included in automatic MRR
-      }
+    for (const s of schools) {
+      totalReports += s.report_count;
+      if (s.plan === 'pro' && s.status === 'active') mrr += 49;
+      if (s.plan === 'premium' && s.status === 'active') mrr += 49;  // alias
     }
 
     const active = schools.filter(s => s.status === 'active').length;
-    const trial = schools.filter(s => s.status === 'trial').length;
+    const trial = schools.filter(s => s.plan === 'standard' && s.status === 'active').length;
     const expired = schools.filter(s => s.status === 'expired').length;
 
     return cors({
