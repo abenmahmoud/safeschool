@@ -199,7 +199,13 @@ tr:hover td{background:rgba(99,102,241,.03)}
         <div style="padding:24px">
           <div class="fr2">
             <div class="f"><label>Nom *</label><input type="text" id="cn" placeholder="Lycee Jean Moulin" oninput="onNm()"></div>
-            <div class="f"><label>Ville</label><input type="text" id="cv" placeholder="Drancy"></div>
+            <div class="f"><label>Ville *</label><input type="text" id="cv" placeholder="Drancy" oninput="onNm()"></div>
+          </div>
+          <div class="fr2">
+            <div class="f"><label>Code postal *</label><input type="text" id="cp" maxlength="5" placeholder="93700" oninput="onNm()"></div>
+            <div class="f"><label>Type</label>
+              <select id="ctp" onchange="onNm()"><option value="lycee">Lycee</option><option value="college">College</option><option value="ecole">Ecole primaire</option><option value="autre">Autre</option></select>
+            </div>
           </div>
           <div class="fr2">
             <div class="f"><label>Email contact *</label><input type="email" id="ce" placeholder="proviseur@etablissement.fr"></div>
@@ -595,13 +601,35 @@ function rstCr() {
   rdQu();
 }
 function onNm() {
-  var slug = document.getElementById('cn').value.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+  // Format durable: {type}-{nom}-{ville}-{cp}
+  // Preserve tous les mots ASCII-ifies, minuscules, sans accents, tirets separateurs
+  function clean(s) {
+    return (s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  var type = (document.getElementById('ctp') || {}).value || 'lycee';
+  var name = clean(document.getElementById('cn').value);
+  var city = clean(document.getElementById('cv').value);
+  var cp   = clean(document.getElementById('cp') && document.getElementById('cp').value || '');
+  // Eviter doublon si le nom contient deja "lycee"/"college"/"ecole" au debut
+  var namePrefix = name.split('-')[0];
+  var parts = [];
+  if (type && namePrefix !== type) parts.push(type);
+  if (name) parts.push(name);
+  if (city) parts.push(city);
+  if (cp) parts.push(cp);
+  var slug = parts.join('-').replace(/-+/g, '-').slice(0, 63);
   document.getElementById('csl').value = slug;
-  document.getElementById('sdp').textContent = slug ? slug + '.safeschool.fr' : 'nom-lycee.safeschool.fr';
-  if (slug) { document.getElementById('dnsb').style.display = 'block'; document.getElementById('dsl').textContent = slug + '.safeschool.fr'; }
-  else document.getElementById('dnsb').style.display = 'none';
+  var sdp = document.getElementById('sdp');
+  if (sdp) sdp.textContent = slug ? slug + '.safeschool.fr' : 'type-nom-ville-cp.safeschool.fr';
+  var dnsb = document.getElementById('dnsb');
+  var dsl = document.getElementById('dsl');
+  if (slug && dnsb && dsl) { dnsb.style.display = 'block'; dsl.textContent = slug + '.safeschool.fr'; }
+  else if (dnsb) dnsb.style.display = 'none';
 }
 function onPl(el) {
   ST.plan = el.dataset.plan;
@@ -1480,49 +1508,8 @@ rdQu();
 </script>
 
 <script>
-// SafeSchool - Override slug generation: nom + ville + cp
-(function() {
-  function toSlugFull(name, city, cp) {
-    return [name, city, cp].filter(Boolean).join(' ')
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s]/g, '').trim()
-      .replace(/\s+/g, '-').replace(/-+/g, '-')
-      .substring(0, 80);
-  }
-  function updateSlug() {
-    var name = (document.getElementById('cn') || {}).value || '';
-    var city = (document.getElementById('cv') || {}).value || '';
-    var cp = (document.getElementById('cp') || {}).value || '';
-    var slugField = document.getElementById('csl');
-    if(slugField) slugField.value = toSlugFull(name, city, cp);
-  }
-  // Ajouter champ CP après le champ ville si absent
-  function addCpField() {
-    if(document.getElementById('cp')) return;
-    var cvField = document.getElementById('cv');
-    if(!cvField) return;
-    var cpDiv = document.createElement('div');
-    cpDiv.style.cssText = 'margin-top:12px';
-    cpDiv.innerHTML = '<label style="display:block;font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:4px">CODE POSTAL *</label>' +
-      '<input id="cp" type="text" maxlength="5" placeholder="ex: 93700" style="width:100%;padding:.65rem .875rem;background:#374151;border:1px solid #4b5563;border-radius:8px;color:#fff;font-size:.9rem">';
-    cvField.closest('div') ? cvField.closest('div').insertAdjacentElement('afterend', cpDiv) : cvField.insertAdjacentElement('afterend', cpDiv);
-    document.getElementById('cp').addEventListener('input', updateSlug);
-  }
-  // Attendre que le DOM soit prêt
-  function init() {
-    addCpField();
-    var cn = document.getElementById('cn');
-    var cv = document.getElementById('cv');
-    if(cn) cn.addEventListener('input', updateSlug);
-    if(cv) cv.addEventListener('input', updateSlug);
-  }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-  // Retry si les champs pas encore dans le DOM (chargement dynamique)
-  setTimeout(init, 1000);
-  setTimeout(init, 3000);
-})();
+// SafeSchool v2 - Slug generation est maintenant géré nativement dans onNm()
+// L'ancien override (redondant) a été supprimé pour éviter les conflits
 </script>
 
 <script>
