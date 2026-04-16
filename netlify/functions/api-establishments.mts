@@ -301,7 +301,7 @@ export default async (req: Request, context: Context) => {
     if (!okRL && schoolRL.admin_code && acRL === schoolRL.admin_code) okRL = true;
     if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
     const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
+    const skRL = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
     const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
     if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
     const dataRL = await resRL.json();
