@@ -2,19 +2,35 @@ import type { Context } from '@netlify/functions';
 
 // SafeSchool Admin API V2 - JWT-based multi-tenant isolation
 // Sprint 4 hardening: replaces direct Supabase calls from dashboard
+// FIX: base64url padding for atob
+
+function b64urlDecode(s: string): string {
+  // Replace base64url chars and add padding
+  let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+  while(b64.length % 4) b64 += '=';
+  return atob(b64);
+}
 
 async function verifyJWT(token: string, secret: string): Promise<any|null> {
   try {
-    const [h, p, s] = token.split('.');
-    if(!h || !p || !s) return null;
+    const parts = token.split('.');
+    if(parts.length !== 3) return null;
+    const [h, p, s] = parts;
+
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['verify']);
-    const sig = Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+    const sigStr = b64urlDecode(s);
+    const sig = new Uint8Array(sigStr.length);
+    for(let i = 0; i < sigStr.length; i++) sig[i] = sigStr.charCodeAt(i);
+
     const ok = await crypto.subtle.verify('HMAC', key, sig, new TextEncoder().encode(h+'.'+p));
     if(!ok) return null;
-    const payload = JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/')));
+
+    const payload = JSON.parse(b64urlDecode(p));
     if(payload.exp && payload.exp < Math.floor(Date.now()/1000)) return null;
     return payload;
-  } catch { return null; }
+  } catch(e) {
+    return null;
+  }
 }
 
 function cors(body:any, status:number=200){
@@ -36,27 +52,38 @@ export default async function handler(req: Request, ctx: Context) {
   const SK = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'safeschool_change_me';
 
+  // Debug endpoint to check env
+  const urlCheck = new URL(req.url);
+  if(urlCheck.pathname.endsWith('/_debug')){
+    return cors({
+      has_SU: !!SU,
+      has_SK: !!SK,
+      has_JWT: !!JWT_SECRET,
+      jwt_len: JWT_SECRET.length,
+      jwt_is_default: JWT_SECRET === 'safeschool_change_me'
+    });
+  }
+
   // Extract JWT from Authorization header
   const auth = req.headers.get('Authorization') || req.headers.get('authorization') || '';
   const token = auth.replace(/^Bearer\s+/i, '').trim();
   if(!token) return cors({error:'Token requis'}, 401);
 
   const payload = await verifyJWT(token, JWT_SECRET);
-  if(!payload || !payload.school_id || !payload.slug) return cors({error:'Token invalide'}, 401);
+  if(!payload || !payload.school_id || !payload.slug) return cors({error:'Token invalide', debug: {tokenLen: token.length, jwtSecLen: JWT_SECRET.length}}, 401);
 
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api\/admin-v2/, '').replace(/\/$/,'') || '/';
 
-  // Route: GET /reports - list reports for MY school
+  // Route: GET /reports
   if(req.method === 'GET' && path === '/reports'){
     const r = await fetch(SU + '/rest/v1/reports?school_id=eq.' + payload.school_id + '&select=*&order=created_at.desc', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
-    const data = await r.json();
-    return cors(data);
+    return cors(await r.json());
   }
 
-  // Route: GET /reports/:id - get single report (must belong to my school)
+  // Route: GET /reports/:id
   const reportIdMatch = path.match(/^\/reports\/([a-f0-9\-]+)$/);
   if(req.method === 'GET' && reportIdMatch){
     const id = reportIdMatch[1];
@@ -68,38 +95,33 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(data[0]);
   }
 
-  // Route: PATCH /reports/:id - update report (must belong to my school)
+  // Route: PATCH /reports/:id
   if(req.method === 'PATCH' && reportIdMatch){
     const id = reportIdMatch[1];
     let body: any = {};
     try { body = await req.json(); } catch { return cors({error:'Invalid body'}, 400); }
-    // Whitelist allowed fields (no privilege escalation)
     const allowed = ['status','admin_reply','admin_note','staff_reply','assigned_to','assigned_staff_id','assigned_to_name','reply_sent_at','internal_notes','urgency'];
     const update: any = {};
     for(const k of allowed) if(k in body) update[k] = body[k];
     if(Object.keys(update).length === 0) return cors({error:'Nothing to update'}, 400);
 
-    // Verify report belongs to my school first
     const verifyR = await fetch(SU + '/rest/v1/reports?id=eq.' + id + '&school_id=eq.' + payload.school_id + '&select=id', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
-    const verifyData = await verifyR.json();
-    if(!Array.isArray(verifyData) || !verifyData.length) return cors({error:'Not found or cross-tenant blocked'}, 404);
+    if(!(await verifyR.json()).length) return cors({error:'Not found or cross-tenant blocked'}, 404);
 
     const r = await fetch(SU + '/rest/v1/reports?id=eq.' + id + '&school_id=eq.' + payload.school_id, {
       method: 'PATCH',
       headers: { apikey: SK, Authorization: 'Bearer ' + SK, 'Content-Type':'application/json', Prefer:'return=representation' },
       body: JSON.stringify(update)
     });
-    const data = await r.json();
-    return cors(data);
+    return cors(await r.json());
   }
 
-  // Route: GET /files/:reportId - get signed URLs for report files
+  // Route: GET /files/:reportId
   const filesMatch = path.match(/^\/files\/([a-f0-9\-]+)$/);
   if(req.method === 'GET' && filesMatch){
     const reportId = filesMatch[1];
-    // Verify report belongs to my school
     const verifyR = await fetch(SU + '/rest/v1/reports?id=eq.' + reportId + '&school_id=eq.' + payload.school_id + '&select=id', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
@@ -111,7 +133,6 @@ export default async function handler(req: Request, ctx: Context) {
     const files: any[] = await filesR.json();
     if(!Array.isArray(files) || !files.length) return cors([]);
 
-    // Sign URLs
     const paths = files.map(f => f.file_path);
     const signR = await fetch(SU + '/storage/v1/object/sign/report-files', {
       method: 'POST',
@@ -126,7 +147,7 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(enriched);
   }
 
-  // Route: GET /stats - dashboard stats for my school
+  // Route: GET /stats
   if(req.method === 'GET' && path === '/stats'){
     const r = await fetch(SU + '/rest/v1/reports?school_id=eq.' + payload.school_id + '&select=status,urgency,type', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
@@ -142,7 +163,7 @@ export default async function handler(req: Request, ctx: Context) {
     return cors({school_id: payload.school_id, school_name: payload.school_name, stats: stats});
   }
 
-  // Route: GET /subadmins - list sub-admins
+  // Route: GET /subadmins
   if(req.method === 'GET' && path === '/subadmins'){
     const r = await fetch(SU + '/rest/v1/sub_admins?school_id=eq.' + payload.school_id + '&select=id,name,role,email,is_active,created_at&order=created_at.desc', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
@@ -150,9 +171,9 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(await r.json());
   }
 
-  // Route: GET /me - return JWT payload info
+  // Route: GET /me
   if(req.method === 'GET' && path === '/me'){
-    return cors({school_id: payload.school_id, school_name: payload.school_name, slug: payload.slug, role: payload.role});
+    return cors({school_id: payload.school_id, school_name: payload.school_name, slug: payload.slug, role: payload.role, exp: payload.exp});
   }
 
   return cors({error: 'Route not found', method: req.method, path: path}, 404);
