@@ -685,6 +685,22 @@ async function createSch() {
       throw new Error(resp.error || 'Erreur creation (HTTP ' + r.status + ')');
     }
 
+    // Validate sync results: Supabase must have created/updated, Netlify must have added/exists
+    var syncOk = true;
+    var syncErrors = [];
+    if (!resp.school_id) { syncOk = false; syncErrors.push('Pas de school_id retourne'); }
+    if (resp.results) {
+      if (resp.results.supabase && resp.results.supabase !== 'created' && resp.results.supabase !== 'updated') {
+        syncOk = false; syncErrors.push('Supabase: ' + resp.results.supabase);
+      }
+      if (resp.results.netlify && resp.results.netlify !== 'added' && resp.results.netlify !== 'exists') {
+        syncErrors.push('Netlify DNS: ' + resp.results.netlify);
+      }
+    }
+    if (!syncOk) {
+      throw new Error('Erreur synchronisation: ' + syncErrors.join(', '));
+    }
+
     // Normalize response for showSucc (merge sync response with expected fields)
     var school = {
       id: resp.school_id,
@@ -704,7 +720,14 @@ async function createSch() {
     };
 
     showSucc(school);
-    shTst('Etablissement cree et synchronise (Supabase + Netlify) !');
+    // Show warning if Netlify DNS had issues but school was created
+    if (resp.results && resp.results.netlify && resp.results.netlify !== 'added' && resp.results.netlify !== 'exists') {
+      shTst('Etablissement cree (Supabase OK) mais DNS: ' + resp.results.netlify, true);
+    } else {
+      shTst('Etablissement cree et synchronise (Supabase + Netlify) !');
+    }
+    // Auto-refresh the schools list so the new school appears immediately
+    try { await loadDashboard(); } catch(_) {}
     console.log('[SafeSchool] School created:', school);
     console.log('[SafeSchool] Access URLs:', resp.access);
     console.log('[SafeSchool] Sync results:', resp.results);
