@@ -311,32 +311,25 @@ export default async (req: Request, context: Context) => {
     // Public endpoint: get establishment by slug (for app subdomain routing)
     if (req.method === 'GET' && path.startsWith('/by-slug/')) {
       const slug = path.replace('/by-slug/', '');
-      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-      const entry = index.find((e: any) => e.slug === slug && e.is_active);
-      if (!entry) return cors({ error: 'Etablissement non trouvÃÂÃÂ©' }, 404, req);
-      const data = await store.get(`school_${entry.id}`, { type: 'json' });
-  if (req.method === 'GET' && path.startsWith('/reports/')) {
-    return cors({ ok: true, reports: [], total: 0, debug: true }, 200, req);
-  }
-  // === LISTE SIGNALEMENTS ADMIN ===
-  if (req.method === 'GET' && path.startsWith('/reports/')) {
-    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
-    const acRL = req.headers.get('x-admin-code') || '';
-    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
-    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
-    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
-    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
-    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
-    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
-    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
-    const dataRL = await resRL.json();
-    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
-  }
-      if (!data) return cors({ error: 'DonnÃÂÃÂ©es non trouvÃÂÃÂ©es' }, 404, req);
+      const _suBS = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+      const _skBS = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      let entry: any = null;
+      if (_suBS && _skBS) {
+        try {
+          const _rBS = await fetch(_suBS + '/rest/v1/schools?slug=eq.' + encodeURIComponent(slug) + '&is_active=eq.true&select=*&limit=1', {
+            headers: { apikey: _skBS, Authorization: 'Bearer ' + _skBS }
+          });
+          if (_rBS.ok) { const _aBS = await _rBS.json(); if (Array.isArray(_aBS) && _aBS.length > 0) entry = _aBS[0]; }
+        } catch {}
+      }
+      if (!entry) {
+        const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+        entry = index.find((e: any) => e.slug === slug && e.is_active);
+      }
+      if (!entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
+      const blobBS = (await store.get(`school_${entry.id}`, { type: 'json' })) as any;
+      const data = blobBS || entry;
+      if (!data) return cors({ error: 'Donnees non trouvees' }, 404, req);
       const isAdmin = authCheck(req);
       const publicInfo: any = {
         id: (data as any).id,
@@ -344,7 +337,7 @@ export default async (req: Request, context: Context) => {
         slug: (data as any).slug,
         city: (data as any).city,
         type: (data as any).type,
-        plan: (data as any).plan,
+        plan: (data as any).plan || (data as any).plan_code,
         is_active: (data as any).is_active,
         domain: (data as any).domain || buildSchoolDomain((data as any).slug),
         url: (data as any).url || buildSchoolUrl((data as any).slug),
