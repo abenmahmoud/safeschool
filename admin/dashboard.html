@@ -198,7 +198,7 @@ if(!_t||!_s){location.href="/admin/login";}
 try{var _p=JSON.parse(atob(_t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));_sid=_p.school_id||"";}catch(e){}
 document.getElementById("sb-school-name").textContent=_nm;
 document.getElementById("topbar-school").textContent=_nm;
-var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcÃ¨lement:"Cyber"};
+var TL={physique:"Physique",verbal:"Verbal",exclusion:"Exclusion",autre:"Autre",harcelement:"Harcelement",cyberharcèlement:"Cyber"};
 var SN={nouveau:"Nouveau",en_cours:"En cours",resolu:"Resolu"};
 var SC={nouveau:"tnew",en_cours:"tprog",resolu:"tdone"};
 function ago(d){var m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return"instant";if(m<60)return m+"min";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"j";}
