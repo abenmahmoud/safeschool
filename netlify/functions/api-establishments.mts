@@ -24,14 +24,30 @@ const LOGIN_RATE_LIMIT = 5;
 const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; remaining: number }> {
-  const store = getStore({ name: 'rate-limits', consistency: 'strong' });
+  
+// HELPER V4: Read school from Supabase by slug (source of truth)
+async function _readSchoolBySupa(slug: string): Promise<{id: string, slug: string, is_active: boolean, admin_email?: string, admin_code?: string, admin_name?: string, name?: string} | null> {
+  const _su = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+  const _sk = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  if (!_su || !_sk) return null;
+  try {
+    const _r = await fetch(_su + '/rest/v1/schools?slug=eq.' + encodeURIComponent(slug) + '&is_active=eq.true&select=*&limit=1', {
+      headers: { apikey: _sk, Authorization: 'Bearer ' + _sk }
+    });
+    if (!_r.ok) return null;
+    const _arr = await _r.json();
+    if (Array.isArray(_arr) && _arr.length > 0) return _arr[0];
+  } catch { return null; }
+  return null;
+}
+
+const store = getStore({ name: 'rate-limits', consistency: 'strong' });
 
   if (req.method === 'GET' && path.startsWith('/reports/')) {
     const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
     const acRL = req.headers.get('x-admin-code') || '';
     const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    const _schoolRL_supa = await _readSchoolBySupa(slugRL); const idxRL: any[] = []; const schoolRL = _schoolRL_supa;
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
     let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
@@ -262,9 +278,10 @@ export default async (req: Request, context: Context) => {
   if (req.method === 'POST' && path.startsWith('/submit-report/')) {
     const slugSR = (path.split('/submit-report/')[1] || '').split('?')[0].toLowerCase();
     if (!slugSR) return cors({ error: 'Slug manquant' }, 400, req);
-    const idxSR = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolSR = idxSR.find((e: any) => e.slug === slugSR);
-    if (!schoolSR?.id) return cors({ error: 'Etablissement inconnu: ' + slugSR }, 404, req);
+    // V4: read from Supabase
+    const _schoolSR = await _readSchoolBySupa(slugSR);
+    if (!_schoolSR?.id) return cors({ error: 'Etablissement non trouvé: ' + slugSR }, 404, req);
+    const schoolSR = _schoolSR;
     let bodySR: any = {};
     try { bodySR = await req.json(); } catch { return cors({ error: 'Corps invalide' }, 400, req); }
     const alphaSR = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -302,8 +319,7 @@ export default async (req: Request, context: Context) => {
     const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
     const acRL = req.headers.get('x-admin-code') || '';
     const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    const _schoolRL_supa = await _readSchoolBySupa(slugRL); const idxRL: any[] = []; const schoolRL = _schoolRL_supa;
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
     let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
@@ -368,8 +384,7 @@ export default async (req: Request, context: Context) => {
     const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
     const acRL = req.headers.get('x-admin-code') || '';
     const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
+    const _schoolRL_supa = await _readSchoolBySupa(slugRL); const idxRL: any[] = []; const schoolRL = _schoolRL_supa;
     if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
     const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
     let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
