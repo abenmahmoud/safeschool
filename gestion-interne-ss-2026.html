@@ -1630,4 +1630,68 @@ rdQu();
   };
 })();
 </script>
+
+<script id="ss-fix-createsch">
+// FIX: Override createSch pour corriger le bug de champs vides et contraintes SQL
+(function() {
+  function fixedCreateSch() {
+    var name = (document.getElementById('cn') && document.getElementById('cn').value || '').trim();
+    var city = (document.getElementById('cv') && document.getElementById('cv').value || '').trim();
+    var postal_code = (document.getElementById('cp') && document.getElementById('cp').value || '').trim();
+    var type_raw = (document.getElementById('ctp') && document.getElementById('ctp').value || 'lycee').trim().toLowerCase();
+    var admin_email = (document.getElementById('cae') && document.getElementById('cae').value || '').trim();
+    var admin_name = (document.getElementById('cap') && document.getElementById('cap').value || '').trim();
+    
+    // Valider type selon contrainte SQL
+    var validTypes = ['lycee','college','ecole','autre'];
+    var type = validTypes.includes(type_raw) ? type_raw : 'lycee';
+    
+    if (!name || !city || !postal_code || !admin_email) {
+      alert('Champs requis: Nom, Ville, Code postal, Email admin etablissement');
+      return;
+    }
+    
+    // Token SA: chercher dans toutes les clés connues
+    var token = localStorage.getItem('ss_jwt_v2') || localStorage.getItem('ss_jwt') || localStorage.getItem('ss_token') || localStorage.getItem('sa_token') || '';
+    if (!token) { alert('Non connecte - veuillez vous reconnecter'); return; }
+    
+    var btn = document.querySelector('button[onclick*="createSch"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creation en cours...'; }
+    
+    fetch('/api/school-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-sa-token': token },
+      body: JSON.stringify({ name: name, city: city, postal_code: postal_code, type: type, admin_email: admin_email, admin_name: admin_name, plan: 'standard', sector: 'public' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (btn) { btn.disabled = false; btn.textContent = "Creer l'etablissement"; }
+      if (d.ok) {
+        alert('Etablissement cree!\n\nCode admin: ' + d.admin_code + '\nURL eleves: https://' + d.slug + '.safeschool.fr\nURL admin: https://app.safeschool.fr/admin/login?etab=' + d.slug);
+        ['cn','cv','cp','ce','cae','cap'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
+        if (typeof loadDashboard === 'function') { setTimeout(loadDashboard, 500); }
+        if (typeof showPage === 'function') { showPage('db'); }
+        if (typeof showSection === 'function') { showSection('db'); }
+      } else {
+        alert('Erreur: ' + (d.error || JSON.stringify(d).substring(0,200)));
+      }
+    }).catch(function(e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Creer l'etablissement"; }
+      alert('Erreur reseau: ' + e.message);
+    });
+  }
+  
+  // Attendre que la page soit chargée puis remplacer
+  function applyFix() {
+    window.createSch = fixedCreateSch;
+    console.log('[SafeSchool FIX] createSch patched v2');
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyFix);
+  } else {
+    applyFix();
+  }
+  // Double sécurité
+  setTimeout(applyFix, 1000);
+})();
+</script>
 </body>
