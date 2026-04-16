@@ -25,25 +25,6 @@ const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 async function checkLoginRateLimit(ip: string): Promise<{ blocked: boolean; remaining: number }> {
   const store = getStore({ name: 'rate-limits', consistency: 'strong' });
-
-  if (req.method === 'GET' && path.startsWith('/reports/')) {
-    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
-    const acRL = req.headers.get('x-admin-code') || '';
-    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
-    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
-    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
-    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
-    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
-    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
-    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
-    const dataRL = await resRL.json();
-    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
-  }
-
   const key = `school_login_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
   const now = Date.now();
   let entry: { attempts: number[] } | null = null;
@@ -281,7 +262,7 @@ export default async (req: Request, context: Context) => {
     
     // Email auto: admin + eleve si email fourni
     try {
-      const _adminEmail = blobRL?.admin_email || blobRL?.email || "";
+      const _adminEmail = schoolSR?.admin_email || schoolSR?.email || "";
       const _siteUrl = Netlify.env.get('URL') || 'https://app.safeschool.fr';
       if (_adminEmail) {
         fetch(_siteUrl + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: schoolSR.id, reportId: dataSR[0]?.id, trackingCode: codeSR, urgency: bodySR.urgency || "moyen", type: bodySR.type, adminEmail: _adminEmail }) }).catch(() => {});
@@ -360,28 +341,6 @@ export default async (req: Request, context: Context) => {
         if (entry) data = await store.get(`school_${entry.id}`, { type: 'json' });
       }
       if (!data || !entry) return cors({ error: 'Etablissement non trouvé' }, 404, req);
-  if (req.method === 'GET' && path.startsWith('/reports/')) {
-    return cors({ ok: true, reports: [], total: 0, debug: true }, 200, req);
-  }
-  // === LISTE SIGNALEMENTS ADMIN ===
-  if (req.method === 'GET' && path.startsWith('/reports/')) {
-    const slugRL = (path.split('/reports/')[1] || '').split('?')[0].toLowerCase();
-    const acRL = req.headers.get('x-admin-code') || '';
-    const SARL = 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
-    const idxRL = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-    const schoolRL = idxRL.find((e: any) => e.slug === slugRL);
-    if (!schoolRL?.id) return cors({ error: 'Etablissement inconnu' }, 404, req);
-    const blobRL = (await store.get('school_' + schoolRL.id, { type: 'json' })) as any;
-    let okRL = (blobRL && (acRL === blobRL.admin_code || acRL === blobRL.admin_password)) || acRL === SARL;
-    if (!okRL) return cors({ error: 'Non autorise' }, 401, req);
-    const suRL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
-    const skRL = Netlify.env.get('SUPABASE_ANON_KEY') || Netlify.env.get('SUPABASE_KEY') || '';
-    const resRL = await fetch(suRL + '/rest/v1/reports?school_id=eq.' + schoolRL.id + '&order=created_at.desc&limit=200', { headers: { 'apikey': skRL, 'Authorization': 'Bearer ' + skRL } });
-    if (!resRL.ok) return cors({ error: 'Erreur lecture' }, 500, req);
-    const dataRL = await resRL.json();
-    return cors({ ok: true, reports: dataRL, total: dataRL.length }, 200, req);
-  }
-      if (!data) return cors({ error: 'Données non trouvées' }, 404, req);
       const isAdmin = authCheck(req);
       const publicInfo: any = {
         id: (data as any).id,
@@ -521,9 +480,9 @@ export default async (req: Request, context: Context) => {
     // Sprint1: emails automatiques
     try {
       const _rEmail2 = String(sr_body?.reporter_email || sr_body?.contact || '');
-      const _aEmail2 = String(sr_school?.admin_email || '');
-      fetch(new URL(req.url).origin + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: sr_school?.id, trackingCode: sr_code, reportId: sr_data[0]?.id, urgency: String(sr_body?.urgency || 'moyen'), type: String(sr_body?.type || 'autre'), adminEmail: _aEmail2 }) }).catch(() => {});
-      if (_rEmail2) fetch(new URL(req.url).origin + '/api/notify/status-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trackingCode: sr_code, newStatus: 'nouveau', email: _rEmail2, schoolId: sr_school?.id }) }).catch(() => {});
+      const _aEmail2 = String(sr_entry?.admin_email || '');
+      fetch(new URL(req.url).origin + '/api/notify/new-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: sr_entry?.id, trackingCode: sr_code, reportId: sr_data[0]?.id, urgency: String(sr_body?.urgency || 'moyen'), type: String(sr_body?.type || 'autre'), adminEmail: _aEmail2 }) }).catch(() => {});
+      if (_rEmail2) fetch(new URL(req.url).origin + '/api/notify/status-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trackingCode: sr_code, newStatus: 'nouveau', email: _rEmail2, schoolId: sr_entry?.id }) }).catch(() => {});
     } catch (_) {}
     return cors({ ok: true, tracking_code: sr_code, report_id: sr_data[0]?.id }, 201, req);
   }
@@ -772,12 +731,61 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === 'GET' && (path === '' || path === '/')) {
-      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-      const schools = [];
-      for (const entry of index) {
-        const data = await store.get(`school_${entry.id}`, { type: 'json' });
-        if (data) schools.push(data);
+      // Read from Supabase (source of truth), fallback to Blobs for legacy schools
+      const suList = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+      const skList = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      const schools: any[] = [];
+      const seenIds = new Set<string>();
+
+      if (suList && skList) {
+        try {
+          const rList = await fetch(
+            suList + '/rest/v1/schools?select=*&order=created_at.desc',
+            { headers: { apikey: skList, Authorization: 'Bearer ' + skList } }
+          );
+          if (rList.ok) {
+            const rows = await rList.json();
+            if (Array.isArray(rows)) {
+              for (const row of rows) {
+                seenIds.add(row.id);
+                schools.push({
+                  id: row.id,
+                  name: row.name,
+                  slug: row.slug,
+                  city: row.city || '',
+                  postal_code: row.postal_code || '',
+                  type: row.type || 'lycee',
+                  plan: row.plan_code || 'standard',
+                  status: row.is_active ? 'active' : 'expired',
+                  is_active: row.is_active !== false,
+                  admin_email: row.admin_email || '',
+                  admin_name: row.admin_name || '',
+                  admin_code: row.admin_code || '',
+                  admin_password: row.admin_code || '',
+                  domain: buildSchoolDomain(row.slug),
+                  url: buildSchoolUrl(row.slug),
+                  report_count: 0,
+                  created_at: row.created_at,
+                  updated_at: row.updated_at,
+                  expires_at: row.expires_at || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString()
+                });
+              }
+            }
+          }
+        } catch (_e) { /* fall through to blobs */ }
       }
+
+      // Merge legacy Blobs schools not yet in Supabase
+      try {
+        const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+        for (const entry of index) {
+          if (!seenIds.has(entry.id)) {
+            const data = await store.get(`school_${entry.id}`, { type: 'json' });
+            if (data) schools.push(data);
+          }
+        }
+      } catch (_e) { /* ignore blob errors */ }
+
       return cors(schools, 200, req);
     }
 
