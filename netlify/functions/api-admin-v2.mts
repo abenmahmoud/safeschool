@@ -1,35 +1,45 @@
 import type { Context } from '@netlify/functions';
 
-// SafeSchool Admin API V2 - JWT-based multi-tenant isolation
-// Sprint 4 hardening: replaces direct Supabase calls from dashboard
-// FIX: base64url padding for atob
+// SafeSchool Admin API V2 - DEBUG VERSION
 
 function b64urlDecode(s: string): string {
-  // Replace base64url chars and add padding
   let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
   while(b64.length % 4) b64 += '=';
   return atob(b64);
 }
 
-async function verifyJWT(token: string, secret: string): Promise<any|null> {
+// Match the EXACT same logic as api-establishments signJWT
+async function signJWT(payload: any, secret: string): Promise<string> {
+  const h = { alg: 'HS256', typ: 'JWT' };
+  const toB64url = (obj: any) => btoa(JSON.stringify(obj)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const h64 = toB64url(h);
+  const p64 = toB64url(payload);
+  const msg = h64 + '.' + p64;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  return msg + '.' + sigB64;
+}
+
+async function verifyJWT(token: string, secret: string): Promise<{ok: boolean, payload?: any, error?: string}> {
   try {
     const parts = token.split('.');
-    if(parts.length !== 3) return null;
+    if(parts.length !== 3) return {ok:false, error:'parts ne 3'};
     const [h, p, s] = parts;
 
-    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['verify']);
-    const sigStr = b64urlDecode(s);
-    const sig = new Uint8Array(sigStr.length);
-    for(let i = 0; i < sigStr.length; i++) sig[i] = sigStr.charCodeAt(i);
+    // Re-sign with our secret and compare signatures
+    const msg = h + '.' + p;
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+    const mySigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+    const mySig = btoa(String.fromCharCode(...new Uint8Array(mySigBuf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 
-    const ok = await crypto.subtle.verify('HMAC', key, sig, new TextEncoder().encode(h+'.'+p));
-    if(!ok) return null;
+    if(mySig !== s) return {ok:false, error:'sig mismatch', expected: mySig.substring(0,20), got: s.substring(0,20)};
 
     const payload = JSON.parse(b64urlDecode(p));
-    if(payload.exp && payload.exp < Math.floor(Date.now()/1000)) return null;
-    return payload;
-  } catch(e) {
-    return null;
+    if(payload.exp && payload.exp < Math.floor(Date.now()/1000)) return {ok:false, error:'expired'};
+    return {ok:true, payload: payload};
+  } catch(e: any) {
+    return {ok:false, error: e.message || 'verify error'};
   }
 }
 
@@ -52,30 +62,33 @@ export default async function handler(req: Request, ctx: Context) {
   const SK = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'safeschool_change_me';
 
-  // Debug endpoint to check env
   const urlCheck = new URL(req.url);
-  if(urlCheck.pathname.endsWith('/_debug')){
+  const pathCheck = urlCheck.pathname;
+
+  if(pathCheck.endsWith('/_debug')){
+    const auth = req.headers.get('Authorization') || '';
+    const tok = auth.replace(/^Bearer\s+/i,'').trim();
+    const result = tok ? await verifyJWT(tok, JWT_SECRET) : {ok:false, error:'no token'};
     return cors({
-      has_SU: !!SU,
-      has_SK: !!SK,
-      has_JWT: !!JWT_SECRET,
-      jwt_len: JWT_SECRET.length,
-      jwt_is_default: JWT_SECRET === 'safeschool_change_me'
+      env: { has_SU: !!SU, has_SK: !!SK, has_JWT: !!JWT_SECRET, jwt_len: JWT_SECRET.length },
+      token_info: tok ? { len: tok.length, parts: tok.split('.').length } : null,
+      verify_result: result
     });
   }
 
-  // Extract JWT from Authorization header
   const auth = req.headers.get('Authorization') || req.headers.get('authorization') || '';
   const token = auth.replace(/^Bearer\s+/i, '').trim();
   if(!token) return cors({error:'Token requis'}, 401);
 
-  const payload = await verifyJWT(token, JWT_SECRET);
-  if(!payload || !payload.school_id || !payload.slug) return cors({error:'Token invalide', debug: {tokenLen: token.length, jwtSecLen: JWT_SECRET.length}}, 401);
+  const verifyResult = await verifyJWT(token, JWT_SECRET);
+  if(!verifyResult.ok || !verifyResult.payload) return cors({error:'Token invalide', debug: verifyResult}, 401);
+  const payload = verifyResult.payload;
+
+  if(!payload.school_id || !payload.slug) return cors({error:'Payload incomplet', payload_keys: Object.keys(payload)}, 401);
 
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api\/admin-v2/, '').replace(/\/$/,'') || '/';
 
-  // Route: GET /reports
   if(req.method === 'GET' && path === '/reports'){
     const r = await fetch(SU + '/rest/v1/reports?school_id=eq.' + payload.school_id + '&select=*&order=created_at.desc', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
@@ -83,7 +96,6 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(await r.json());
   }
 
-  // Route: GET /reports/:id
   const reportIdMatch = path.match(/^\/reports\/([a-f0-9\-]+)$/);
   if(req.method === 'GET' && reportIdMatch){
     const id = reportIdMatch[1];
@@ -95,7 +107,6 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(data[0]);
   }
 
-  // Route: PATCH /reports/:id
   if(req.method === 'PATCH' && reportIdMatch){
     const id = reportIdMatch[1];
     let body: any = {};
@@ -108,7 +119,7 @@ export default async function handler(req: Request, ctx: Context) {
     const verifyR = await fetch(SU + '/rest/v1/reports?id=eq.' + id + '&school_id=eq.' + payload.school_id + '&select=id', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
-    if(!(await verifyR.json()).length) return cors({error:'Not found or cross-tenant blocked'}, 404);
+    if(!(await verifyR.json()).length) return cors({error:'Not found or cross-tenant'}, 404);
 
     const r = await fetch(SU + '/rest/v1/reports?id=eq.' + id + '&school_id=eq.' + payload.school_id, {
       method: 'PATCH',
@@ -118,7 +129,6 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(await r.json());
   }
 
-  // Route: GET /files/:reportId
   const filesMatch = path.match(/^\/files\/([a-f0-9\-]+)$/);
   if(req.method === 'GET' && filesMatch){
     const reportId = filesMatch[1];
@@ -147,23 +157,24 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(enriched);
   }
 
-  // Route: GET /stats
   if(req.method === 'GET' && path === '/stats'){
     const r = await fetch(SU + '/rest/v1/reports?school_id=eq.' + payload.school_id + '&select=status,urgency,type', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
     const data: any[] = await r.json();
-    const stats = {
-      total: data.length,
-      nouveau: data.filter(d => d.status === 'nouveau').length,
-      en_cours: data.filter(d => d.status === 'en_cours').length,
-      traites: data.filter(d => ['traite','archive','closed'].includes(d.status)).length,
-      urgents: data.filter(d => d.urgency === 'haute').length
-    };
-    return cors({school_id: payload.school_id, school_name: payload.school_name, stats: stats});
+    return cors({
+      school_id: payload.school_id,
+      school_name: payload.school_name,
+      stats: {
+        total: data.length,
+        nouveau: data.filter(d => d.status === 'nouveau').length,
+        en_cours: data.filter(d => d.status === 'en_cours').length,
+        traites: data.filter(d => ['traite','archive','closed'].includes(d.status)).length,
+        urgents: data.filter(d => d.urgency === 'haute').length
+      }
+    });
   }
 
-  // Route: GET /subadmins
   if(req.method === 'GET' && path === '/subadmins'){
     const r = await fetch(SU + '/rest/v1/sub_admins?school_id=eq.' + payload.school_id + '&select=id,name,role,email,is_active,created_at&order=created_at.desc', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
@@ -171,7 +182,6 @@ export default async function handler(req: Request, ctx: Context) {
     return cors(await r.json());
   }
 
-  // Route: GET /me
   if(req.method === 'GET' && path === '/me'){
     return cors({school_id: payload.school_id, school_name: payload.school_name, slug: payload.slug, role: payload.role, exp: payload.exp});
   }
