@@ -10,7 +10,7 @@ async function verifyJWT(token:string,sec:string):Promise<any|null>{
 function cors(d:any,s=200){return new Response(JSON.stringify(d),{status:s,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'}});}
 export default async(req:Request,context:Context)=>{
   if(req.method==='OPTIONS')return cors({});
-  const SECRET=Netlify.env.get('ADMIN_JWT_SECRET')||'safeschool_jwt_change_me';
+  const SECRET=Netlify.env.get('ADMIN_JWT_SECRET')||'safeschool_change_me';
   const SU=Netlify.env.get('aSUPABASE_URL')||Netlify.env.get('SUPABASE_URL')||'';
   const SK=Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
   const SA='c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
