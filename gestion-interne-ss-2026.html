@@ -646,26 +646,71 @@ function rdQu() {
 }
 async function createSch() {
   var name = document.getElementById('cn').value.trim();
-  var slug = document.getElementById('csl').value.trim();
-  var email = document.getElementById('ce').value.trim();
   var city = document.getElementById('cv').value.trim();
+  var cp = (document.getElementById('cp') || {}).value || '';
+  cp = cp.trim();
+  var email = document.getElementById('ce').value.trim();
   var type = document.getElementById('ctp').value;
   var adminEmail = document.getElementById('cae').value.trim();
   var adminPass = document.getElementById('cap').value.trim();
+  var adminName = (document.getElementById('can') || {}).value || '';
 
-  if (!name || !email) { shTst('Champs obligatoires manquants', true); return; }
+  // Validations strictes
+  if (!name) { shTst('Nom requis', true); return; }
+  if (!city) { shTst('Ville requise (pour slug unique)', true); return; }
+  if (!cp || !/^[0-9]{5}$/.test(cp)) { shTst('Code postal requis (5 chiffres)', true); return; }
+  if (!email) { shTst('Email contact requis', true); return; }
   if (!adminEmail) { shTst('Email admin requis', true); return; }
 
   try {
-    var school = await api('POST', '/establishments/', {
-      name: name, slug: slug, city: city, email: email, type: type,
-      plan: ST.plan, admin_email: adminEmail, admin_password: adminPass || undefined
+    // Appel direct au sync API (source unique: fait Supabase + Netlify + retour complet)
+    var SA = localStorage.getItem('sa_token') || 'c3VwZXJhZG1pbkBzYWZlc2Nob29sLmZyOlNhZmVTY2hvb2wyMDI1IUAjU0E=';
+    var r = await fetch('/api/school-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-sa-token': SA },
+      body: JSON.stringify({
+        name: name,
+        city: city,
+        postal_code: cp,
+        type: type,
+        plan: ST.plan,
+        admin_email: adminEmail,
+        admin_name: adminName,
+        admin_code: adminPass || undefined,
+        sector: 'public'
+      })
     });
+    var resp = await r.json();
+    if (!r.ok || !resp.ok) {
+      throw new Error(resp.error || 'Erreur creation (HTTP ' + r.status + ')');
+    }
+
+    // Normalize response for showSucc (merge sync response with expected fields)
+    var school = {
+      id: resp.school_id,
+      name: resp.name,
+      slug: resp.slug,
+      city: resp.city,
+      postal_code: resp.postal_code,
+      type: resp.type,
+      plan: resp.plan || ST.plan,
+      admin_code: resp.admin_code,
+      admin_email: resp.admin_email,
+      admin_password: resp.admin_code,  // le code sert de mot de passe initial
+      expires_at: new Date(Date.now() + 365*24*3600*1000).toISOString(),
+      // nouveaux champs: URL complètes disponibles
+      _access: resp.access,
+      _results: resp.results
+    };
 
     showSucc(school);
-    shTst('Etablissement cree !');
+    shTst('Etablissement cree et synchronise (Supabase + Netlify) !');
+    console.log('[SafeSchool] School created:', school);
+    console.log('[SafeSchool] Access URLs:', resp.access);
+    console.log('[SafeSchool] Sync results:', resp.results);
   } catch(e) {
-    shTst(e.message, true);
+    shTst(e.message || 'Erreur inconnue', true);
+    console.error('[SafeSchool] Creation error:', e);
   }
 }
 
