@@ -1,40 +1,27 @@
 import type { Context } from '@netlify/functions';
+import crypto from 'node:crypto';
 
-// SafeSchool Admin API V2 - DEBUG VERSION
+// SafeSchool Admin API V2 - FIX: use Node crypto (not Web Crypto)
 
 function b64urlDecode(s: string): string {
   let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
   while(b64.length % 4) b64 += '=';
-  return atob(b64);
+  return Buffer.from(b64, 'base64').toString('utf-8');
 }
 
-// Match the EXACT same logic as api-establishments signJWT
-async function signJWT(payload: any, secret: string): Promise<string> {
-  const h = { alg: 'HS256', typ: 'JWT' };
-  const toB64url = (obj: any) => btoa(JSON.stringify(obj)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  const h64 = toB64url(h);
-  const p64 = toB64url(payload);
-  const msg = h64 + '.' + p64;
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  return msg + '.' + sigB64;
+function b64urlEncodeBuffer(buf: Buffer): string {
+  return buf.toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 
-async function verifyJWT(token: string, secret: string): Promise<{ok: boolean, payload?: any, error?: string}> {
+function verifyJWT(token: string, secret: string): {ok: boolean, payload?: any, error?: string} {
   try {
     const parts = token.split('.');
     if(parts.length !== 3) return {ok:false, error:'parts ne 3'};
     const [h, p, s] = parts;
-
-    // Re-sign with our secret and compare signatures
     const msg = h + '.' + p;
-    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-    const mySigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
-    const mySig = btoa(String.fromCharCode(...new Uint8Array(mySigBuf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-
+    const mac = crypto.createHmac('sha256', secret).update(msg).digest();
+    const mySig = b64urlEncodeBuffer(mac);
     if(mySig !== s) return {ok:false, error:'sig mismatch', expected: mySig.substring(0,20), got: s.substring(0,20)};
-
     const payload = JSON.parse(b64urlDecode(p));
     if(payload.exp && payload.exp < Math.floor(Date.now()/1000)) return {ok:false, error:'expired'};
     return {ok:true, payload: payload};
@@ -63,12 +50,10 @@ export default async function handler(req: Request, ctx: Context) {
   const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'safeschool_change_me';
 
   const urlCheck = new URL(req.url);
-  const pathCheck = urlCheck.pathname;
-
-  if(pathCheck.endsWith('/_debug')){
+  if(urlCheck.pathname.endsWith('/_debug')){
     const auth = req.headers.get('Authorization') || '';
     const tok = auth.replace(/^Bearer\s+/i,'').trim();
-    const result = tok ? await verifyJWT(tok, JWT_SECRET) : {ok:false, error:'no token'};
+    const result = tok ? verifyJWT(tok, JWT_SECRET) : {ok:false, error:'no token'};
     return cors({
       env: { has_SU: !!SU, has_SK: !!SK, has_JWT: !!JWT_SECRET, jwt_len: JWT_SECRET.length },
       token_info: tok ? { len: tok.length, parts: tok.split('.').length } : null,
@@ -80,11 +65,10 @@ export default async function handler(req: Request, ctx: Context) {
   const token = auth.replace(/^Bearer\s+/i, '').trim();
   if(!token) return cors({error:'Token requis'}, 401);
 
-  const verifyResult = await verifyJWT(token, JWT_SECRET);
+  const verifyResult = verifyJWT(token, JWT_SECRET);
   if(!verifyResult.ok || !verifyResult.payload) return cors({error:'Token invalide', debug: verifyResult}, 401);
   const payload = verifyResult.payload;
-
-  if(!payload.school_id || !payload.slug) return cors({error:'Payload incomplet', payload_keys: Object.keys(payload)}, 401);
+  if(!payload.school_id || !payload.slug) return cors({error:'Payload incomplet'}, 401);
 
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api\/admin-v2/, '').replace(/\/$/,'') || '/';
@@ -115,12 +99,10 @@ export default async function handler(req: Request, ctx: Context) {
     const update: any = {};
     for(const k of allowed) if(k in body) update[k] = body[k];
     if(Object.keys(update).length === 0) return cors({error:'Nothing to update'}, 400);
-
     const verifyR = await fetch(SU + '/rest/v1/reports?id=eq.' + id + '&school_id=eq.' + payload.school_id + '&select=id', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
     if(!(await verifyR.json()).length) return cors({error:'Not found or cross-tenant'}, 404);
-
     const r = await fetch(SU + '/rest/v1/reports?id=eq.' + id + '&school_id=eq.' + payload.school_id, {
       method: 'PATCH',
       headers: { apikey: SK, Authorization: 'Bearer ' + SK, 'Content-Type':'application/json', Prefer:'return=representation' },
@@ -136,13 +118,11 @@ export default async function handler(req: Request, ctx: Context) {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
     if(!(await verifyR.json()).length) return cors({error:'Not found'}, 404);
-
     const filesR = await fetch(SU + '/rest/v1/report_files?report_id=eq.' + reportId + '&school_id=eq.' + payload.school_id + '&select=*', {
       headers: { apikey: SK, Authorization: 'Bearer ' + SK }
     });
     const files: any[] = await filesR.json();
     if(!Array.isArray(files) || !files.length) return cors([]);
-
     const paths = files.map(f => f.file_path);
     const signR = await fetch(SU + '/storage/v1/object/sign/report-files', {
       method: 'POST',
