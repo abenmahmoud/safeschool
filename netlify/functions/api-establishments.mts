@@ -319,10 +319,47 @@ export default async (req: Request, context: Context) => {
     // Public endpoint: get establishment by slug (for app subdomain routing)
     if (req.method === 'GET' && path.startsWith('/by-slug/')) {
       const slug = path.replace('/by-slug/', '');
-      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-      const entry = index.find((e: any) => e.slug === slug && e.is_active);
-      if (!entry) return cors({ error: 'Etablissement non trouvÃÂÃÂ©' }, 404, req);
-      const data = await store.get(`school_${entry.id}`, { type: 'json' });
+      // FIX v2: Read from Supabase (source of truth), fallback to Blobs for legacy schools
+      const suBS = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+      const skBS = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      let data: any = null;
+      let entry: any = null;
+      if (suBS && skBS) {
+        try {
+          const rBS = await fetch(
+            suBS + '/rest/v1/schools?slug=eq.' + encodeURIComponent(slug) +
+            '&is_active=eq.true&select=*',
+            { headers: { apikey: skBS, Authorization: 'Bearer ' + skBS } }
+          );
+          if (rBS.ok) {
+            const arr = await rBS.json();
+            if (Array.isArray(arr) && arr.length > 0) {
+              const row = arr[0];
+              data = {
+                id: row.id,
+                name: row.name,
+                slug: row.slug,
+                city: row.city || '',
+                postal_code: row.postal_code || '',
+                type: row.type || 'lycee',
+                plan: row.plan_code || 'standard',
+                is_active: row.is_active !== false,
+                admin_code: row.admin_code || '',
+                admin_email: row.admin_email || '',
+                admin_name: row.admin_name || ''
+              };
+              entry = { id: row.id, slug: row.slug, is_active: row.is_active };
+            }
+          }
+        } catch (_e) { /* fall through to blobs */ }
+      }
+      // Fallback: Netlify Blobs (legacy schools not yet migrated)
+      if (!data) {
+        const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+        entry = index.find((e: any) => e.slug === slug && e.is_active);
+        if (entry) data = await store.get(`school_${entry.id}`, { type: 'json' });
+      }
+      if (!data || !entry) return cors({ error: 'Etablissement non trouve' }, 404, req);
   if (req.method === 'GET' && path.startsWith('/reports/')) {
     return cors({ ok: true, reports: [], total: 0, debug: true }, 200, req);
   }
@@ -365,23 +402,57 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === 'GET' && path === '/public') {
-      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-      const active = index.filter((e: any) => e.is_active);
-      const results = [];
-      for (const e of active) {
-        const data = (await store.get(`school_${e.id}`, { type: 'json' })) as any;
-        results.push({
-          id: e.id,
-          name: e.name,
-          slug: e.slug,
-          city: e.city,
-          type: e.type,
-          plan: e.plan,
-          supabase_id: data?.supabase_id || null,
-          domain: data?.domain || buildSchoolDomain(e.slug),
-          url: data?.url || buildSchoolUrl(e.slug),
-        });
+      // FIX v2: Read from Supabase (source of truth), merge with Blobs legacy schools
+      const suPL = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+      const skPL = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      const results: any[] = [];
+      const seenSlugs = new Set<string>();
+      if (suPL && skPL) {
+        try {
+          const rPL = await fetch(
+            suPL + '/rest/v1/schools?is_active=eq.true&select=id,name,slug,city,postal_code,type,plan_code&order=name.asc',
+            { headers: { apikey: skPL, Authorization: 'Bearer ' + skPL } }
+          );
+          if (rPL.ok) {
+            const rows = await rPL.json();
+            if (Array.isArray(rows)) {
+              for (const row of rows) {
+                seenSlugs.add(row.slug);
+                results.push({
+                  id: row.id,
+                  name: row.name,
+                  slug: row.slug,
+                  city: row.city || '',
+                  postal_code: row.postal_code || '',
+                  type: row.type || 'lycee',
+                  plan: row.plan_code || 'standard',
+                  supabase_id: row.id,
+                  domain: buildSchoolDomain(row.slug),
+                  url: buildSchoolUrl(row.slug),
+                });
+              }
+            }
+          }
+        } catch (_e) { /* fall through */ }
       }
+      // Merge legacy Blobs schools not yet in Supabase
+      try {
+        const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
+        for (const e of index.filter((x: any) => x.is_active && !seenSlugs.has(x.slug))) {
+          const data = (await store.get(`school_${e.id}`, { type: 'json' })) as any;
+          results.push({
+            id: e.id,
+            name: e.name,
+            slug: e.slug,
+            city: e.city,
+            type: e.type,
+            plan: e.plan,
+            supabase_id: data?.supabase_id || null,
+            domain: data?.domain || buildSchoolDomain(e.slug),
+            url: data?.url || buildSchoolUrl(e.slug),
+          });
+        }
+      } catch (_e) { /* ignore blob errors */ }
       return cors(results, 200, req);
     }
 
