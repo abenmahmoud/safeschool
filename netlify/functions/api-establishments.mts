@@ -357,22 +357,35 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === 'GET' && path === '/public') {
-      const index = ((await store.get('_index', { type: 'json' })) as any[]) || [];
-      const active = index.filter((e: any) => e.is_active);
-      const results = [];
-      for (const e of active) {
-        const data = (await store.get(`school_${e.id}`, { type: 'json' })) as any;
-        results.push({
-          id: e.id,
-          name: e.name,
-          slug: e.slug,
-          city: e.city,
-          type: e.type,
-          plan: e.plan,
-          supabase_id: data?.supabase_id || null,
-          domain: data?.domain || buildSchoolDomain(e.slug),
-          url: data?.url || buildSchoolUrl(e.slug),
-        });
+      // V9: Read from Supabase (source of truth) - inline
+      const _suPU = Netlify.env.get('aSUPABASE_URL') || Netlify.env.get('SUPABASE_URL') || '';
+      const _skPU = Netlify.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      const results: any[] = [];
+      if (_suPU && _skPU) {
+        try {
+          const _rPU = await fetch(_suPU + '/rest/v1/schools?is_active=eq.true&select=id,name,slug,city,postal_code,type,plan_code&order=name.asc', {
+            headers: { apikey: _skPU, Authorization: 'Bearer ' + _skPU }
+          });
+          if (_rPU.ok) {
+            const _aPU = await _rPU.json();
+            if (Array.isArray(_aPU)) {
+              for (const e of _aPU) {
+                results.push({
+                  id: e.id,
+                  name: e.name,
+                  slug: e.slug,
+                  city: e.city || '',
+                  postal_code: e.postal_code || '',
+                  type: e.type || 'lycee',
+                  plan: e.plan_code || 'standard',
+                  supabase_id: e.id,
+                  domain: buildSchoolDomain(e.slug),
+                  url: buildSchoolUrl(e.slug),
+                });
+              }
+            }
+          }
+        } catch {}
       }
       return cors(results, 200, req);
     }
