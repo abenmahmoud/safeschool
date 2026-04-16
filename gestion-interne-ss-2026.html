@@ -1641,56 +1641,78 @@ rdQu();
     var type_raw = (document.getElementById('ctp') && document.getElementById('ctp').value || 'lycee').trim().toLowerCase();
     var admin_email = (document.getElementById('cae') && document.getElementById('cae').value || '').trim();
     var admin_name = (document.getElementById('cap') && document.getElementById('cap').value || '').trim();
-    
+
     // Valider type selon contrainte SQL
     var validTypes = ['lycee','college','ecole','autre'];
     var type = validTypes.includes(type_raw) ? type_raw : 'lycee';
-    
+
     if (!name || !city || !postal_code || !admin_email) {
       alert('Champs requis: Nom, Ville, Code postal, Email admin etablissement');
       return;
     }
-    
-    // Token SA: chercher dans toutes les clés connues
-    var token = localStorage.getItem('ss_jwt_v2') || localStorage.getItem('ss_jwt') || localStorage.getItem('ss_token') || localStorage.getItem('sa_token') || '';
+
+    // Token SA: chercher dans toutes les cles connues
+    var token = localStorage.getItem('ss_jwt_v2') || localStorage.getItem('ss_jwt') || localStorage.getItem('ss_token') || localStorage.getItem('sa_token') || sessionStorage.getItem('sa_token') || '';
     if (!token) { alert('Non connecte - veuillez vous reconnecter'); return; }
-    
+
     var btn = document.querySelector('button[onclick*="createSch"]');
     if (btn) { btn.disabled = true; btn.textContent = 'Creation en cours...'; }
-    
+
     fetch('/api/school-sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-sa-token': token },
       body: JSON.stringify({ name: name, city: city, postal_code: postal_code, type: type, admin_email: admin_email, admin_name: admin_name, plan: 'standard', sector: 'public' })
-    }).then(function(r) { return r.json(); }).then(function(d) {
+    }).then(function(r) { return r.json().then(function(d) { return { status: r.status, ok: r.ok, data: d }; }); }).then(function(res) {
       if (btn) { btn.disabled = false; btn.textContent = "Creer l'etablissement"; }
-      if (d.ok) {
-        alert('Etablissement cree!\n\nCode admin: ' + d.admin_code + '\nURL eleves: https://' + d.slug + '.safeschool.fr\nURL admin: https://app.safeschool.fr/admin/login?etab=' + d.slug);
-        ['cn','cv','cp','ce','cae','cap'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
-        if (typeof loadDashboard === 'function') { setTimeout(loadDashboard, 500); }
-        if (typeof showPage === 'function') { showPage('db'); }
-        if (typeof showSection === 'function') { showSection('db'); }
-      } else {
-        alert('Erreur: ' + (d.error || JSON.stringify(d).substring(0,200)));
+      var d = res.data;
+
+      // Validate full creation success
+      if (!res.ok || !d.ok || !d.school_id) {
+        alert('Erreur creation: ' + (d.error || 'Reponse inattendue du serveur (HTTP ' + res.status + ')'));
+        return;
       }
+
+      var supaOk = d.results && (d.results.supabase === 'created' || d.results.supabase === 'updated');
+      var netlifyOk = d.results && (d.results.netlify === 'added' || d.results.netlify === 'exists');
+
+      if (!supaOk) {
+        alert('Attention: Supabase en erreur (' + (d.results && d.results.supabase || 'inconnu') + '). Le sous-domaine pourrait ne pas fonctionner. Contactez le support.');
+        return;
+      }
+
+      var warnings = [];
+      if (!netlifyOk) {
+        warnings.push('Sous-domaine non ajoute (' + (d.results && d.results.netlify || 'inconnu') + '). Le DNS peut ne pas fonctionner immediatement.');
+      }
+
+      var msg = 'Etablissement cree avec succes !\n\nCode admin: ' + d.admin_code + '\nURL eleves: https://' + d.slug + '.safeschool.fr\nURL admin: https://app.safeschool.fr/admin/login?etab=' + d.slug;
+      if (warnings.length) msg += '\n\n⚠ ' + warnings.join('\n⚠ ');
+      alert(msg);
+
+      // Clear form fields
+      ['cn','cv','cp','ce','cae','cap'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
+
+      // Auto-refresh: navigate to dashboard to see the new school in the list
+      if (typeof loadDashboard === 'function') { loadDashboard(); }
+      if (typeof showPage === 'function') { showPage('db'); }
     }).catch(function(e) {
       if (btn) { btn.disabled = false; btn.textContent = "Creer l'etablissement"; }
       alert('Erreur reseau: ' + e.message);
     });
   }
-  
-  // Attendre que la page soit chargée puis remplacer
+
+  // Attendre que la page soit chargee puis remplacer
   function applyFix() {
     window.createSch = fixedCreateSch;
-    console.log('[SafeSchool FIX] createSch patched v2');
+    console.log('[SafeSchool FIX] createSch patched v3 - validates Supabase+Netlify results');
   }
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', applyFix);
   } else {
     applyFix();
   }
-  // Double sécurité
+  // Double securite
   setTimeout(applyFix, 1000);
 })();
 </script>
