@@ -19,6 +19,10 @@ edge_functions = "netlify/edge-functions"
 
   [build.services]
 
+[[edge_functions]]
+  path = "/*"
+  function = "subdomain-router"
+
 [functions]
 
   [functions."*"]
